@@ -1,0 +1,30 @@
+# Spintelių kūrėjas (cabinet builder)
+
+Dėdės Baldai workshop tool: enter a cabinet the way the offer app does (size, sections), pick the joinery, and get the part list and CNC programs without the engineer.
+
+**Open it:** `index.html` — one self-contained page, runs in any browser (GitHub Pages serves it from the repo root).
+
+## What it does
+- Cabinet settings as in the offer app (gervdalius-droid.github.io/offer), with the same sketch; offer-app JSON exports can be imported.
+- Construction: confirmats / cams + dowels / dowels per joint, top rails (surišimo juostos), back on or inside, fixed shelves, oven supports.
+- **Jungtys 3D**: pick up a connector card (with a cutaway picture of the konfirmatas / ekscentrikas / kaištis) and drop it on a joint, move connectors along a joint, drag them off to remove; left and right sides together or separately; full-screen mode for easier dragging.
+- Extra operations: leg marks, Blum TANDEM / TANDEMBOX runner marks, TANDEMBOX front fixing, hinge cups and plates, shelf-support holes.
+- Output (ZIP): `.XXL` programs for the SCM Startech CN Plus (5 mm long-edge bores as a separate turned program), the ReportLists `.xlsm` filled exactly like the SolidWorks macro DB_PartList v18 (same template, labels, QR codes, pictures — imports into the nesting app), `.csv` and the project `.json`.
+
+## Source
+| File | |
+|---|---|
+| `src/engine.js` | cabinet → panels, holes, edge bores, joints; `.XXL` writer |
+| `src/export.js` | project part list, hardware, report input |
+| `src/report.js`, `src/report_tpl.js` | ReportLists `.xlsm` on the DB_PartList v18 template (`tpl/`) |
+| `src/iso.js` | 3D connector editor |
+| `src/art.js`, `src/photos.js` | connector pictures and product photos |
+| `src/app.js`, `src/style.css` | the app (LT / EN) |
+| `src/sketch.js` | the offer app's cabinet sketch |
+
+Build: `python3 build.py` → `index.html` (and `dist/`). The ReportLists export loads JSZip from cdnjs, so it needs internet; offline a plain list is made.
+
+## Checks (`test/`)
+`npm install`, then e.g. `node test/compare_ref.js` (programs vs the verified SWOOD reference), `node test/align_check.js`, `node test/align_mixed.js`, `node test/align_manual.js` (every edge bore meets its face hole, hand-placed and per-side joints), `node test/ops_check2.js`. The `*.py` UI tests use Playwright.
+
+Hand-placed connectors, hinge and shelf-support holes are marked „nepatikrinta" in the app until checked on a real part.
