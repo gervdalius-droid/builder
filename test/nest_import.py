@@ -5,7 +5,7 @@ async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch()
         a = await b.new_page()
-        await a.goto('file:///home/claude/cabcreator/dist/index.html'); await a.wait_for_timeout(500)
+        await a.goto('file:///home/claude/cabcreator/dist/index.html'); await a.wait_for_timeout(500); await a.evaluate("()=>{const b=document.querySelector('[data-act=psample]'); if(b) b.click()}"); await a.wait_for_timeout(250)
         b64 = await a.evaluate("""() => { const k=window.__dbk; const pj=k.buildProjectAll(); const u=k.xlsmBytes(pj);
             let s=''; for (let i=0;i<u.length;i++) s+=String.fromCharCode(u[i]); return [btoa(s), pj.parts.length, pj.parts.filter(x=>x.op1).length]; }""")
         open('/home/claude/cabcreator/scratch/PAVYZDYS_ReportLists_to_Excel.xlsm','wb').write(base64.b64decode(b64[0]))

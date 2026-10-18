@@ -7,7 +7,7 @@ async def main():
         pg.on('pageerror', lambda e: errs.append(str(e)))
         pg.on('console', lambda m: errs.append('console:'+m.text) if m.type=='error' else None)
         await pg.add_init_script("try{localStorage.clear()}catch(e){}")
-        await pg.goto('file:///home/claude/cabcreator/dist/index.html'); await pg.wait_for_timeout(600)
+        await pg.goto('file:///home/claude/cabcreator/dist/index.html'); await pg.wait_for_timeout(600); await pg.evaluate("()=>{const b=document.querySelector('[data-act=psample]'); if(b) b.click()}"); await pg.wait_for_timeout(250)
         await pg.click('.cab >> nth=1'); await pg.wait_for_timeout(200)
         el = pg.locator('.iso3dwrap'); await el.scroll_into_view_if_needed()
         await el.screenshot(path=OUT+'iso_a.png')

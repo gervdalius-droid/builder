@@ -13,7 +13,7 @@ async def main():
         b = await p.chromium.launch(); pg = await b.new_page(viewport={'width':1440,'height':1000}); errs=[]
         pg.on('pageerror', lambda e: errs.append(str(e)))
         await pg.add_init_script("try{localStorage.clear()}catch(e){}")
-        await pg.goto('file:///home/claude/cabcreator/dist/index.html'); await pg.wait_for_timeout(600)
+        await pg.goto('file:///home/claude/cabcreator/dist/index.html'); await pg.wait_for_timeout(600); await pg.evaluate("()=>{const b=document.querySelector('[data-act=psample]'); if(b) b.click()}"); await pg.wait_for_timeout(250)
         await pg.click('.cab >> nth=1'); await pg.wait_for_timeout(200)
         await pg.locator('.iso3dwrap').scroll_into_view_if_needed(); await pg.evaluate('()=>window.scrollBy(0,-90)')
         # 1) drag a cam chip onto the left bottom seam at ~40 % (between two confirmats) → adds + converts

@@ -529,6 +529,97 @@ html.iso-noscroll,html.iso-noscroll body{overflow:hidden}
 .ia-hiC{fill:none;stroke:#eef2f4;stroke-width:1.2;opacity:.8}
 .ia-slot{fill:#4b555b}
 .ia-t{paint-order:stroke;stroke:#fbfaf6;stroke-width:2.4px;stroke-linejoin:round}
+/* separate program downloads */
+button.prog{cursor:pointer;color:var(--ink);font:600 11px var(--f-mono);line-height:1.4;margin:1px 4px 1px 0}
+button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.plhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.plcab{border:1px solid var(--line);border-radius:var(--r);margin-top:8px;overflow:hidden}
+.plct{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;background:var(--sunk);border-bottom:1px solid var(--line)}
+.plrow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--line)}
+.plrow:last-child{border-bottom:0}
+.plf{font:12.5px var(--f-mono);overflow-wrap:anywhere}
+.plrow .btn{padding:5px 10px}
+.pdl{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+@media (max-width:560px){ .plrow{grid-template-columns:minmax(0,1fr) auto} .plrow .unit{grid-column:1;grid-row:2} .plrow .btn{grid-row:1/3;grid-column:2} }
+
+/* ---- header: brand goes home, Projects + New project always visible, autosave note */
+.brandbtn{border:0;background:none;padding:0;cursor:pointer;text-align:left;color:inherit;font:inherit}
+.brandbtn:hover h1{text-decoration:underline;text-underline-offset:3px}
+.projname{position:relative}
+.projname input[aria-invalid="true"]{border-color:var(--bad);background:var(--bad-bg)}
+.saved{font:11px var(--f-mono);color:var(--ok);white-space:nowrap;opacity:.8}
+.saved.flash{animation:savedFlash .9s ease-out}
+@keyframes savedFlash{0%{opacity:1;color:var(--ok);transform:scale(1.08)}100%{opacity:.8;transform:none}}
+.newbtn{border-color:var(--accent);color:var(--accent)}
+.newbtn:hover{background:var(--accent-soft)}
+@media (max-width:1180px){ .brand .sub{display:none} }
+@media (max-width:720px){ .saved{display:none} .projbtn{order:-1} }
+
+/* ---- start screen */
+.home{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;max-width:980px;margin:22px auto 40px}
+.hero{padding:22px 24px;border:1.5px solid var(--accent);box-shadow:0 2px 14px rgba(36,72,201,.10)}
+.hero h2{margin:0;font:600 30px/1.1 var(--f-display)}
+.hero .note{margin:6px 0 0;font-size:14px}
+.np{display:flex;gap:10px;align-items:flex-end;margin-top:16px;flex-wrap:wrap}
+.np .f{flex:1 1 280px}
+.np input{width:100%;font:600 18px var(--f-mono);padding:11px 12px;border:1.5px solid var(--line2);border-radius:8px;background:var(--panel)}
+.np input:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+.np input[aria-invalid="true"]{border-color:var(--bad);box-shadow:0 0 0 3px var(--bad-bg)}
+.np .btn.big{padding:12px 20px;font-size:16px}
+.hero-alt{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.plib{padding:18px 20px}
+.plib-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.plib-h h2{margin:0;font:600 22px var(--f-display);display:flex;align-items:center;gap:8px}
+.plib-h .cnt{font:600 12px var(--f-mono);background:var(--accent-soft);color:var(--accent);border-radius:9px;padding:1px 7px}
+.plib-h input{flex:0 1 260px;border:1px solid var(--line2);border-radius:6px;padding:7px 10px;background:var(--sunk)}
+.plib-list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);background:var(--panel)}
+.prow:last-child{border-bottom:0}
+.prow.cur{background:var(--accent-soft)}
+.prow-main{border:0;background:none;text-align:left;cursor:pointer;padding:4px 2px;color:inherit;font:inherit;min-width:0}
+.prow-main b{display:flex;align-items:center;gap:8px;font:600 16px var(--f-body);overflow-wrap:anywhere}
+.prow-main small{display:block;color:var(--muted);font:12px var(--f-mono);margin-top:2px}
+.prow-main:hover b{color:var(--accent)}
+.prow-act{display:flex;gap:2px}
+.prow-act .btn{padding:6px 8px;font-size:13px}
+.plib .empty{padding:18px;text-align:center;border:1px dashed var(--line2);border-radius:var(--r);margin:0}
+@media (max-width:640px){
+  .prow{grid-template-columns:minmax(0,1fr) auto}
+  .prow-act{grid-column:1/-1;grid-row:2}
+  .hero{padding:16px}
+  .hero h2{font-size:24px}
+}
+
+/* ---- step navigation in the cabinet editor */
+.stepnav{position:sticky;top:calc(70px + env(safe-area-inset-top,0px));z-index:12;display:flex;gap:4px;overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:4px;box-shadow:0 2px 8px rgba(0,0,0,.05);scrollbar-width:thin}
+.stepnav button{display:flex;align-items:center;gap:6px;border:0;background:transparent;border-radius:6px;padding:6px 10px;cursor:pointer;color:var(--muted);font-weight:600;white-space:nowrap;position:relative}
+.stepnav button:hover{background:var(--sunk);color:var(--ink)}
+.stepnav button.on{background:var(--ink);color:var(--panel)}
+.stepnav .sn{font:600 12px var(--f-mono);width:20px;height:20px;border-radius:50%;display:grid;place-items:center;border:1.5px solid currentColor}
+.stepnav .sdot{width:8px;height:8px;border-radius:50%;background:var(--bad);display:inline-block}
+.stepnav button.need .sn{border-color:var(--bad);color:var(--bad)}
+.stepnav button.on.need .sn{color:var(--panel)}
+@media (max-width:720px){ .stepnav{top:0} .stepnav .sl{display:none} .stepnav button.on .sl{display:inline} }
+.card.step{scroll-margin-top:130px}
+
+/* ---- ready for CNC check */
+.ready{padding:12px 16px;margin-bottom:14px;border-width:1.5px}
+.ready.ok{border-color:var(--ok)}
+.ready.bad{border-color:var(--bad)}
+.ready-h b{font:600 18px var(--f-display)}
+.ready.ok .ready-h b{color:var(--ok)}
+.ready.bad .ready-h b{color:var(--bad)}
+.ready ul{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ready li{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ready .ic{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}
+.ready li.ok .ic{background:var(--ok-bg);color:var(--ok)}
+.ready li.warn .ic{background:var(--warn-bg);color:var(--warn)}
+.ready li.bad .ic{background:var(--bad-bg);color:var(--bad)}
+.ready .tx{flex:1 1 220px}
+.ready li .btn{padding:5px 12px}
+.req{color:var(--bad);font-style:normal;font-weight:700}
+.reqnote{margin:0 0 8px;font-size:12px}
+.f input[aria-invalid="true"]{border-color:var(--bad);background:var(--bad-bg)}
 
 </style>
 </head>
@@ -1292,7 +1383,7 @@ function buildProject(col, opts) {
       parts.push({ name:p.name, short:p.short, cab:c.nr, role:p.role, mat:p.mat || '', L:p.L, W:p.W, T:p.T, qty:1,
                    eb:{ eb1:p.eb.y0 || '', eb2:p.eb.y1 || '', eb3:p.eb.x0 || '', eb4:p.eb.x1 || '' },
                    op1:pr.files[0] ? pr.files[0].id : '', op2:pr.files[1] ? pr.files[1].id : '',
-                   progs:pr.files.map(function (f) { return { id:f.id, kind:f.kind }; }), src:'cab',
+                   progs:pr.files.map(function (f) { return { id:f.id, kind:f.kind, file:f.file }; }), src:'cab',
                    pic:{ holes:p.holes.map(function (h) { return { x:h.x, y:h.y, d:h.d, face:h.face, through:!!h.through }; }),
                          edges:p.edges.map(function (e) { return { edge:e.edge, pos:e.pos, d:e.d, depth:e.depth }; }) } });
     });
@@ -2711,7 +2802,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = api; else 
 (function () {
 "use strict";
 var E = window.DBEngine, X = window.DBExport, Z = window.DBZip, SK = window.OfferSketch, ISO = window.DBIso;
-var VERSION = '1.7';
+var VERSION = '1.9';
 var IN_ARTIFACT = !!(window.claude && typeof window.claude.use === 'function');
 
 /* ----------------------------------------------------------------- texts */
@@ -2799,6 +2890,18 @@ lt:{
  isoNoJ:'Šioje spintelėje karkaso jungčių nėra.',
  isoD_confirmat:'Varžtas per šoną į detalės kraštą. Ø8 kiaurai + Ø5×32. Tvirčiausias, bet varžto galva matosi.', isoD_cam:'Ekscentrikas detalėje pasuktas užveržia varžtą šone. Ø15 + Ø8. Nesimato, galima išardyti.', isoD_dowel:'Medinis kaištis Ø8 su klijais — centruoja ir laiko. Nesimato, neišardomas.',
  isoGrab:'⠿ Tempkite ant jungties', isoTapLine:'Bakstelėkite jungties liniją', isoFullOn:'Atidaryti 3D per visą ekraną', isoFullOff:'Uždaryti visą ekraną (Esc)', isoFullOnS:'Visas ekranas', isoFullOffS:'Uždaryti',
+ xxlTitle:'CNC programos (.XXL)', xxlLead:'Kiekvieną programą galima atsisiųsti atskirai, be ZIP. ↻ — pasukta programa (5 mm skylės ilgame krašte). Naršyklė gali paklausti, ar leisti atsisiųsti kelis failus — leiskite.',
+ xxlAll:'⤓ Visos .XXL atskirai ({n})', xxlAllT:'Kiekviena programa atskiru failu, be ZIP', xxlCab:'⤓ Šios spintelės ({n})', xxlPart:'⤓ Visos šios detalės ({n})', xxlOne:'Atsisiųsti', xxlRot:'pasukta', xxlSaving:'Atsisiunčiama failų: {n}…',
+ reqNote:'privaloma — be to detalių sąraše nebus medžiagos', n1:'Matmenys', n2:'Sekcijos', n3:'Konstrukcija', n4:'Operacijos', n5:'Medžiagos', n6:'Papildomos',
+ toHome:'Visi projektai', prNew2:'Naujas projektas', autosaved:'išsaugota', autosaveT:'Viskas išsaugoma automatiškai šioje naršyklėje',
+ npLead:'Įrašykite pavadinimą — jis bus CNC programų ir sąrašo failų pavadinimuose. Toliau pasirinksite pirmą spintelę.', npName:'Projekto pavadinimas', npPh:'pvz. VIRTUVE_JONAITIS', npCreate:'Sukurti projektą',
+ npOr:'arba', npImport:'Įkelti iš pasiūlymo programos (.json)', npSample:'Atidaryti pavyzdį', npNeed:'Įrašykite projekto pavadinimą', npDone:'Sukurtas projektas {n}',
+ prSearch:'Ieškoti projekto…', prOpenNow:'atidarytas', prUpdated:'keista', prDup:'Kopija', prDupT:'Sukurti šio projekto kopiją', prJsonT:'Atsisiųsti projekto failą (atsarginė kopija)', prDupDone:'Kopija sukurta',
+ prNone2:'Projektų dar nėra — sukurkite pirmą viršuje.', prNoMatch:'Nieko nerasta.', prHint2:'Projektai išsaugomi automatiškai šioje naršyklėje. Atsarginei kopijai ar perkelti į kitą kompiuterį — „.json“.', prDeleted:'Projektas ištrintas',
+ noName:'(be pavadinimo)', cabsN:'spint.', copySfx:'(kopija)', agoNow:'ką tik', agoMin:'prieš {n} min.', agoToday:'šiandien',
+ firstCabQ:'Pirmoji spintelė — kokią kuriame?', stepsNav:'Spintelės žingsniai', stepNeed:'Reikia užpildyti',
+ ckTitleOk:'Paruošta CNC', ckTitleBad:'Prieš siunčiant į CNC — pataisykite', ckFix:'Taisyti', ckName:'Neįrašytas projekto pavadinimas (jis bus failų pavadinimuose)', ckNameOk:'Projektas: <b>{n}</b>',
+ ckMat:'Neįrašyta medžiaga — spintelės {c}', ckMatOk:'Medžiagos įrašytos', ckEdge:'Neįrašytas karkaso kraštas — spintelės {c}', ckErr:'Klaidų, dėl kurių dalis skylių negręžiama: {n} (žr. žemiau)', ckProg:'{p} detalės, {n} CNC programų',
  isoSides:'Šonai:', isoModeBoth:'Abu kartu', isoModeSep:'Atskirai', isoModeBothT:'Pakeitimas viename šone pakartojamas kitame (veidrodiškai)', isoModeSepT:'Keičiamas tik tas šonas, ant kurio tempiate',
  isoBoth:'abu šonai', isoBothNote:'Kairys ir dešinys šonai keičiasi kartu. Norėdami keisti tik vieną šoną, viršuje pasirinkite „Atskirai“.', isoDiffer:'šonai skiriasi',
  isoCopyToR:'Taip pat ir dešiniame', isoCopyToL:'Taip pat ir kairiame', isoCopied:'Abu šonai vienodi', isoL1:'K:', isoR1:'D:', isoResetT:'Abiem šonams — standartas', isoArmed:'Bakstelėkite jungties liniją — bus pridėta. Dar kartą bakstelėkite mygtuką — atšaukti.', isoMissTap:'Bakstelėkite tiksliau ant punktyrinės jungties linijos',
@@ -2886,6 +2989,18 @@ en:{
  isoNoJ:'This cabinet has no carcass joints.',
  isoD_confirmat:'Screw through the side into the part edge. Ø8 through + Ø5×32. Strongest, the head shows.', isoD_cam:'A cam in the part, turned, pulls the bolt in the side tight. Ø15 + Ø8. Hidden, can be taken apart.', isoD_dowel:'Ø8 wooden dowel with glue — aligns and holds. Hidden, not taken apart.',
  isoGrab:'⠿ Drag onto a joint', isoTapLine:'Tap a joint line', isoFullOn:'Open the 3D view full screen', isoFullOff:'Close full screen (Esc)', isoFullOnS:'Full screen', isoFullOffS:'Close',
+ xxlTitle:'CNC programs (.XXL)', xxlLead:'Every program can be downloaded on its own, without a ZIP. ↻ — turned program (5 mm holes in a long edge). The browser may ask whether to allow several downloads — allow it.',
+ xxlAll:'⤓ All .XXL separately ({n})', xxlAllT:'Each program as its own file, no ZIP', xxlCab:'⤓ This cabinet ({n})', xxlPart:'⤓ All of this part ({n})', xxlOne:'Download', xxlRot:'turned', xxlSaving:'Downloading {n} files…',
+ reqNote:'required — otherwise the part list has no material', n1:'Size', n2:'Sections', n3:'Construction', n4:'Operations', n5:'Materials', n6:'Extras',
+ toHome:'All projects', prNew2:'New project', autosaved:'saved', autosaveT:'Everything is saved automatically in this browser',
+ npLead:'Type a name — it goes into the CNC program and list file names. Next you pick the first cabinet.', npName:'Project name', npPh:'e.g. KITCHEN_SMITH', npCreate:'Create project',
+ npOr:'or', npImport:'Import from the offer app (.json)', npSample:'Open the example', npNeed:'Type a project name', npDone:'Project {n} created',
+ prSearch:'Search projects…', prOpenNow:'open', prUpdated:'changed', prDup:'Copy', prDupT:'Make a copy of this project', prJsonT:'Download the project file (backup)', prDupDone:'Copy made',
+ prNone2:'No projects yet — create the first one above.', prNoMatch:'Nothing found.', prHint2:'Projects are saved automatically in this browser. For a backup or another computer — “.json”.', prDeleted:'Project deleted',
+ noName:'(no name)', cabsN:'cab.', copySfx:'(copy)', agoNow:'just now', agoMin:'{n} min ago', agoToday:'today',
+ firstCabQ:'First cabinet — what are we building?', stepsNav:'Cabinet steps', stepNeed:'Needs filling in',
+ ckTitleOk:'Ready for CNC', ckTitleBad:'Before sending to CNC — fix these', ckFix:'Fix', ckName:'No project name (it goes into the file names)', ckNameOk:'Project: <b>{n}</b>',
+ ckMat:'No material — cabinets {c}', ckMatOk:'Materials filled in', ckEdge:'No carcass edging — cabinets {c}', ckErr:'Errors that leave holes undrilled: {n} (see below)', ckProg:'{p} parts, {n} CNC programs',
  isoSides:'Sides:', isoModeBoth:'Both', isoModeSep:'Separately', isoModeBothT:'A change on one side is mirrored on the other', isoModeSepT:'Only the side you drag on changes',
  isoBoth:'both sides', isoBothNote:'Left and right sides change together. To change only one side, pick “Separately” above.', isoDiffer:'sides differ',
  isoCopyToR:'Same on the right', isoCopyToL:'Same on the left', isoCopied:'Both sides now match', isoL1:'L:', isoR1:'R:', isoResetT:'Standard on both sides', isoArmed:'Tap a joint line to add it there. Tap the button again to stop.', isoMissTap:'Tap closer to a dashed joint line',
@@ -2999,9 +3114,34 @@ function sample() {   // first run: a realistic small project so the tool opens 
   p.cabinets.forEach(function (k) { k.mat = { carc:'LMDP balta 18 (pavyzdys)', facade:'LMDP antracitas 18 (pavyzdys)', back:'LMDP balta 18 (pavyzdys)' }; k.edge = { carc:'ABS balta 0.8 (pavyzdys)', facade:'ABS antracitas 1 (pavyzdys)' }; });
   return p;
 }
-if (!S.proj || !Array.isArray(S.proj.cabinets)) S.proj = sample();
-S.proj.cabinets = S.proj.cabinets.map(normCab);
-function save() { store('dbKurejas.current', S.proj); }
+(function migrate() {   // older versions: a separate 'saved projects' list and one current project → one library
+  if (store('dbKurejas.lib')) return;
+  var l = [], seen = {};
+  var add = function (p, when) { if (!p || !Array.isArray(p.cabinets)) return; p.id = p.id || uid(); if (seen[p.id]) return; seen[p.id] = 1; p.updated = p.updated || when || new Date().toISOString(); l.push(libRec(p)); };
+  add(S.proj); (store('dbKurejas.projects') || []).forEach(function (r) { add(r.data, r.saved); });
+  libSet(l);
+})();
+if (!S.proj || !Array.isArray(S.proj.cabinets)) { S.proj = null; S.home = true; }
+else { S.proj.cabinets = S.proj.cabinets.map(normCab); S.home = false; }
+/* ---- projects: every project is kept in the library and saved automatically; 'dbKurejas.current' is the open one */
+function lib() { var l = store('dbKurejas.lib'); return Array.isArray(l) ? l : []; }
+function libSet(l) { store('dbKurejas.lib', l); }
+function libRec(p) { return { id:p.id, name:p.name || '', updated:p.updated || new Date().toISOString(), n:(p.cabinets || []).length, data:clone(p) }; }
+var libTimer = null;
+function libSave() { if (!S.proj) return; var p = S.proj; libSet([libRec(p)].concat(lib().filter(function (r) { return r.id !== p.id; }))); }
+function save() {
+  if (!S.proj) return;
+  S.proj.updated = new Date().toISOString();
+  store('dbKurejas.current', S.proj);
+  clearTimeout(libTimer); libTimer = setTimeout(libSave, 250);
+  var sv = document.getElementById('saved'); if (sv) { sv.classList.remove('flash'); void sv.offsetWidth; sv.classList.add('flash'); }
+}
+function openProject(p) {
+  S.proj = clone(p); S.proj.id = S.proj.id || uid(); S.proj.cabinets = (S.proj.cabinets || []).map(normCab);
+  S.home = false; S.tab = 'cab'; S.sel = 0; S.part = null; S.iso = null; S.undo = []; S.picking = !S.proj.cabinets.length; S.confirm = null;
+  store('dbKurejas.current', S.proj); window.scrollTo(0, 0);
+}
+function newProject(name) { openProject({ app:'db-kurejas', v:1, id:uid(), name:name, cabinets:[], updated:new Date().toISOString() }); libSave(); }
 (function () { var tp = store('dbKurejas.reportTpl'); if (tp && tp.b64) { S.tplB64 = tp.b64; S.tplName = tp.name; } })();
 function b64ToBytes(b64) { var bin = atob(b64), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
 function bytesToB64(u) { var s = '', CH = 0x8000; for (var i = 0; i < u.length; i += CH) s += String.fromCharCode.apply(null, u.subarray(i, i + CH)); return btoa(s); }
@@ -3020,7 +3160,7 @@ function loadTemplateFile(file) {
   };
   rd.readAsArrayBuffer(file);
 }
-function cur() { return S.proj.cabinets[S.sel]; }
+function cur() { return S.proj ? S.proj.cabinets[S.sel] : null; }
 
 /* ----------------------------------------------------------------- engine bridge */
 function projName() { return E.safeName(S.proj.name || 'PROJEKTAS') || 'PROJEKTAS'; }
@@ -3080,22 +3220,30 @@ function ico(kind) {
 
 /* ----------------------------------------------------------------- render: shell */
 var app = document.getElementById('app');
+function langBtns() { return '<span class="lang"><button data-act="lang" data-v="lt" class="' + (S.lang === 'lt' ? 'on' : '') + '">LT</button><button data-act="lang" data-v="en" class="' + (S.lang === 'en' ? 'on' : '') + '">EN</button></span>'; }
 function render() {
+  if (!S.proj) S.home = true;
+  if (S.home) {
+    app.innerHTML = '<header class="top"><div class="wrap"><div class="brand"><div class="logo">DB</div><div><h1>' + t('app') + '</h1><div class="sub">' + t('sub') + '</div></div></div>' +
+      '<div class="hbtns">' + langBtns() + '</div></div></header><main class="wrap">' + viewHome() + '</main>';
+    if (S.focusNew) { S.focusNew = false; var nf = document.getElementById('np-name'); if (nf) { nf.focus(); nf.select(); } }
+    return;
+  }
   var pj = null, cabInfo = S.proj.cabinets.map(function (c, i) { return buildOne(i); });
   S._info = cabInfo;
   var nParts = cabInfo.reduce(function (a, x) { return a + x.r.panels.length; }, 0);
   var h = '<header class="top"><div class="wrap">' +
-    '<div class="brand"><div class="logo">DB</div><div><h1>' + t('app') + '</h1><div class="sub">' + t('sub') + '</div></div></div>' +
-    '<label class="projname"><span class="unit">' + t('project') + '</span><input id="projname" type="text" data-bind="p.name" value="' + esc(S.proj.name) + '" placeholder="' + t('projPh') + '" autocomplete="off"></label>' +
+    '<button class="brand brandbtn" data-act="home" title="' + t('toHome') + '"><div class="logo">DB</div><div><h1>' + t('app') + '</h1><div class="sub">' + t('sub') + '</div></div></button>' +
+    '<button class="btn projbtn" data-act="home" title="' + t('toHome') + '">☰ ' + t('projects') + '</button>' +
+    '<label class="projname"><span class="unit">' + t('project') + '</span><input id="projname" type="text" data-bind="p.name" value="' + esc(S.proj.name) + '" placeholder="' + t('projPh') + '" autocomplete="off"' + (S.proj.name ? '' : ' aria-invalid="true"') + '><span class="saved" id="saved" title="' + t('autosaveT') + '">✓ ' + t('autosaved') + '</span></label>' +
     '<nav class="tabs" aria-label="tabs">' +
       tabBtn('cab', t('tCab'), S.proj.cabinets.length) + tabBtn('res', t('tRes'), nParts) + tabBtn('set', t('tSet')) + '</nav>' +
-    '<div class="hbtns"><button class="btn" data-act="drawer">' + t('projects') + '</button>' +
-    '<span class="lang"><button data-act="lang" data-v="lt" class="' + (S.lang === 'lt' ? 'on' : '') + '">LT</button><button data-act="lang" data-v="en" class="' + (S.lang === 'en' ? 'on' : '') + '">EN</button></span></div>' +
+    '<div class="hbtns"><button class="btn newbtn" data-act="pnew">＋ ' + t('prNew2') + '</button>' + langBtns() + '</div>' +
     '</div></header><main class="wrap">';
   if (S.tab === 'cab') h += viewCab(cabInfo);
   else if (S.tab === 'res') h += viewRes(buildProjectAll());
   else h += viewSet();
-  h += '</main>' + (S.drawer ? viewDrawer() : '') + '<datalist id="dl-mat">' + listOpts('mat') + '</datalist><datalist id="dl-edge">' + listOpts('edge') + '</datalist>';
+  h += '</main><datalist id="dl-mat">' + listOpts('mat') + '</datalist><datalist id="dl-edge">' + listOpts('edge') + '</datalist>';
   var fx = document.activeElement && document.activeElement.id, ss = fx && document.activeElement.selectionStart;
   app.innerHTML = h;
   mountIso();
@@ -3119,11 +3267,36 @@ function viewCab(info) {
   }).join('') + '</div><button class="btn pri" data-act="pick">' + t('newCab') + '</button></aside>';
   if (S.picking || !cabs.length) return '<div class="ws">' + rail + '<section class="editor" style="grid-column:span 2">' + viewPick() + '</section></div>';
   var c = cur(), inf = info[S.sel];
-  return '<div class="ws">' + rail + '<section class="editor">' + viewEditor(c) + '</section>' + viewSheet(c, inf) + '</div>';
+  return '<div class="ws">' + rail + '<section class="editor">' + stepNav(c, inf) + viewEditor(c) + '</section>' + viewSheet(c, inf) + '</div>';
 }
+/* where am I / what is left: the steps of this cabinet, with a mark where something needs attention */
+function needsMats(c) { if (c.dishwasher) return !c.mat.facade; return !c.mat.carc || (c.sections.some(function (s) { return s.kind === 'drawers' || s.kind === 'doors'; }) && !c.mat.facade); }
+function stepNav(c, inf) {
+  var z = c.dishwasher ? null : zoneInfo(c), bad = inf.warnings.some(function (w) { return level(w) === 'bad'; });
+  var st = c.dishwasher ? [['dims', 1, t('n1')], ['mats', 2, t('n5'), needsMats(c)]]
+    : [['dims', 1, t('n1')], ['secs', 2, t('n2'), z.over || !c.sections.length], ['constr', 3, t('n3'), bad], ['ops', 4, t('n4')], ['mats', 5, t('n5'), needsMats(c)], ['extra', 6, t('n6')]];
+  return '<nav class="stepnav" aria-label="' + t('stepsNav') + '">' + st.map(function (x, i) {
+    return '<button type="button" class="' + (i === 0 ? 'on' : '') + (x[3] ? ' need' : '') + '" data-act="goto" data-v="st-' + x[0] + '"' + (x[3] ? ' title="' + t('stepNeed') + '"' : '') + '><span class="sn">' + x[1] + '</span><span class="sl">' + esc(x[2]) + '</span>' + (x[3] ? '<i class="sdot" aria-label="' + t('stepNeed') + '"></i>' : '') + '</button>';
+  }).join('') + '</nav>';
+}
+function gotoStep(id) {
+  var el = document.getElementById(id); if (!el) return;
+  var nav = document.querySelector('.stepnav'), top = document.querySelector('.top');
+  var off = (top && getComputedStyle(top).position === 'sticky' ? top.offsetHeight : 0) + (nav ? nav.offsetHeight : 0) + 12;
+  window.scrollTo({ top:el.getBoundingClientRect().top + window.scrollY - off, behavior:'smooth' });
+  S.gotoAt = Date.now();   // keep the clicked step lit while the page scrolls (the last steps may not reach the top)
+  if (nav) nav.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-v') === id); });
+}
+window.addEventListener('scroll', function () {   // highlight the step being read
+  var nav = document.querySelector('.stepnav'); if (!nav || Date.now() - (S.gotoAt || 0) < 1200) return;
+  var bs = nav.querySelectorAll('button'), y = (document.querySelector('.top') || {}).offsetHeight + nav.offsetHeight + 40, act = 0;
+  bs.forEach(function (b, i) { var el = document.getElementById(b.getAttribute('data-v')); if (el && el.getBoundingClientRect().top < y) act = i; });
+  if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) act = bs.length - 1;
+  bs.forEach(function (b, i) { b.classList.toggle('on', i === act); });
+}, { passive:true });
 function typeName(c) { return c.dishwasher ? t('pDish') : ({ 'PASTATOMOS':t('tBase'), 'PAKABINAMOS':t('tWall'), 'ŪKINĖ':t('tTall') })[c.type] || c.type; }
 function viewPick() {
-  return '<div class="card"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px"><div><h3 style="margin:0;font:600 24px var(--f-display)">' + (S.proj.cabinets.length ? t('pickTitle') : t('firstCab')) + '</h3><p class="note" style="margin:2px 0 0">' + t('pickLead') + '</p></div>' +
+  return '<div class="card"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px"><div><h3 style="margin:0;font:600 24px var(--f-display)">' + (S.proj.cabinets.length ? t('pickTitle') : t('firstCabQ')) + '</h3><p class="note" style="margin:2px 0 0">' + t('pickLead') + '</p></div>' +
     (S.proj.cabinets.length ? '<button class="btn ghost" data-act="unpick">' + t('cancel') + '</button>' : '') + '</div><div class="presets">' +
     PRESETS.map(function (p, i) { return '<button class="preset" data-act="preset" data-i="' + i + '">' + ico(p.k) + '<b>' + t(p.k) + '</b><small>' + p.W + '×' + p.H + '×' + p.D + '</small></button>'; }).join('') + '</div></div>';
 }
@@ -3133,7 +3306,7 @@ function fS(label, bind, val, opts) { var id = 'f-' + bind.replace(/\./g, '-'); 
 function segI(bind, val, opts) { var sym = ISO && ISO.sym ? ISO.sym : function () { return ''; }; return seg(bind, val, opts).replace(/(data-v="(confirmat|cam|dowel)"[^>]*>)/g, function (m, a, ty) { return a + sym(ty); }); }
 function seg(bind, val, opts) { return '<div class="seg" role="group">' + opts.map(function (o) { return '<button type="button" data-act="set" data-bind="' + bind + '" data-v="' + esc(o[0]) + '" class="' + (String(val) === String(o[0]) ? 'on' : '') + '" aria-pressed="' + (String(val) === String(o[0])) + '">' + esc(o[1]) + '</button>'; }).join('') + '</div>'; }
 function chk(bind, val, label) { var id = 'f-' + bind.replace(/\./g, '-'); return '<label class="chk" for="' + id + '"><input id="' + id + '" type="checkbox" data-bind="' + bind + '"' + (val ? ' checked' : '') + '>' + label + '</label>'; }
-function step(no, title, lead, body) { return '<div class="card step"><div class="no">' + no + '</div><div><h3>' + title + '</h3>' + (lead ? '<p class="lead">' + lead + '</p>' : '') + body + '</div></div>'; }
+function step(no, title, lead, body, key) { return '<div class="card step"' + (key ? ' id="st-' + key + '"' : '') + '><div class="no">' + no + '</div><div><h3>' + title + '</h3>' + (lead ? '<p class="lead">' + lead + '</p>' : '') + body + '</div></div>'; }
 
 function zoneInfo(c) {
   var o = c.cnc, H = num(c.H), t_ = num(c.thick) || 18, topFull = o.top === 'full';
@@ -3149,15 +3322,15 @@ function viewEditor(c) {
     (c.dishwasher ? fN(t('dishW'), b + 'dishWidth', c.dishWidth) : fN(t('W'), b + 'W', c.W)) + fN(t('H'), b + 'H', c.H) + fN(t('D'), b + 'D', c.D) +
     fN(t('thick'), b + 'thick', c.thick, 's') + fN(t('facT'), b + 'cnc.facadeT', o.facadeT, 's') +
     '<span class="row" style="margin-left:auto;gap:6px"><button class="btn ghost" data-act="dup">' + t('dup') + '</button><button class="btn ghost danger" data-act="del">' + (S.confirm === 'del' ? t('delSure') : t('del')) + '</button></span></div>';
-  h += step(1, t('s1'), t('s1l'), dims);
-  if (c.dishwasher) { h += step(2, t('s5'), t('s5l'), matsBlock(c)); return h; }
+  h += step(1, t('s1'), t('s1l'), dims, 'dims');
+  if (c.dishwasher) { h += step(2, t('s5'), t('s5l'), matsBlock(c), 'mats'); return h; }
   /* 2 — sections */
   var z = zoneInfo(c);
   var secs = '<div class="zone' + (z.over ? ' over' : '') + '">' + t('zone') + ' <b>' + fmt(z.Hz) + '</b> mm · ' + t('used') + ' <b>' + fmt(z.exp + z.fillH * z.nFill) + '</b>' + (z.over ? ' · <b>' + t('over') + ' ' + fmt(z.exp - z.Hz) + '</b>' : '') + '</div><div class="secs">';
   for (var i = c.sections.length - 1; i >= 0; i--) secs += viewSection(c, c.sections[i], i, z);
   secs += '</div><div class="addsec"><span class="unit" style="align-self:center">' + t('add') + ':</span>' +
     ['drawers', 'doors', 'open', 'oven'].map(function (k) { return '<button class="btn" data-act="addsec" data-v="' + k + '">＋ ' + t({ drawers:'kDrawers', doors:'kDoors', open:'kOpen', oven:'kOven' }[k]) + '</button>'; }).join('') + '</div>';
-  h += step(2, t('s2'), t('s2l'), secs);
+  h += step(2, t('s2'), t('s2l'), secs, 'secs');
   /* 3 — construction */
   var jo = '<div class="lbl">' + t('jMain') + ' <span class="unit">· ' + t('jMainL') + '</span></div><div class="choices">' +
     choice(b + 'cnc.joinery', o.joinery, 'confirmat', artOf('confirmat'), t('jConf'), t('jConfD')) +
@@ -3176,7 +3349,7 @@ function viewEditor(c) {
     '<div class="xleg"><span><i class="lc"></i>' + t('lgConf') + '</span><span><i class="lk"></i>' + t('lgCam') + '</span><span><i class="ld"></i>' + t('lgDowel') + '</span></div></figure></div>' +
     '<div class="iso3dwrap"><div class="lbl">' + t('isoTitle') + ' <span class="unit">· ' + t('isoLead') + '</span></div><div class="iso3d" id="iso3d"></div></div>' +
     '<div class="jtable" id="jtable">' + jointsBlock(c, rInfo) + '</div>';
-  h += step(3, t('s3'), t('s3l'), jo);
+  h += step(3, t('s3'), t('s3l'), jo, 'constr');
   /* 4 — operations */
   var has = function (f) { return c.sections.some(f); };
   var hasDr = has(function (s) { return s.kind === 'drawers' && E.R.runner[s.hw]; }), hasTb = has(function (s) { return s.kind === 'drawers' && s.hw === 'BLUM TANDEMBOX'; });
@@ -3188,9 +3361,9 @@ function viewEditor(c) {
     opRow(b + 'cnc.hinges', o.hinges, t('oHinge'), t('oHingeD'), false, hasDoor, seg(b + 'cnc.hingeFix', o.hingeFix, [['screw', t('hfScrew')], ['press', t('hfPress')]])) +
     opRow(b + 'cnc.pinsOn', o.pins !== 'off', t('oPins'), t('oPinsD'), false, hasSh, seg(b + 'cnc.pins', o.pins, [['shelf', t('pinShelf')], ['row', t('pinRow')]])) +
     '</div>';
-  h += step(4, t('s4'), t('s4l'), ops);
-  h += step(5, t('s5'), t('s5l'), matsBlock(c));
-  h += step(6, t('s6'), t('s6l'), extrasBlock(c));
+  h += step(4, t('s4'), t('s4l'), ops, 'ops');
+  h += step(5, t('s5'), t('s5l'), matsBlock(c), 'mats');
+  h += step(6, t('s6'), t('s6l'), extrasBlock(c), 'extra');
   return h;
 }
 function jointsBlock(c, r) {
@@ -3292,8 +3465,9 @@ function opRow(bind, on, title, desc, verified, applies, more) {
     '<span class="badge ' + (verified ? 'ok' : 'warn') + '">' + (verified ? t('verified') : t('unverified')) + '</span></div>';
 }
 function matsBlock(c) {
-  var b = 'c.';
-  return '<div class="row">' + fT(t('mCarc'), b + 'mat.carc', c.mat.carc, 'dl-mat') + fT(t('mFac'), b + 'mat.facade', c.mat.facade, 'dl-mat') + (c.dishwasher ? '' : fT(t('mBack'), b + 'mat.back', c.mat.back, 'dl-mat')) + '</div>' +
+  var b = 'c.', hasFront = c.dishwasher || c.sections.some(function (s) { return s.kind === 'drawers' || s.kind === 'doors'; });
+  var req = function (html, val) { return html.replace('<span>', '<span>').replace('</span>', ' <i class="req" aria-hidden="true">*</i></span>').replace('type="text"', 'type="text" required' + (val ? '' : ' aria-invalid="true"')); };
+  return '<p class="note reqnote"><i class="req">*</i> ' + t('reqNote') + '</p><div class="row">' + (c.dishwasher ? fT(t('mCarc'), b + 'mat.carc', c.mat.carc, 'dl-mat') : req(fT(t('mCarc'), b + 'mat.carc', c.mat.carc, 'dl-mat'), c.mat.carc)) + (hasFront ? req(fT(t('mFac'), b + 'mat.facade', c.mat.facade, 'dl-mat'), c.mat.facade) : fT(t('mFac'), b + 'mat.facade', c.mat.facade, 'dl-mat')) + (c.dishwasher ? '' : fT(t('mBack'), b + 'mat.back', c.mat.back, 'dl-mat')) + '</div>' +
     '<div class="row" style="margin-top:10px">' + fT(t('eCarc'), b + 'edge.carc', c.edge.carc, 'dl-edge') + fT(t('eFac'), b + 'edge.facade', c.edge.facade, 'dl-edge') + '</div>';
 }
 function viewSection(c, s, i, z) {
@@ -3342,8 +3516,10 @@ function viewRes(pj) {
   var h = '<div class="res"><div class="reshead"><div><h2 style="margin:0 0 8px;font:600 26px var(--f-display)">' + t('rTitle') + '</h2><div class="stats">' +
     stat(S.proj.cabinets.length, t('cabs')) + stat(parts.length, t('parts')) + stat(pj.files.length, t('progs')) + stat(fmt(area) + ' m²', S.lang === 'lt' ? 'plokštės' : 'board') + stat(fmt(ebM) + ' m', S.lang === 'lt' ? 'kraštų' : 'edging') +
     '</div></div><div><div class="dl"><button class="btn pri big" data-act="dl" data-v="zip">' + t('zipAll') + '</button>' +
-    (IN_ARTIFACT ? '' : '<button class="btn" data-act="dl" data-v="xlsm">' + t('xlsm') + '</button><button class="btn" data-act="dl" data-v="csv">' + t('csv') + '</button><button class="btn" data-act="print">' + t('print') + '</button>') +
+    '<button class="btn" data-act="dlall" title="' + t('xxlAllT') + '">' + t('xxlAll').replace('{n}', pj.files.length) + '</button>' +
+    '<button class="btn" data-act="dl" data-v="xlsm">' + t('xlsm') + '</button><button class="btn" data-act="dl" data-v="csv">' + t('csv') + '</button>' + (IN_ARTIFACT ? '' : '<button class="btn" data-act="print">' + t('print') + '</button>') +
     '</div><p class="note" style="margin:6px 0 0">' + t('zipNote') + '</p></div></div>';
+  h += readyCheck(pj);
   var bad = pj.warnings.filter(function (w) { return level(w) === 'bad'; });
   if (bad.length) h += '<div class="warns">' + bad.map(function (x) { return '<div class="w bad"><span class="tag">' + t('errTag') + '</span><span>' + esc(x) + '</span></div>'; }).join('') + '</div>';
   var rows = '', curG = null, nr = 0;
@@ -3352,15 +3528,42 @@ function viewRes(pj) {
     if (g !== curG) { curG = g; rows += '<tr class="grp"><td colspan="9">' + esc(p.mat || (S.lang === 'lt' ? 'be medžiagos' : 'no material')) + ' · ' + E.num(p.T) + ' mm</td></tr>'; }
     rows += '<tr class="part' + (S.part === p.name ? ' on' : '') + '" data-act="part" data-v="' + esc(p.name) + '" tabindex="0"><td class="n">' + (++nr) + '</td><td><b>' + esc(p.short) + '</b><br><span class="unit">' + esc(p.name) + '</span></td><td class="n">' + p.cab + '</td>' +
       '<td class="n">' + fmt(p.L) + '</td><td class="n">' + fmt(p.W) + '</td><td class="n">' + E.num(p.T) + '</td><td class="n">' + p.qty + '</td><td class="mono">' + esc(X.edgeText(p.eb) || '—') + '</td><td>' +
-      ((p.progs || []).length ? p.progs.map(function (f, k) { return '<span class="prog' + (f.kind === 'rot' ? ' rot' : '') + '" title="' + esc(f.id) + '">' + (f.kind === 'rot' ? '↻ ' : '') + (k + 1) + 'OP</span>'; }).join('') : '<span class="prog none">' + t('noProg') + '</span>') + '</td></tr>';
+      ((p.progs || []).length ? p.progs.map(function (f, k) { return '<button type="button" class="prog dlp' + (f.kind === 'rot' ? ' rot' : '') + '" data-act="dlprog" data-v="' + esc(f.file) + '" title="' + esc(t('xxlOne') + ' ' + f.file) + '">⤓ ' + (f.kind === 'rot' ? '↻ ' : '') + (k + 1) + 'OP</button>'; }).join('') : '<span class="prog none">' + t('noProg') + '</span>') + '</td></tr>';
   });
   var table = '<div class="tablewrap"><table><thead><tr><th class="n">Nr</th><th>' + t('cDet') + '</th><th class="n">' + t('cCab') + '</th><th class="n">' + t('cL') + '</th><th class="n">' + t('cW') + '</th><th class="n">' + t('cT') + '</th><th class="n">' + t('cQ') + '</th><th>' + t('cEdge') + '</th><th>' + t('cProg') + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
   var hw = '<div class="card"><h3 style="margin:0 0 4px;font:600 20px var(--f-display)">' + t('hw') + '</h3><p class="note" style="margin:0 0 8px">' + t('hwNote') + '</p><div class="tablewrap"><table class="hwtable"><tbody>' +
     pj.hardware.map(function (x) { return '<tr><td>' + esc(x.item) + '</td><td class="n">' + x.qty + '</td><td>' + esc(x.unit) + '</td><td class="unit">' + (S.lang === 'lt' ? 'sp. ' : 'cab. ') + x.cabs.join(', ') + '</td></tr>'; }).join('') + '</tbody></table></div></div>';
   var other = pj.warnings.filter(function (w) { return level(w) !== 'bad'; });
   var wl = '<div class="card noprint"><h3 style="margin:0 0 8px;font:600 20px var(--f-display)">' + t('allWarn') + '</h3><div class="warns">' + (other.length ? dedupe(other).map(function (x) { var lv = level(x); return '<div class="w ' + lv + '"><span class="tag">' + t(lv === 'warn' ? 'warnTag' : 'infoTag') + '</span><span>' + esc(x) + '</span></div>'; }).join('') : '<span class="note">' + t('none') + '</span>') + '</div></div>';
-  h += '<div class="split"><div style="display:flex;flex-direction:column;gap:16px;min-width:0">' + table + hw + wl + '</div><aside class="pview">' + viewPart() + '</aside></div></div>';
+  var byCab = {}; pj.parts.forEach(function (p) { (p.progs || []).forEach(function (f, k) { (byCab[p.cab] = byCab[p.cab] || []).push({ f:f, k:k, p:p }); }); });
+  var plist = '<div class="card noprint" id="proglist"><div class="plhead"><h3 style="margin:0;font:600 20px var(--f-display)">' + t('xxlTitle') + ' <span class="unit">· ' + pj.files.length + '</span></h3>' +
+    '<button class="btn" data-act="dlall">' + t('xxlAll').replace('{n}', pj.files.length) + '</button></div><p class="note" style="margin:4px 0 10px">' + t('xxlLead') + '</p>' +
+    Object.keys(byCab).sort(function (a, b) { return a - b; }).map(function (cn) {
+      var cab = S.proj.cabinets[cn - 1] || {};
+      return '<div class="plcab"><div class="plct"><b>' + cn + ' · ' + esc(cab.name || typeName(cab)) + '</b><button class="btn ghost" data-act="dlcab" data-v="' + cn + '">' + t('xxlCab').replace('{n}', byCab[cn].length) + '</button></div>' +
+        byCab[cn].map(function (x) { return '<div class="plrow"><span class="plf mono">' + esc(x.f.file) + '</span><span class="unit">' + esc(x.p.short) + ' · ' + (x.f.kind === 'rot' ? '↻ ' + t('xxlRot') : (x.k + 1) + 'OP') + '</span>' +
+          '<button class="btn" data-act="dlprog" data-v="' + esc(x.f.file) + '" aria-label="' + esc(t('xxlOne') + ' ' + x.f.file) + '">⤓ .XXL</button></div>'; }).join('') + '</div>';
+    }).join('') + '</div>';
+  h += '<div class="split"><div style="display:flex;flex-direction:column;gap:16px;min-width:0">' + table + plist + hw + wl + '</div><aside class="pview">' + viewPart() + '</aside></div></div>';
   return h;
+}
+/* before it goes to the machine: what is missing, with a direct way to fix it */
+function readyCheck(pj) {
+  var items = [], cabs = S.proj.cabinets;
+  if (!String(S.proj.name || '').trim()) items.push(['bad', t('ckName'), '<button class="btn" data-act="fixname">' + t('ckFix') + '</button>']);
+  else items.push(['ok', t('ckNameOk').replace('{n}', projName())]);
+  var noMat = [], noEdge = [];
+  cabs.forEach(function (c, i) { if (needsMats(c)) noMat.push(i); if (!c.edge.carc && !c.dishwasher) noEdge.push(i); });
+  var nums = function (a) { return a.map(function (i) { return i + 1; }).join(', '); };
+  if (noMat.length) items.push(['bad', t('ckMat').replace('{c}', nums(noMat)), '<button class="btn" data-act="fixcab" data-i="' + noMat[0] + '" data-v="mats">' + t('ckFix') + '</button>']);
+  else items.push(['ok', t('ckMatOk')]);
+  if (noEdge.length) items.push(['warn', t('ckEdge').replace('{c}', nums(noEdge)), '<button class="btn ghost" data-act="fixcab" data-i="' + noEdge[0] + '" data-v="mats">' + t('ckFix') + '</button>']);
+  var errs = pj.warnings.filter(function (w) { return level(w) === 'bad'; }).length;
+  if (errs) items.push(['bad', t('ckErr').replace('{n}', errs)]);
+  items.push(['ok', t('ckProg').replace('{n}', pj.files.length).replace('{p}', pj.parts.length)]);
+  var badN = items.filter(function (x) { return x[0] === 'bad'; }).length;
+  return '<div class="card ready ' + (badN ? 'bad' : 'ok') + ' noprint"><div class="ready-h"><b>' + (badN ? t('ckTitleBad') : t('ckTitleOk')) + '</b></div><ul>' + items.map(function (x) {
+    return '<li class="' + x[0] + '"><span class="ic" aria-hidden="true">' + (x[0] === 'ok' ? '✓' : x[0] === 'warn' ? '!' : '✕') + '</span><span class="tx">' + x[1] + '</span>' + (x[2] || '') + '</li>'; }).join('') + '</ul></div>';
 }
 function stat(v, l) { return '<div class="stat"><b>' + v + '</b><span>' + l + '</span></div>'; }
 function findPanel(name) {
@@ -3379,7 +3582,8 @@ function viewPart() {
     '<div class="legend"><span><i style="border:1.5px solid #2448c9;background:#dfe6fb"></i>' + t('lgA') + '</span><span><i style="border:1.5px dashed #b4291f"></i>' + t('lgB') + '</span><span><i style="background:#1b211e"></i>' + t('lgT') + '</span><span><i style="background:#9a6a00;width:7px;height:7px"></i>' + t('lgM') + '</span><span><i style="border-radius:1px;background:#2f7d55;height:5px"></i>' + t('lgE') + '</span><span><i style="border-radius:0;background:#f2b705;height:4px"></i>' + t('lgEb') + '</span></div>' +
     '<div class="note" style="margin-top:6px;color:#5f6a64">' + esc(p.note) + '</div></div>' +
     (f && f.kind === 'rot' ? '<p class="note" style="margin:0">' + t('rotHint') + '</p>' : '') +
-    (f ? '<div class="ptabs">' + tabs + '<span class="unit">' + esc(f.file) + '</span><button class="btn ghost" data-act="copy" style="margin-left:auto">' + t('copy') + '</button></div><pre class="code" id="progtext">' + esc(f.text) + '</pre>' : '<div class="card empty">' + t('noProg') + '</div>');
+    (f ? '<div class="ptabs">' + tabs + '<span class="unit">' + esc(f.file) + '</span><span class="pdl"><button class="btn ghost" data-act="copy">' + t('copy') + '</button><button class="btn pri" data-act="dlprog" data-v="' + esc(f.file) + '">⤓ .XXL</button>' +
+      (pr.files.length > 1 ? '<button class="btn" data-act="dlpart" data-v="' + esc(p.name) + '">' + t('xxlPart').replace('{n}', pr.files.length) + '</button>' : '') + '</span></div><pre class="code" id="progtext">' + esc(f.text) + '</pre>' : '<div class="card empty">' + t('noProg') + '</div>');
 }
 /* panel as the operator sees it in 1OP: X to the right from the left end, Y up from the front edge */
 function panelSVG(p, up) {
@@ -3453,19 +3657,42 @@ function viewSet() {
 }
 
 /* ----------------------------------------------------------------- render: projects drawer */
-function viewDrawer() {
-  var list = store('dbKurejas.projects') || [];
-  return '<div class="overlay" data-act="closeDrawer"><div class="drawer" role="dialog" aria-label="' + t('prTitle') + '" data-stop="1"><div class="row" style="justify-content:space-between;align-items:center"><h2>' + t('prTitle') + '</h2><button class="btn ghost" data-act="closeDrawer">' + t('close') + '</button></div>' +
-    '<div class="row"><button class="btn pri" data-act="psave">' + t('prSave') + '</button><button class="btn" data-act="pnew">' + (S.confirm === 'new' ? t('newConfirm') : t('prNew')) + '</button></div>' +
-    '<p class="note" style="margin:0">' + t('prHint') + '</p><div class="plist">' + (list.length ? list.map(function (p, i) {
-      return '<div class="pitem"><span><b>' + esc(p.name || '—') + '</b><small>' + esc((p.saved || '').replace('T', ' ').slice(0, 16)) + ' · ' + (p.data.cabinets || []).length + ' ' + t('cabs').toLowerCase() + '</small></span><button class="btn" data-act="popen" data-i="' + i + '">' + t('prOpen') + '</button><button class="btn ghost danger" data-act="pdel" data-i="' + i + '" aria-label="' + t('del') + '">' + (S.confirm === 'pdel' + i ? t('delSure') : '✕') + '</button></div>';
-    }).join('') : '<span class="note">' + t('prNone') + '</span>') + '</div>' +
-    '<div class="card" style="margin-top:6px"><b>' + t('prImport') + '</b><p class="note" style="margin:4px 0 8px">' + t('prImportL') + '</p><input id="f-import" type="file" accept=".json,application/json" data-act-change="import"></div>' +
-    '<button class="btn" data-act="dl" data-v="json">' + t('json') + '</button></div></div>';
+/* ---- start screen: new project first, then the saved ones */
+function ago(iso) {
+  if (!iso) return '';
+  var d = new Date(iso), now = new Date(), min = Math.round((now - d) / 60000);
+  if (min < 1) return t('agoNow'); if (min < 60) return t('agoMin').replace('{n}', min);
+  var sameDay = d.toDateString() === now.toDateString(), pad = function (n) { return (n < 10 ? '0' : '') + n; };
+  var hm = pad(d.getHours()) + ':' + pad(d.getMinutes());
+  if (sameDay) return t('agoToday') + ' ' + hm;
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + hm;
+}
+function viewHome() {
+  var l = lib(), q = (S.homeQ || '').toLowerCase();
+  var shown = l.filter(function (r) { return !q || String(r.name || '').toLowerCase().indexOf(q) >= 0; });
+  var hero = '<section class="card hero"><div class="hero-t"><h2>＋ ' + t('prNew2') + '</h2><p class="note">' + t('npLead') + '</p></div>' +
+    '<div class="np"><label class="f grow" for="np-name"><span>' + t('npName') + '</span><input id="np-name" type="text" autocomplete="off" placeholder="' + t('npPh') + '" value="' + esc(S.npName || '') + '"></label>' +
+    '<button class="btn pri big" data-act="pcreate">' + t('npCreate') + ' →</button></div>' +
+    '<div class="hero-alt"><span class="unit">' + t('npOr') + '</span><button class="btn" data-act="pimport">⤒ ' + t('npImport') + '</button><button class="btn ghost" data-act="psample">' + t('npSample') + '</button>' +
+    '<input id="f-import" type="file" accept=".json,application/json" data-act-change="import" hidden></div></section>';
+  var list = '<section class="card plib"><div class="plib-h"><h2>' + t('prTitle') + ' <span class="cnt">' + l.length + '</span></h2>' +
+    (l.length > 5 ? '<input id="home-q" type="search" placeholder="' + t('prSearch') + '" value="' + esc(S.homeQ || '') + '" aria-label="' + t('prSearch') + '">' : '') + '</div>' +
+    (shown.length ? '<div class="plib-list">' + shown.map(function (r) {
+      var isCur = S.proj && S.proj.id === r.id, del = S.confirm === 'pdel' + r.id;
+      return '<div class="prow' + (isCur ? ' cur' : '') + '"><button class="prow-main" data-act="popen" data-v="' + esc(r.id) + '"><b>' + esc(r.name || t('noName')) + (isCur ? ' <span class="badge ok">' + t('prOpenNow') + '</span>' : '') + '</b>' +
+        '<small>' + r.n + ' ' + t('cabsN') + ' · ' + t('prUpdated') + ' ' + esc(ago(r.updated)) + '</small></button>' +
+        '<span class="prow-act"><button class="btn ghost" data-act="pdup" data-v="' + esc(r.id) + '" title="' + t('prDupT') + '">' + t('prDup') + '</button>' +
+        '<button class="btn ghost" data-act="pjson" data-v="' + esc(r.id) + '" title="' + t('prJsonT') + '">.json</button>' +
+        '<button class="btn ghost danger" data-act="pdel" data-v="' + esc(r.id) + '">' + (del ? t('delSure') : t('del')) + '</button></span>' +
+        '<button class="btn pri prow-open" data-act="popen" data-v="' + esc(r.id) + '">' + t('prOpen') + '</button></div>';
+    }).join('') + '</div>' : '<p class="note empty">' + (l.length ? t('prNoMatch') : t('prNone2')) + '</p>') +
+    '<p class="note" style="margin:10px 0 0">' + t('prHint2') + '</p></section>';
+  return '<div class="home">' + hero + list + '</div>';
 }
 
 /* ----------------------------------------------------------------- live refresh while typing (no full re-render → focus stays) */
 function refreshLive() {
+  if (S.home) return;
   if (S.tab !== 'cab' || S.picking || !cur()) { if (S.tab === 'set') return; return; }
   var inf = buildOne(S.sel); S._info[S.sel] = inf;
   var sk = document.getElementById('sketch'); if (sk) sk.innerHTML = sketchOf(cur());
@@ -3544,9 +3771,13 @@ function assign(bind, raw) {
   setPath(tg.obj, tg.path, v);
 }
 app.addEventListener('input', function (e) {
+  if (e.target.id === 'np-name') { S.npName = e.target.value; e.target.removeAttribute('aria-invalid'); return; }
+  if (e.target.id === 'home-q') { S.homeQ = e.target.value; var pos = e.target.selectionStart; render(); var q = document.getElementById('home-q'); if (q) { q.focus(); try { q.setSelectionRange(pos, pos); } catch (er) {} } return; }
   var el = e.target, bind = el.getAttribute('data-bind'); if (!bind || el.type === 'checkbox' || el.tagName === 'SELECT') return;
   if (el.getAttribute('data-lines')) { setPath(S.settings, bind.slice(2), el.value.split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean)); store('dbKurejas.settings', S.settings); return; }
   assign(bind, (el.getAttribute('data-num') && bind.indexOf('s.') === 0) ? num(el.value) : el.value);
+  if (el.required) { if (el.value.trim()) el.removeAttribute('aria-invalid'); else el.setAttribute('aria-invalid', 'true'); }
+  if (bind === 'p.name') { if (el.value.trim()) el.removeAttribute('aria-invalid'); else el.setAttribute('aria-invalid', 'true'); }
   if (bind === 'c.name') { var b = document.querySelector('.cab.on b'); if (b) b.firstChild.textContent = el.value || typeName(cur()); }
   if (/^c\.(W|H|D|dishWidth)$/.test(bind)) { var sm = document.querySelector('.cab.on small'); var c = cur(); if (sm) sm.textContent = fmt(c.dishwasher ? c.dishWidth : c.W) + '×' + fmt(c.H) + '×' + fmt(c.D); }
   after(bind, false);
@@ -3571,7 +3802,7 @@ app.addEventListener('keydown', function (e) {
     e.preventDefault();
   }
   if ((e.key === 'Enter' || e.key === ' ') && e.target.getAttribute && e.target.getAttribute('data-act') === 'part') { e.preventDefault(); e.target.click(); }
-  if (e.key === 'Escape' && S.drawer) { S.drawer = false; render(); }
+  if (e.key === 'Enter' && e.target.id === 'np-name') { e.preventDefault(); var b = document.querySelector('[data-act=pcreate]'); if (b) b.click(); return; }
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z') && S.tab === 'cab' && !/INPUT|SELECT|TEXTAREA/.test(e.target.tagName) && undoJoints()) e.preventDefault();
 });
 app.addEventListener('click', function (e) {
@@ -3603,25 +3834,32 @@ app.addEventListener('click', function (e) {
     case 'copy': { var txt = (document.getElementById('progtext') || {}).textContent || ''; var ok = function () { toast(t('copied')); }; var fb = function () { var r = document.createRange(); r.selectNodeContents(document.getElementById('progtext')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); };
       try { navigator.clipboard.writeText(txt).then(ok, fb); } catch (er) { fb(); } return; }
     case 'dl': download(v); return;
+    case 'dlprog': e.stopPropagation(); saveProgs([v]); return;
+    case 'dlpart': saveProgs(buildProjectAll().parts.filter(function (p) { return p.name === v; }).reduce(function (a, p) { return a.concat((p.progs || []).map(function (f) { return f.file; })); }, [])); return;
+    case 'dlcab': saveProgs(buildProjectAll().parts.filter(function (p) { return String(p.cab) === v; }).reduce(function (a, p) { return a.concat((p.progs || []).map(function (f) { return f.file; })); }, [])); return;
+    case 'dlall': saveProgs(buildProjectAll().files.map(function (f) { return f.name; })); return;
     case 'tplreset': S.tplB64 = null; S.tplName = ''; try { localStorage.removeItem('dbKurejas.reportTpl'); } catch (e) {} break;
     case 'print': try { window.print(); } catch (er) {} return;
     case 'resetrules': S.settings.rules = clone(RULE_DEF); store('dbKurejas.settings', S.settings); applyRules(); break;
-    case 'drawer': S.drawer = true; break;
-    case 'closeDrawer': S.drawer = false; break;
-    case 'psave': saveProject(); break;
-    case 'pnew': if (S.confirm !== 'new') { S.confirm = 'new'; break; } S.confirm = null; S.proj = { app:'db-kurejas', v:1, id:uid(), name:'', cabinets:[] }; S.sel = 0; S.picking = true; S.tab = 'cab'; S.drawer = false; save(); break;
-    case 'popen': { var l = store('dbKurejas.projects') || []; if (l[i]) { S.proj = clone(l[i].data); S.proj.cabinets = S.proj.cabinets.map(normCab); S.sel = 0; S.part = null; S.drawer = false; S.tab = 'cab'; save(); } break; }
-    case 'pdel': { if (S.confirm !== 'pdel' + i) { S.confirm = 'pdel' + i; break; } S.confirm = null; var l2 = store('dbKurejas.projects') || []; l2.splice(i, 1); store('dbKurejas.projects', l2); break; }
+    case 'goto': gotoStep(v); return;
+    case 'fixcab': S.home = false; S.tab = 'cab'; S.sel = i; S.picking = false; render(); setTimeout(function () { gotoStep('st-' + (v || 'mats')); }, 30); return;
+    case 'fixname': { var pn = document.getElementById('projname'); if (pn) { pn.focus(); pn.scrollIntoView({ block:'center' }); } return; }
+    case 'home': if (S.proj) { clearTimeout(libTimer); libSave(); } S.home = true; S.confirm = null; window.scrollTo(0, 0); break;
+    case 'pcreate': { var nm = ((document.getElementById('np-name') || {}).value || '').trim();
+      if (!nm) { toast(t('npNeed'), true); var nf = document.getElementById('np-name'); if (nf) { nf.focus(); nf.setAttribute('aria-invalid', 'true'); } return; }
+      S.npName = ''; newProject(nm); toast(t('npDone').replace('{n}', nm)); break; }
+    case 'pimport': { var fi = document.getElementById('f-import'); if (fi) fi.click(); return; }
+    case 'psample': { var sp = sample(); sp.id = uid(); openProject(sp); libSave(); break; }
+    case 'pdup': { var src = lib().filter(function (r) { return r.id === v; })[0]; if (!src) break; var cp2 = clone(src.data); cp2.id = uid(); cp2.name = (cp2.name || '') + ' ' + t('copySfx'); cp2.updated = new Date().toISOString();
+      libSet([libRec(cp2)].concat(lib())); toast(t('prDupDone')); break; }
+    case 'pjson': { var rj = lib().filter(function (r) { return r.id === v; })[0]; if (rj) saveFile(E.safeName(rj.name || 'PROJEKTAS') + '_projektas.json', JSON.stringify(rj.data, null, 1)); return; }
+    case 'pnew': if (S.proj) { clearTimeout(libTimer); libSave(); } S.home = true; S.focusNew = true; S.confirm = null; window.scrollTo(0, 0); break;
+    case 'popen': { var rec = lib().filter(function (r) { return r.id === v; })[0]; if (rec) { if (S.proj && S.proj.id !== rec.id) { clearTimeout(libTimer); libSave(); } openProject(rec.data); } break; }
+    case 'pdel': { if (S.confirm !== 'pdel' + v) { S.confirm = 'pdel' + v; break; } S.confirm = null; libSet(lib().filter(function (r) { return r.id !== v; }));
+      if (S.proj && S.proj.id === v) { S.proj = null; try { localStorage.removeItem('dbKurejas.current'); } catch (er) {} } toast(t('prDeleted')); break; }
   }
   render();
 });
-function saveProject() {
-  var l = store('dbKurejas.projects') || [], idx = -1;
-  l.forEach(function (p, i) { if (p.data && p.data.id === S.proj.id) idx = i; });
-  var rec = { name:S.proj.name || '—', saved:new Date().toISOString(), data:clone(S.proj) };
-  if (idx >= 0) l[idx] = rec; else l.unshift(rec);
-  store('dbKurejas.projects', l); toast(t('saved'));
-}
 var tTimer;
 function toast(msg, err) { var d = document.getElementById('toast'); if (!d) { d = document.createElement('div'); d.id = 'toast'; document.body.appendChild(d); } d.className = 'toast' + (err ? ' err' : ''); d.textContent = msg; d.hidden = false; clearTimeout(tTimer); tTimer = setTimeout(function () { d.hidden = true; }, 2600); }
 
@@ -3635,7 +3873,8 @@ function importFile(file) {
       if (d && d.app === 'db-kurejas' && Array.isArray(d.cabinets)) { p = d; p.id = p.id || uid(); }
       else if (d && Array.isArray(d.cabinets)) p = fromOffer(d);
       else throw new Error('format');
-      p.cabinets = p.cabinets.map(normCab); S.proj = p; S.sel = 0; S.part = null; S.drawer = false; S.tab = 'cab'; S.picking = false; save(); render();
+      if (lib().some(function (r) { return r.id === p.id; })) p.id = uid();   // importing the same file twice gives two projects, not an overwrite
+      openProject(p); save(); clearTimeout(libTimer); libSave(); render();
       toast(t('imported') + p.cabinets.length);
     } catch (er) { toast(t('badFile'), true); }
   };
@@ -3691,8 +3930,16 @@ function download(kind) {
   else { name = base + '_projektas.json'; data = JSON.stringify(S.proj, null, 1); }
   saveFile(name, data);
 }
-function saveFile(name, data) {
-  var blob = data instanceof Uint8Array ? new Blob([data]) : new Blob([data], { type:'text/plain;charset=utf-8' });
+/* separate .XXL files (no ZIP): one download each, spaced so the browser lets them all through */
+function saveProgs(names) {
+  var pj = buildProjectAll(), map = {}; pj.files.forEach(function (f) { map[f.name] = f.text; });
+  names = names.filter(function (n) { return map[n] != null; });
+  if (!names.length) { toast(t('noProg'), true); return; }
+  if (names.length > 1) toast(t('xxlSaving').replace('{n}', names.length));
+  names.forEach(function (n, i) { setTimeout(function () { saveFile(n, map[n], 'application/octet-stream'); }, i * (IN_ARTIFACT ? 450 : 300)); });
+}
+function saveFile(name, data, type) {
+  var blob = data instanceof Uint8Array ? new Blob([data]) : new Blob([data], { type:type || 'text/plain;charset=utf-8' });
   if (IN_ARTIFACT) {
     window.claude.use('downloads').then(function (dl) {
       if (!dl) { toast(t('dlFail') + 'unavailable', true); return; }

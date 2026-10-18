@@ -6,7 +6,7 @@ async def main():
         b = await p.chromium.launch()
         pg = await b.new_page(viewport={'width':1440,'height':1000})
         errs=[]; pg.on('pageerror', lambda e: errs.append(str(e))); pg.on('console', lambda m: errs.append('console:'+m.text) if m.type=='error' else None)
-        await pg.goto('file:///home/claude/cabcreator/dist/index.html'); await pg.wait_for_timeout(800)
+        await pg.goto('file:///home/claude/cabcreator/dist/index.html'); await pg.wait_for_timeout(800); await pg.evaluate("()=>{const b=document.querySelector('[data-act=psample]'); if(b) b.click()}"); await pg.wait_for_timeout(250)
         await pg.screenshot(path=OUT+'cab1.png', full_page=True)
         # select cabinet 2 (drawer+doors) and toggle things
         await pg.click('.cab >> nth=1'); await pg.wait_for_timeout(200)
@@ -28,7 +28,7 @@ async def main():
         # mobile
         m = await b.new_page(viewport={'width':390,'height':844})
         m.on('pageerror', lambda e: errs.append('m:'+str(e)))
-        await m.goto('file:///home/claude/cabcreator/dist/index.html'); await m.wait_for_timeout(600)
+        await m.goto('file:///home/claude/cabcreator/dist/index.html'); await m.wait_for_timeout(600); await m.evaluate("()=>{const b=document.querySelector('[data-act=psample]'); if(b) b.click()}"); await m.wait_for_timeout(250)
         sw = await m.evaluate("[document.documentElement.scrollWidth, innerWidth]"); print('mobile scrollWidth', sw)
         await m.screenshot(path=OUT+'mobile.png', full_page=True)
         await m.emulate_media(color_scheme='dark'); await m.wait_for_timeout(100)

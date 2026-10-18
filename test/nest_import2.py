@@ -8,7 +8,7 @@ async def main():
         await a.add_init_script("try{localStorage.clear()}catch(e){}")
         jz=open('/home/claude/cabcreator/node_modules/jszip/dist/jszip.min.js').read()
         await a.route('**/jszip.min.js', lambda route: route.fulfill(status=200, content_type='application/javascript', body=jz))
-        await a.goto('file:///home/claude/cabcreator/dist/index.html'); await a.wait_for_timeout(1500)
+        await a.goto('file:///home/claude/cabcreator/dist/index.html'); await a.wait_for_timeout(1500); await a.evaluate("()=>{const b=document.querySelector('[data-act=psample]'); if(b) b.click()}"); await a.wait_for_timeout(250)
         print('JSZip loaded:', await a.evaluate("!!window.JSZip"))
         b64 = await a.evaluate("""async () => { const k=window.__dbk; const pj=k.buildProjectAll(); const u=await k.xlsmBytes(pj);
             let s=''; for (let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000)); return btoa(s); }""")

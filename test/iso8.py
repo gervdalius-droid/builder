@@ -6,7 +6,7 @@ async def main():
         b = await p.chromium.launch(); errs=[]
         pg = await b.new_page(viewport={'width':1440,'height':1000}); pg.on('pageerror', lambda e: errs.append(str(e)))
         await pg.add_init_script("try{localStorage.clear()}catch(e){}")
-        await pg.goto('file:///home/claude/cabcreator/dist/index.html'); await pg.wait_for_timeout(500)
+        await pg.goto('file:///home/claude/cabcreator/dist/index.html'); await pg.wait_for_timeout(500); await pg.evaluate("()=>{const b=document.querySelector('[data-act=psample]'); if(b) b.click()}"); await pg.wait_for_timeout(250)
         await pg.click('.cab >> nth=1'); await pg.wait_for_timeout(200)
         await pg.evaluate("()=>{document.querySelector('.top').style.position='static'}")
         await pg.locator('.choices').screenshot(path=OUT+'ph_choices.png')
@@ -21,7 +21,7 @@ async def main():
         ctx = await b.new_context(viewport={'width':390,'height':844}, color_scheme='dark', is_mobile=True, has_touch=True)
         pm = await ctx.new_page(); pm.on('pageerror', lambda e: errs.append(str(e)))
         await pm.add_init_script("try{localStorage.clear()}catch(e){}")
-        await pm.goto('file:///home/claude/cabcreator/dist/index.html'); await pm.wait_for_timeout(500)
+        await pm.goto('file:///home/claude/cabcreator/dist/index.html'); await pm.wait_for_timeout(500); await pm.evaluate("()=>{const b=document.querySelector('[data-act=psample]'); if(b) b.click()}"); await pm.wait_for_timeout(250)
         await pm.locator('.cab >> nth=0').tap(); await pm.wait_for_timeout(200)
         await pm.locator('.iso-bar').screenshot(path=OUT+'ph_mob.png')
         print('hscroll', await pm.evaluate("()=>document.documentElement.scrollWidth>innerWidth"))

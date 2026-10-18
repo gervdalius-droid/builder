@@ -5,10 +5,13 @@ Dėdės Baldai workshop tool: enter a cabinet the way the offer app does (size, 
 **Open it:** `index.html` — one self-contained page, runs in any browser (GitHub Pages serves it from the repo root).
 
 ## What it does
+- Start screen: **＋ Naujas projektas** (name → first cabinet), import from the offer app, an example, and every project saved automatically (open, copy, .json backup, delete).
+- Cabinet editor with a step bar (Matmenys → Papildomos) that marks what still needs filling in; a „Paruošta CNC“ check before downloading with Fix links.
 - Cabinet settings as in the offer app (gervdalius-droid.github.io/offer), with the same sketch; offer-app JSON exports can be imported.
 - Construction: confirmats / cams + dowels / dowels per joint, top rails (surišimo juostos), back on or inside, fixed shelves, oven supports.
 - **Jungtys 3D**: pick up a connector card (with a cutaway picture of the konfirmatas / ekscentrikas / kaištis) and drop it on a joint, move connectors along a joint, drag them off to remove; left and right sides together or separately; full-screen mode for easier dragging.
 - Extra operations: leg marks, Blum TANDEM / TANDEMBOX runner marks, TANDEMBOX front fixing, hinge cups and plates, shelf-support holes.
+- Separate downloads: every `.XXL` program on its own (from the part list, the part view, per cabinet or all at once — no ZIP needed), the `.xlsm` and `.csv`.
 - Output (ZIP): `.XXL` programs for the SCM Startech CN Plus (5 mm long-edge bores as a separate turned program), the ReportLists `.xlsm` filled exactly like the SolidWorks macro DB_PartList v18 (same template, labels, QR codes, pictures — imports into the nesting app), `.csv` and the project `.json`.
 
 ## Source

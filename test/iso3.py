@@ -4,7 +4,7 @@ OUT='/home/claude/cabcreator/scratch/'
 JS_SEAM="""(k)=>{const st=DBIso._state().C; const svg=document.querySelector('.iso-stage svg').getBoundingClientRect();
   const s=st.seams.find(s=>s.s.key===k.key&&s.s.side===k.side); return {a:[svg.left+s.a[0],svg.top+s.a[1]], b:[svg.left+s.b[0],svg.top+s.b[1]], w:s.s.w};}"""
 async def run(pg, tag):
-    await pg.goto('file:///home/claude/cabcreator/dist/index.html'); await pg.wait_for_timeout(600)
+    await pg.goto('file:///home/claude/cabcreator/dist/index.html'); await pg.wait_for_timeout(600); await pg.evaluate("()=>{const b=document.querySelector('[data-act=psample]'); if(b) b.click()}"); await pg.wait_for_timeout(250)
     await pg.click('.cab >> nth=2'); await pg.wait_for_timeout(200)
     await pg.locator('.iso3dwrap').scroll_into_view_if_needed()
     s = await pg.evaluate(JS_SEAM, {'key':'back','side':'R'})

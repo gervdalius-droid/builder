@@ -44,7 +44,7 @@ function buildProject(col, opts) {
       parts.push({ name:p.name, short:p.short, cab:c.nr, role:p.role, mat:p.mat || '', L:p.L, W:p.W, T:p.T, qty:1,
                    eb:{ eb1:p.eb.y0 || '', eb2:p.eb.y1 || '', eb3:p.eb.x0 || '', eb4:p.eb.x1 || '' },
                    op1:pr.files[0] ? pr.files[0].id : '', op2:pr.files[1] ? pr.files[1].id : '',
-                   progs:pr.files.map(function (f) { return { id:f.id, kind:f.kind }; }), src:'cab',
+                   progs:pr.files.map(function (f) { return { id:f.id, kind:f.kind, file:f.file }; }), src:'cab',
                    pic:{ holes:p.holes.map(function (h) { return { x:h.x, y:h.y, d:h.d, face:h.face, through:!!h.through }; }),
                          edges:p.edges.map(function (e) { return { edge:e.edge, pos:e.pos, d:e.d, depth:e.depth }; }) } });
     });

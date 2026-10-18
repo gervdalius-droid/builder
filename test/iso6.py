@@ -11,7 +11,7 @@ async def main():
         b = await p.chromium.launch(); errs=[]
         pg = await b.new_page(viewport={'width':1440,'height':1000}); pg.on('pageerror', lambda e: errs.append(str(e)))
         await pg.add_init_script("try{localStorage.clear()}catch(e){}")
-        await pg.goto('file:///home/claude/cabcreator/dist/index.html'); await pg.wait_for_timeout(500)
+        await pg.goto('file:///home/claude/cabcreator/dist/index.html'); await pg.wait_for_timeout(500); await pg.evaluate("()=>{const b=document.querySelector('[data-act=psample]'); if(b) b.click()}"); await pg.wait_for_timeout(250)
         await pg.click('.cab >> nth=0'); await pg.wait_for_timeout(200)
         await pg.locator('.iso3dwrap').scroll_into_view_if_needed(); await pg.evaluate('()=>window.scrollBy(0,-90)')
         await pg.click('[data-iso=mode][data-v=sep]'); await pg.wait_for_timeout(150)

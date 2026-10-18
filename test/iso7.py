@@ -10,7 +10,7 @@ async def main():
         b = await p.chromium.launch(); errs=[]
         pg = await b.new_page(viewport={'width':1440,'height':1000}); pg.on('pageerror', lambda e: errs.append(str(e)))
         await pg.add_init_script("try{localStorage.clear()}catch(e){}")
-        await pg.goto('file:///home/claude/cabcreator/dist/index.html'); await pg.wait_for_timeout(500)
+        await pg.goto('file:///home/claude/cabcreator/dist/index.html'); await pg.wait_for_timeout(500); await pg.evaluate("()=>{const b=document.querySelector('[data-act=psample]'); if(b) b.click()}"); await pg.wait_for_timeout(250)
         await pg.click('.cab >> nth=1'); await pg.wait_for_timeout(200)
         await pg.locator('.iso3dwrap').scroll_into_view_if_needed(); await pg.evaluate('()=>window.scrollBy(0,-90)')
         chip = await pg.locator('[data-chip=dowel]').bounding_box(); st = await pg.locator('.iso-stage').bounding_box()
@@ -32,7 +32,7 @@ async def main():
         ctx = await b.new_context(viewport={'width':390,'height':844}, color_scheme='dark', has_touch=True, is_mobile=True)
         pm = await ctx.new_page(); pm.on('pageerror', lambda e: errs.append(str(e)))
         await pm.add_init_script("try{localStorage.clear()}catch(e){}")
-        await pm.goto('file:///home/claude/cabcreator/dist/index.html'); await pm.wait_for_timeout(500)
+        await pm.goto('file:///home/claude/cabcreator/dist/index.html'); await pm.wait_for_timeout(500); await pm.evaluate("()=>{const b=document.querySelector('[data-act=psample]'); if(b) b.click()}"); await pm.wait_for_timeout(250)
         await pm.locator('.cab >> nth=0').tap(); await pm.wait_for_timeout(200)
         await pm.locator('.iso3dwrap').scroll_into_view_if_needed()
         await pm.screenshot(path=OUT+'ux_mob.png')

@@ -11,7 +11,7 @@ async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch(); a = await b.new_page(viewport={'width':1300,'height':900}); errs=[]
         a.on('pageerror', lambda e: errs.append(str(e)))
-        await a.goto('file:///home/claude/cabcreator/dist/index.html'); await a.wait_for_timeout(400)
+        await a.goto('file:///home/claude/cabcreator/dist/index.html'); await a.wait_for_timeout(400); await a.evaluate("()=>{const b=document.querySelector('[data-act=psample]'); if(b) b.click()}"); await a.wait_for_timeout(250)
         await a.click('[data-act=drawer]'); await a.set_input_files('#f-import','/home/claude/cabcreator/scratch/offer_export.json'); await a.wait_for_timeout(500)
         info = await a.evaluate("""() => { const k=window.__dbk, S=k.S; const pj=k.buildProjectAll();
           const u=k.zipAll(pj); let s=''; for (let i=0;i<u.length;i++) s+=String.fromCharCode(u[i]);
@@ -19,7 +19,7 @@ async def main():
         open('/home/claude/cabcreator/scratch/all.zip','wb').write(base64.b64decode(info.pop('zip')))
         print(json.dumps(info, ensure_ascii=False, indent=0)[:2500]); print('errors', errs)
         await a.click('.cab >> nth=1'); await a.wait_for_timeout(200); await a.screenshot(path='/home/claude/cabcreator/scratch/offerimp.png')
-        m = await b.new_page(viewport={'width':390,'height':844}); await m.goto('file:///home/claude/cabcreator/dist/index.html'); await m.wait_for_timeout(400)
+        m = await b.new_page(viewport={'width':390,'height':844}); await m.goto('file:///home/claude/cabcreator/dist/index.html'); await m.wait_for_timeout(400); await m.evaluate("()=>{const b=document.querySelector('[data-act=psample]'); if(b) b.click()}"); await m.wait_for_timeout(250)
         print('mobile', await m.evaluate("[document.documentElement.scrollWidth, innerWidth]"))
         await m.click('[data-act=tab][data-v=res]'); await m.wait_for_timeout(200); print('mobile res', await m.evaluate("[document.documentElement.scrollWidth, innerWidth]"))
         await m.click('[data-act=tab][data-v=set]'); await m.wait_for_timeout(200); print('mobile set', await m.evaluate("[document.documentElement.scrollWidth, innerWidth]"))
