@@ -194,7 +194,7 @@ function frontCab(c, i, it, bad, act) {
   fronts(i).forEach(function (f) {
     var fx = x0 + f.x0 * k, fy = fY(z0 + f.z1), fw = (f.x1 - f.x0) * k, fh = (f.z1 - f.z0) * k;
     s += '<rect class="rm-front" x="' + fx.toFixed(1) + '" y="' + fy.toFixed(1) + '" width="' + fw.toFixed(1) + '" height="' + fh.toFixed(1) + '"/>';
-    if (f.door) { var hx = f.left ? fx : fx + fw, ox = f.left ? fx + fw : fx;   // opening lines meet at the hinge side
+    if (f.door) { var hx = f.left ? fx + fw : fx, ox = f.left ? fx : fx + fw;   // opening lines meet on the handle side (opposite the hinges): a pair hinged outside points to the middle
       s += '<path class="rm-open" d="M' + ox.toFixed(1) + ' ' + fy.toFixed(1) + ' L' + hx.toFixed(1) + ' ' + (fy + fh / 2).toFixed(1) + ' L' + ox.toFixed(1) + ' ' + (fy + fh).toFixed(1) + '"/>'; }
     else if (fw > 8) s += '<line class="rm-handle" x1="' + (fx + fw * 0.35).toFixed(1) + '" y1="' + (fy + Math.min(fh * 0.22, 40 * k + 3)).toFixed(1) + '" x2="' + (fx + fw * 0.65).toFixed(1) + '" y2="' + (fy + Math.min(fh * 0.22, 40 * k + 3)).toFixed(1) + '"/>';
   });
