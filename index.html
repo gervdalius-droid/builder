@@ -22,19 +22,24 @@
   --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
   --r:8px;
+  --k-drawers:#2f5bd6; --k-doors:#1f8a55; --k-open:#9a6b2f; --k-oven:#c9531d; --x-ink:#c2382c; --x-bg:#fdeceb; --x-line:#f5c6c1;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#121614; --panel:#1b201d; --sunk:#161a18; --ink:#e4e9e5; --muted:#9aa59f; --line:#2c332f; --line2:#3a433e;
   --accent:#7d9bff; --accent-ink:#0d1330; --accent-soft:#232c4a;
   --warn:#f2c94c; --warn-bg:#3a3014; --warn-line:#7a6320;
   --bad:#ff8a7e; --bad-bg:#43211e; --ok:#6fd49c; --ok-bg:#163526; --info:#9cc0e0; --info-bg:#1b2a38;
-  --paper:#eef0ec; --paper-line:#c9cec8; color-scheme:dark }}
+  --paper:#eef0ec; --paper-line:#c9cec8; color-scheme:dark;
+  --k-drawers:#86a2ff; --k-doors:#6fd49c; --k-open:#d9a76a; --k-oven:#ff9d6b; --x-ink:#ff8f84; --x-bg:#3a1f1c; --x-line:#6b2f29;
+}}
 :root[data-theme="dark"]{
   --bg:#121614; --panel:#1b201d; --sunk:#161a18; --ink:#e4e9e5; --muted:#9aa59f; --line:#2c332f; --line2:#3a433e;
   --accent:#7d9bff; --accent-ink:#0d1330; --accent-soft:#232c4a;
   --warn:#f2c94c; --warn-bg:#3a3014; --warn-line:#7a6320;
   --bad:#ff8a7e; --bad-bg:#43211e; --ok:#6fd49c; --ok-bg:#163526; --info:#9cc0e0; --info-bg:#1b2a38;
-  --paper:#eef0ec; --paper-line:#c9cec8; color-scheme:dark }
+  --paper:#eef0ec; --paper-line:#c9cec8; color-scheme:dark;
+  --k-drawers:#86a2ff; --k-doors:#6fd49c; --k-open:#d9a76a; --k-oven:#ff9d6b; --x-ink:#ff8f84; --x-bg:#3a1f1c; --x-line:#6b2f29;
+}
 
 *{box-sizing:border-box}
 html,body{background:var(--bg)}
@@ -742,6 +747,94 @@ button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(
 .colblk .backsel .seg{flex-wrap:nowrap}
 .colblk .backsel .seg button{padding:5px 7px;font-size:12.5px;white-space:nowrap}
 
+/* ---- sections: kinds, column map, remove buttons */
+.k-drawers{--k:var(--k-drawers)} .k-doors{--k:var(--k-doors)} .k-open{--k:var(--k-open)} .k-oven{--k:var(--k-oven)}
+.sec{border-left:4px solid var(--k,var(--line2));background:var(--panel);box-shadow:0 1px 0 rgba(0,0,0,.03)}
+.sec .kind{color:var(--k,var(--ink))}
+.sec .sh{padding-bottom:8px;border-bottom:1px dashed var(--line)}
+.sec .row{gap:10px 14px;align-items:flex-end}
+.sec .tools{gap:6px}
+.sec .tools button{width:32px;height:30px;display:grid;place-items:center}
+.sec .tools button:disabled{opacity:.35;cursor:default}
+.sec .tools .xbtn{margin-top:6px}
+.xbtn{display:inline-grid;place-items:center;min-width:30px;height:30px;padding:0 8px;border:1px solid var(--x-line)!important;background:var(--x-bg)!important;color:var(--x-ink)!important;border-radius:6px;cursor:pointer;font-weight:700;line-height:1}
+.xbtn:hover{background:var(--x-ink)!important;color:#fff!important;border-color:var(--x-ink)!important}
+.xbtn:focus-visible{outline:2px solid var(--x-ink);outline-offset:2px}
+.addk{display:inline-flex;align-items:center;gap:6px}
+.addk .kdot{width:9px;height:9px;border-radius:2px;background:var(--k);flex:none}
+.addk:hover{border-color:var(--k)}
+.toast{display:flex;align-items:center;gap:14px}
+.toast-act{background:none;border:1px solid currentColor;color:inherit;border-radius:5px;padding:4px 10px;font-weight:700;cursor:pointer}
+.toast-act:hover{background:var(--panel);color:var(--ink)}
+.colmap{display:flex;gap:0;padding:8px;border:1px solid var(--line);border-radius:var(--r);background:var(--sunk);min-width:0}
+.cm-col{appearance:none;display:flex;flex-direction:column;gap:5px;min-width:0;padding:6px;margin:0;border:2px solid transparent;border-radius:7px;background:none;cursor:pointer;text-align:left;color:var(--ink)}
+.cm-col+.cm-col{position:relative}
+.cm-col+.cm-col::before{content:"";position:absolute;left:-2px;top:28px;bottom:30px;width:3px;background:var(--line2);border-radius:2px}
+.cm-col:hover{background:var(--panel)}
+.cm-col.on{border-color:var(--accent);background:var(--panel);box-shadow:0 2px 10px rgba(36,72,201,.12)}
+.cm-h{display:flex;justify-content:space-between;gap:6px;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden}
+.cm-h b{font:600 15px/1.1 var(--f-display);color:var(--ink);overflow:hidden;text-overflow:ellipsis}
+.cm-h span{font-family:var(--f-mono)}
+.cm-col.on .cm-h b{color:var(--accent)}
+.cm-body{display:flex;flex-direction:column-reverse;gap:3px;height:132px;padding:3px;border-radius:5px;border:1px solid var(--line2);background:var(--panel)}
+.cm-col.over .cm-body{border-color:var(--bad);box-shadow:inset 0 0 0 1px var(--bad)}
+.cm-s{position:relative;display:flex;align-items:center;justify-content:center;min-height:14px;overflow:hidden;border-radius:3px;border:1px solid var(--k);background:color-mix(in srgb,var(--k) 16%,var(--panel))}
+.cm-s em{font:600 11.5px/1.1 var(--f-body);font-style:normal;color:var(--k);padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative}
+.cm-lines{position:absolute;inset:0;background:repeating-linear-gradient(to bottom,transparent 0,transparent calc(100%/var(--n) - 1px),var(--k) calc(100%/var(--n) - 1px),var(--k) calc(100%/var(--n)));opacity:.55}
+.cm-gap{min-height:0}
+.cm-empty{display:grid;place-items:center;font-size:12px;color:var(--muted);border:1px dashed var(--line2);border-radius:3px}
+.cm-back{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cm-back i{width:14px;height:10px;border-radius:2px;flex:none;border:1px dashed var(--line2)}
+.cm-col.b-hdf .cm-back i{border:1px solid #b08a5a;background:repeating-linear-gradient(45deg,#e8d5b5 0 2px,#cfb084 2px 4px)}
+.cm-col.b-solid .cm-back i{border:1px solid var(--ink);background:var(--line2)}
+.cm-col.b-solid .cm-back,.cm-col.b-hdf .cm-back{color:var(--ink);font-weight:600}
+.cmhint{margin:6px 0 10px}
+.colgrid.colsone{grid-template-columns:minmax(0,1fr)}
+.colgrid.colsone .colblk{border:1px solid var(--accent);background:var(--panel);padding:12px}
+.colgrid.colsone .colh{justify-content:flex-start;align-items:baseline}
+.colgrid.colsone .colh b{color:var(--accent)}
+.colgrid.colsone .colh .unit:last-child{margin-left:auto}
+@media (max-width:560px){ .cm-body{height:104px} .cm-h span{display:none} .cm-s em{font-size:10.5px} }
+.toast[hidden]{display:none}
+.cm-col.b-none .cm-body{border-style:dashed}
+.cm-col.b-hdf .cm-body{background:repeating-linear-gradient(45deg,color-mix(in srgb,#c9a46c 14%,var(--panel)) 0 4px,color-mix(in srgb,#c9a46c 26%,var(--panel)) 4px 8px)}
+.cm-col.b-solid .cm-body{background:color-mix(in srgb,var(--ink) 10%,var(--panel))}
+/* ---- front render (column picker) */
+.colmap{display:flex;justify-content:center;padding:12px 12px 10px;background:linear-gradient(180deg,#f3f2ee 0%,#e6e4de 78%,#d9d6cf 100%);border-color:#d3d0c8}
+.fr-wrap{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fr-row{display:flex;gap:0;min-width:0}
+.fr-tab{appearance:none;display:flex;justify-content:space-between;align-items:baseline;gap:6px;min-width:0;padding:5px 7px;margin:0 2px;border:1px solid transparent;border-radius:6px;background:none;cursor:pointer;color:#1b211e;font:inherit;text-align:left;white-space:nowrap;overflow:hidden}
+.fr-tab b{font:600 15px/1.1 var(--f-display);overflow:hidden;text-overflow:ellipsis}
+.fr-tab span{font:11.5px var(--f-mono);color:#5f6a64}
+.fr-tab:hover{background:rgba(255,255,255,.7)}
+.fr-tab.on{background:#fff;border-color:var(--accent-l,#2448c9);box-shadow:0 1px 4px rgba(36,72,201,.18)}
+.fr-tab.on b{color:#2448c9}
+.fr-tab.over b{color:#b4291f}
+.fr-stage{position:relative;line-height:0}
+.fr-svg{display:block;width:100%;height:auto;overflow:visible;filter:drop-shadow(0 6px 10px rgba(30,30,25,.16))}
+.fr-hit{fill:#2448c9;fill-opacity:0;stroke:transparent;cursor:pointer;transition:fill-opacity .12s}
+.fr-hit:hover{fill-opacity:.07}
+.fr-hit.on{stroke:#2448c9;stroke-width:2.5;vector-effect:non-scaling-stroke;fill-opacity:.04}
+.fr-back{display:flex;align-items:center;gap:6px;min-width:0;padding:0 7px;font-size:12px;color:#5f6a64;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fr-back i{width:14px;height:10px;border-radius:2px;flex:none;border:1px dashed #a7aaa3}
+.fr-back.b-hdf i{border:1px solid #b08a5a;background:repeating-linear-gradient(45deg,#e8d5b5 0 2px,#cfb084 2px 4px)}
+.fr-back.b-solid i{border:1px solid #1b211e;background:#c3cac3}
+.fr-back.b-solid,.fr-back.b-hdf{color:#1b211e;font-weight:600}
+.fr-back.on{color:#2448c9}
+@media (max-width:560px){ .fr-tab span{display:none} }
+/* ---- legs */
+.legs-ed{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-start;width:100%}
+.legs-f{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;flex:1 1 300px}
+.legs-f .seg button:disabled{opacity:.35;cursor:not-allowed}
+.legplan{margin:0;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
+.legplan figcaption{font-size:12.5px;color:var(--muted)}
+.legplan figcaption b{color:var(--ink);font-size:14px}
+.lp-bot{fill:var(--sunk);stroke:var(--line2);stroke-width:1.2}
+.lp-part{stroke:var(--muted);stroke-width:1.4;stroke-dasharray:4 3}
+.lp-plate{fill:var(--accent-soft);stroke:none}
+.lp-leg{fill:var(--ink)}
+.lp-t{font:11px var(--f-body);fill:var(--muted)}
+
 </style>
 </head>
 <body>
@@ -1422,13 +1515,39 @@ function buildCabinet(c, idx, projName) {
   };
   for (var kp = 0; kp < cols - 1; kp++) out.push(mkPart(kp));
 
+  /* ---- legs: o.legsX = legs in a row across the width (2–6, or 'parts' = at both sides and under every partition), o.legsY = rows (2 or 3).
+     A leg's plate (Ø60) must not cover a connector head on the underside: such a leg moves sideways, and the worker is told. */
+  var legPos = null;
+  function legSpots(bp) {
+    if (legPos) return legPos;
+    var fs = R.legs.fromSide, nx = o.legsX === 'parts' ? 'parts' : Math.max(2, Math.min(6, Math.round(+o.legsX) || 2)), ny = +o.legsY === 3 ? 3 : 2, xs = [];
+    if (nx === 'parts') { xs.push(fs); for (var q = 1; q < cols; q++) xs.push(bnd[q]); xs.push(W - fs); }
+    else for (var q2 = 0; q2 < nx; q2++) xs.push(fs + (W - 2*fs) * q2 / (nx - 1));
+    var yf = R.legs.fromFront, yb = Dside - R.legs.fromBack, ys = ny === 3 ? [yf, (yf + yb) / 2, yb] : [yf, yb];
+    var heads = bp ? bp.holes.filter(function (h) { return !h.mark && (h.through || h.face === 'B'); }) : [];
+    var free = function (x, y) { return x >= 35 && x <= W - 35 && heads.every(function (h) { return Math.hypot(h.x - x, h.y - y) >= 30 + h.d/2 + 4; }); };
+    legPos = []; var moved = 0;
+    var shift = function (x0, rows) { for (var m = 0; m <= 12; m++) for (var sg = 0; sg < 2; sg++) { var d = sg ? -m * 8 : m * 8; if (rows.every(function (y) { return free(x0 + d, y); })) return d; } return null; };
+    xs.forEach(function (x0) {
+      var dAll = shift(x0, ys);   // the whole line of legs front to back moves together, so they stay in a line
+      ys.forEach(function (y) {
+        var dx = dAll !== null ? dAll : shift(x0, [y]);
+        if (dx === null) { dx = 0; warnOnce('kojelė ' + num(x0) + ' mm: plokštelė uždengia jungties galvutę dugno apačioje — patikrinkite'); }
+        else if (dx) moved++;
+        legPos.push({ x:x0 + dx, y:y });
+      });
+    });
+    for (var g = 1; g < xs.length; g++) if (xs[g] - xs[g - 1] < 70) { warnOnce('kojelės per tankiai: tarp kojelių mažiau nei 70 mm — sumažinkite kojelių skaičių eilėje'); break; }
+    if (moved) warnOnce('kojelės: ' + moved + ' vnt. pastumtos šonu, kad plokštelė neuždengtų jungčių dugno apačioje');
+    return legPos;
+  }
   /* ---- bottom (face A = top face, Y from front) */
   (function () {
     var p = panel(nm('DUGNAS'), 'DUGNAS', W, Dside, t, 'viršus viršuje, priekis Y=0');
     faceJoint(p, jBot, 'A', [t/2, W - t/2], 0);
     for (var kq = 0; kq < cols - 1; kq++) faceJoint(p, { L:jPB[kq].L, R:jPB[kq].L }, 'A', [bnd[kq + 1]], y0p);
     bottomRailHoles.forEach(function (h) { hole(p, 'A', h.x, Dside - t/2, h.d, h.depth, h.through ? { through:true } : null); });   // the standing bottom back rail
-    if (o.legs) [R.legs.fromSide, W - R.legs.fromSide].forEach(function (x) { [R.legs.fromFront, Dside - R.legs.fromBack].forEach(function (y) { legMarks(p, 'B', x, y); }); });
+    if (o.legs) legSpots(p).forEach(function (l) { legMarks(p, 'B', l.x, l.y); });
     place(p, [0, 0, t], X, Y, Z); p.mat = mCarc; p.eb.y0 = eCarc;
     out.push(p);
   })();
@@ -1480,7 +1599,7 @@ function buildCabinet(c, idx, projName) {
 
   /* ---- legs (drawn under the bottom; only marks are drilled) */
   var legs = [];
-  if (o.legs) [R.legs.fromSide, W - R.legs.fromSide].forEach(function (x) { [R.legs.fromFront, Dside - R.legs.fromBack].forEach(function (y) { legs.push({ x:x, y:y, d:R.legs.drawD, h:+c.legH || 100 }); }); });
+  if (o.legs) legSpots(null).forEach(function (l) { legs.push({ x:l.x, y:l.y, d:R.legs.drawD, h:+c.legH || 100 }); });
   if (legs.length) hw.push({ item:'Kojelės', qty:legs.length, unit:'vnt.' });
 
   out.forEach(orient);
@@ -2100,11 +2219,15 @@ function cabinetSVG(c,r){
     s+=slab(W-t_,0,0,W,H,D,(c.visRight?FAC:CK),W_SHELL);  // right side
     s+=slab(t_,0,0,W-t_,t_,D,CK,W_SHELL);        // bottom
     s+=slab(t_,H-t_,0,W-t_,H,D,CK,W_SHELL);      // top
-    if(c.hasBack!==false){const bt=Math.max(3,t_*0.5);const bc=(c.backType==='facade')?FAC:BACKC;s+=slab(t_,t_,D-bt,W-t_,H-t_,D,bc,W_BACK,HID);} // back panel
     // columns & partitions
     const cols=Math.max(1,r.cols||1);
     const colW=(r.colW&&r.colW.length===cols)?r.colW:Array(cols).fill(W/cols);
     const bnd=[0]; for(let k=0;k<cols;k++)bnd.push(bnd[k]+colW[k]); bnd[cols]=W;
+    if(Array.isArray(c.backs)&&c.backs.length===cols){   // a back per column: only where the column has one
+      for(let k=0;k<cols;k++){const bk=c.backs[k]; if(!bk||bk==='none')continue;
+        const bx0=(k===0)?t_:bnd[k]+t_/2, bx1=(k===cols-1)?W-t_:bnd[k+1]-t_/2, bt=bk==='hdf'?3:Math.max(3,t_*0.5);
+        s+=slab(bx0,t_,D-bt,bx1,H-t_,D,BACKC,W_BACK,HID);}
+    } else if(c.hasBack!==false){const bt=Math.max(3,t_*0.5);const bc=(c.backType==='facade')?FAC:BACKC;s+=slab(t_,t_,D-bt,W-t_,H-t_,D,bc,W_BACK,HID);} // back panel
     for(let k=1;k<cols;k++){s+=slab(bnd[k]-t_/2,t_,0,bnd[k]+t_/2,H-t_,D,PK,W_PART);} // partitions
     // sections per column (bottom -> top within each column)
     for(let k=0;k<cols;k++){
@@ -2174,6 +2297,138 @@ function cabinetSVG(c,r){
 /* ---------------- end of verbatim part ---------------- */
 root.OfferSketch = { svg:function(c, lang){ LANG = lang || 'lt'; return cabinetSVG(c, layout(c)); }, layout:layout };
 })(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* Front view of one cabinet, drawn from the engine's real parts (buildCabinet().panels): every part projected
+   straight onto the front plane at its true size, painted back to front, coloured by its material
+   (a few common board names → colours), with soft interior shadow, handles, legs and an oven where one is.
+   window.DBFront.svg(c, r, opts) → SVG string. opts: { bnd:[x…], sel:k, over:[bool], ovens:[{x0,x1,z0,z1}], legH, legs:bool, type } */
+(function () {
+'use strict';
+var MAT = [
+  [/balt|white|snow|sniego|alpin/i, '#f1f1ed'], [/antrac|anthrac|grafit|graphit/i, '#3b3f44'], [/juod|black|nero/i, '#26272a'],
+  [/kašmyr|kasmyr|cashmere|smėl|smel|beige|sand|kreminė|cream/i, '#d7ccba'], [/pilk|grey|gray|beton|concrete|cement/i, '#a2a4a5'],
+  [/riešut|riesut|walnut/i, '#7c573a'], [/ąžuol|azuol|oak/i, '#c7a378'], [/uos|ash/i, '#d6c3a1'], [/buk|beech/i, '#d8b28a'],
+  [/žal|zal|green|olive|alyv/i, '#6a7a5e'], [/mėlyn|melyn|blue|navy/i, '#3f5875'], [/raudon|red|bordo/i, '#8d3c35']
+];
+var WOOD = /ąžuol|azuol|oak|riešut|riesut|walnut|uos|ash|buk|beech|wood|medi/i;
+function matColor(name, dflt) { name = String(name || ''); for (var i = 0; i < MAT.length; i++) if (MAT[i][0].test(name)) return MAT[i][1]; return dflt; }
+function hex(c) { c = c.replace('#', ''); return [parseInt(c.slice(0, 2), 16), parseInt(c.slice(2, 4), 16), parseInt(c.slice(4, 6), 16)]; }
+function mix(c, to, f) { var a = hex(c), b = hex(to); return '#' + a.map(function (v, i) { var x = Math.round(v + (b[i] - v) * f); return (x < 16 ? '0' : '') + x.toString(16); }).join(''); }
+function dark(c, f) { return mix(c, '#000000', f); }
+function light(c, f) { return mix(c, '#ffffff', f); }
+function lum(c) { var a = hex(c); return (0.299 * a[0] + 0.587 * a[1] + 0.114 * a[2]) / 255; }
+function n(v) { return (Math.round(v * 10) / 10).toString(); }
+
+function box(p) {   // the part's extent in the cabinet: [x, y (depth from the front), z (up)]
+  var q = p.place, pts = [];
+  [0, p.L].forEach(function (a) { [0, p.W].forEach(function (b) { [0, p.T].forEach(function (c) { pts.push([0, 1, 2].map(function (i) { return q.o[i] + a * q.u[i] + b * q.v[i] - c * q.n[i]; })); }); }); });
+  return [0, 1, 2].map(function (i) { return [Math.min.apply(null, pts.map(function (r) { return r[i]; })), Math.max.apply(null, pts.map(function (r) { return r[i]; }))]; });
+}
+
+function svg(c, r, o) {
+  o = o || {};
+  var W = +r.dims.W, H = +r.dims.H, D = +r.dims.D, t = +r.dims.t || 18, legH = o.legs ? Math.max(0, +o.legH || 0) : 0;
+  var Y = function (z) { return H - z; };   // svg y from height above the carcass bottom
+  var carc = matColor(c.mat && c.mat.carc, '#efefeb'), fac = matColor(c.mat && c.mat.facade, '#e7e5df'), back = matColor((c.mat && c.mat.back) || (c.mat && c.mat.carc), carc);
+  var hdf = '#e4e1da', wall = '#cfcbc2', woodF = WOOD.test((c.mat && c.mat.facade) || ''), woodC = WOOD.test((c.mat && c.mat.carc) || '');
+  var bnd = o.bnd || [0, W], nC = bnd.length - 1;
+  var vbH = H + legH + 14, s = '';
+  s += '<svg class="fr-svg" viewBox="0 -4 ' + n(W) + ' ' + n(vbH) + '" preserveAspectRatio="xMidYMax meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="' + (o.label || '') + '">';
+  /* ---- shared paints */
+  s += '<defs>' +
+    '<linearGradient id="frGloss" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".45" stop-color="#fff" stop-opacity=".04"/><stop offset="1" stop-color="#000" stop-opacity=".08"/></linearGradient>' +
+    '<linearGradient id="frTopSh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".42"/><stop offset=".22" stop-color="#000" stop-opacity=".12"/><stop offset=".6" stop-color="#000" stop-opacity="0"/></linearGradient>' +
+    '<linearGradient id="frSideL" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".22"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>' +
+    '<linearGradient id="frSideR" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".16"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>' +
+    '<linearGradient id="frUnder" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".26"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>' +
+    '<linearGradient id="frMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9ebee"/><stop offset=".5" stop-color="#a9aeb4"/><stop offset="1" stop-color="#7d838a"/></linearGradient>' +
+    '<linearGradient id="frMetalV" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e9ebee"/><stop offset=".5" stop-color="#a9aeb4"/><stop offset="1" stop-color="#7d838a"/></linearGradient>' +
+    '<linearGradient id="frGlass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a3f46"/><stop offset=".38" stop-color="#16191c"/><stop offset=".40" stop-color="#2b3036"/><stop offset=".55" stop-color="#121417"/><stop offset="1" stop-color="#0b0c0e"/></linearGradient>' +
+    '<radialGradient id="frFloor" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#000" stop-opacity=".30"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>' +
+    (woodF || woodC ? '<pattern id="frGrain" width="60" height="240" patternUnits="userSpaceOnUse"><path d="M6 0c3 60-3 120 2 240M19 0c-4 70 5 140-1 240M33 0c2 80-2 150 3 240M47 0c-3 50 4 130-2 240" fill="none" stroke="#5a3a1c" stroke-opacity=".13" stroke-width="1.2"/></pattern>' : '') +
+    '</defs>';
+  /* ---- floor shadow and legs */
+  if (legH > 0) {
+    s += '<ellipse cx="' + n(W / 2) + '" cy="' + n(Y(-legH)) + '" rx="' + n(W * 0.56) + '" ry="9" fill="url(#frFloor)"/>';
+    (r.legs || []).filter(function (l, i, all) { return Math.abs(l.y - Math.min.apply(null, all.map(function (q) { return q.y; }))) < 1; }).forEach(function (l) {
+      var d = l.d || 40; s += '<rect x="' + n(l.x - d / 2) + '" y="' + n(Y(0)) + '" width="' + n(d) + '" height="' + n(legH) + '" fill="#2d3034"/>' +
+        '<rect x="' + n(l.x - d / 2) + '" y="' + n(Y(0)) + '" width="' + n(d * 0.35) + '" height="' + n(legH) + '" fill="#fff" fill-opacity=".08"/>' +
+        '<rect x="' + n(l.x - d * 0.7) + '" y="' + n(Y(-legH + 10)) + '" width="' + n(d * 1.4) + '" height="10" rx="3" fill="#1f2124"/>'; });
+  } else s += '<rect x="0" y="' + n(Y(0) + 2) + '" width="' + n(W) + '" height="10" fill="url(#frUnder)"/>';
+  /* ---- parts, back to front */
+  var parts = (r.panels || []).map(function (p) { return { p:p, b:box(p) }; });
+  var isFront = function (q) { return /FASADAS|DURYS/.test(q.p.role) && q.b[1][1] <= 0.5; };
+  var inner = parts.filter(function (q) { return !isFront(q) && q.b[1][0] >= 1; }).sort(function (a, b) { return b.b[1][0] - a.b[1][0]; });
+  var edges = parts.filter(function (q) { return !isFront(q) && q.b[1][0] < 1; });
+  var fronts = parts.filter(isFront);
+  var ix = function (k) { return [k === 0 ? t : bnd[k] + t / 2, k === nC - 1 ? W - t : bnd[k + 1] - t / 2]; };
+  // the wall seen through a column without a back
+  for (var k = 0; k < nC; k++) { var a = ix(k); s += '<rect x="' + n(a[0]) + '" y="' + n(Y(H)) + '" width="' + n(a[1] - a[0]) + '" height="' + n(H) + '" fill="' + dark(wall, 0.16) + '"/>'; }
+  var rect = function (b, fill, extra) { return '<rect x="' + n(b[0][0]) + '" y="' + n(Y(b[2][1])) + '" width="' + n(b[0][1] - b[0][0]) + '" height="' + n(b[2][1] - b[2][0]) + '" fill="' + fill + '"' + (extra || '') + '/>'; };
+  inner.forEach(function (q) {
+    var depth = Math.max(0, Math.min(1, q.b[1][0] / Math.max(1, D))), role = q.p.role;
+    var base = role === 'PLAUSAS' || /HDF/.test(q.p.mat || '') ? hdf : role === 'NUGARA' ? back : carc;
+    var thin = (q.b[0][1] - q.b[0][0]) < 0.5 || (q.b[2][1] - q.b[2][0]) < 0.5; if (thin) return;
+    s += rect(q.b, dark(base, 0.06 + depth * 0.26));
+    if (role === 'LENTYNA' || role === 'ORKAITE' || /LENT/.test(role)) {   // a shelf seen edge-on: lit edge, shadow under it
+      s += '<rect x="' + n(q.b[0][0]) + '" y="' + n(Y(q.b[2][0])) + '" width="' + n(q.b[0][1] - q.b[0][0]) + '" height="46" fill="url(#frUnder)"/>';
+      s += '<rect x="' + n(q.b[0][0]) + '" y="' + n(Y(q.b[2][1])) + '" width="' + n(q.b[0][1] - q.b[0][0]) + '" height="2" fill="#fff" fill-opacity=".45"/>';
+    }
+  });
+  // interior shadow: under the top / rails, along the sides
+  for (var k2 = 0; k2 < nC; k2++) { var a2 = ix(k2), w2 = a2[1] - a2[0], h2 = H - 2 * t;
+    s += '<rect x="' + n(a2[0]) + '" y="' + n(Y(H - t)) + '" width="' + n(w2) + '" height="' + n(h2) + '" fill="url(#frTopSh)"/>' +
+         '<rect x="' + n(a2[0]) + '" y="' + n(Y(H - t)) + '" width="' + n(Math.min(60, w2 / 3)) + '" height="' + n(h2) + '" fill="url(#frSideL)"/>' +
+         '<rect x="' + n(a2[1] - Math.min(50, w2 / 3)) + '" y="' + n(Y(H - t)) + '" width="' + n(Math.min(50, w2 / 3)) + '" height="' + n(h2) + '" fill="url(#frSideR)"/>'; }
+  // board edges facing the front (edge band)
+  var edgeC = lum(carc) > 0.6 ? dark(carc, 0.04) : light(carc, 0.06), edgeL = dark(carc, 0.22);
+  edges.forEach(function (q) { s += rect(q.b, edgeC, ' stroke="' + edgeL + '" stroke-width=".7" vector-effect="non-scaling-stroke"'); });
+  // ovens: the appliance in its opening
+  (o.ovens || []).forEach(function (ov) {
+    var x0 = ov.x0 + 2, x1 = ov.x1 - 2, z0 = ov.z0 + 2, z1 = ov.z1 - 2, w = x1 - x0, h = z1 - z0; if (w < 40 || h < 60) return;
+    var cp = Math.min(110, h * 0.17);
+    s += '<rect x="' + n(x0) + '" y="' + n(Y(z1)) + '" width="' + n(w) + '" height="' + n(h) + '" rx="4" fill="#1b1d20"/>' +
+      '<rect x="' + n(x0 + 3) + '" y="' + n(Y(z1) + 3) + '" width="' + n(w - 6) + '" height="' + n(cp - 6) + '" rx="2" fill="#26292d"/>' +
+      '<rect x="' + n(x0 + w / 2 - 40) + '" y="' + n(Y(z1) + cp / 2 - 9) + '" width="80" height="18" rx="2" fill="#0d0f10"/><text x="' + n(x0 + w / 2) + '" y="' + n(Y(z1) + cp / 2 + 5) + '" text-anchor="middle" font-size="14" font-family="ui-monospace,monospace" fill="#ff9a4d">12:00</text>';
+    [0.16, 0.30, 0.70, 0.84].forEach(function (f) { s += '<circle cx="' + n(x0 + w * f) + '" cy="' + n(Y(z1) + cp / 2) + '" r="' + n(Math.min(16, cp * 0.26)) + '" fill="#3a3e43" stroke="#0e0f11" stroke-width="1.5"/><circle cx="' + n(x0 + w * f) + '" cy="' + n(Y(z1) + cp / 2 - Math.min(16, cp * 0.26) * 0.55) + '" r="2" fill="#c9ccd0"/>'; });
+    var gy = Y(z1) + cp + 34, gh = h - cp - 54;
+    s += '<rect x="' + n(x0 + 26) + '" y="' + n(gy) + '" width="' + n(w - 52) + '" height="' + n(Math.max(10, gh)) + '" rx="6" fill="url(#frGlass)"/>' +
+      '<rect x="' + n(x0 + 30) + '" y="' + n(Y(z1) + cp + 10) + '" width="' + n(w - 60) + '" height="12" rx="6" fill="url(#frMetal)"/>';
+  });
+  // fronts with handles
+  var tall = o.type === 'ŪKINĖ', wallC = o.type === 'PAKABINAMOS';
+  var fEdge = dark(fac, lum(fac) > 0.5 ? 0.26 : 0.45);
+  fronts.forEach(function (q) {
+    var b = q.b, x0 = b[0][0], x1 = b[0][1], z0 = b[2][0], z1 = b[2][1], w = x1 - x0, h = z1 - z0;
+    s += '<g class="fr-front">' + rect(b, fac) + (woodF ? rect(b, 'url(#frGrain)') : '') + rect(b, 'url(#frGloss)') +
+      '<rect x="' + n(x0) + '" y="' + n(Y(z1)) + '" width="' + n(w) + '" height="' + n(h) + '" fill="none" stroke="' + fEdge + '" stroke-width=".9" vector-effect="non-scaling-stroke"/>' +
+      '<line x1="' + n(x0 + 1) + '" y1="' + n(Y(z1) + 1) + '" x2="' + n(x1 - 1) + '" y2="' + n(Y(z1) + 1) + '" stroke="#fff" stroke-opacity=".5" stroke-width=".8" vector-effect="non-scaling-stroke"/>';
+    var hl, hx, hz, vert = q.p.role === 'DURYS' && q.p.hingeLeft !== undefined && h > w * 0.9;
+    if (vert) {
+      hl = Math.min(192, Math.max(96, h * 0.25)); hx = q.p.hingeLeft ? x1 - 34 : x0 + 22;
+      hz = wallC ? z0 + 40 : tall ? Math.max(z0 + 40, Math.min(z1 - 40 - hl, 1000 - (o.legH || 0) - hl / 2)) : z1 - 40 - hl;
+      s += '<rect x="' + n(hx + 3) + '" y="' + n(Y(hz + hl) + 4) + '" width="12" height="' + n(hl) + '" rx="6" fill="#000" fill-opacity=".18"/>' +
+           '<rect x="' + n(hx) + '" y="' + n(Y(hz + hl)) + '" width="12" height="' + n(hl) + '" rx="6" fill="url(#frMetalV)"/>';
+    } else if (w > 60 && h > 40) {
+      hl = Math.min(224, Math.max(96, w * 0.4)); hx = x0 + (w - hl) / 2;
+      hz = wallC && q.p.role === 'DURYS' ? z0 + 34 : z1 - Math.min(h / 2, 48) - 6;
+      s += '<rect x="' + n(hx + 3) + '" y="' + n(Y(hz + 12) + 4) + '" width="' + n(hl) + '" height="12" rx="6" fill="#000" fill-opacity=".18"/>' +
+           '<rect x="' + n(hx) + '" y="' + n(Y(hz + 12)) + '" width="' + n(hl) + '" height="12" rx="6" fill="url(#frMetal)"/>';
+    }
+    s += '</g>';
+  });
+  /* ---- columns: problems, the one being edited, click targets */
+  for (var k3 = 0; k3 < nC; k3++) {
+    var cx0 = bnd[k3], cx1 = bnd[k3 + 1];
+    if (o.over && o.over[k3]) s += '<rect x="' + n(cx0 + 3) + '" y="' + n(Y(H) + 3) + '" width="' + n(cx1 - cx0 - 6) + '" height="' + n(H - 6) + '" fill="#b4291f" fill-opacity=".10" stroke="#b4291f" stroke-width="2" stroke-dasharray="6 4" vector-effect="non-scaling-stroke"/>';
+    if (nC > 1) s += '<rect class="fr-hit' + (k3 === o.sel ? ' on' : '') + '" data-act="colsel" data-v="' + k3 + '" x="' + n(cx0 + 1) + '" y="' + n(Y(H) - 2) + '" width="' + n(cx1 - cx0 - 2) + '" height="' + n(H + 4) + '" rx="6"/>';
+  }
+  return s + '</svg>';
+}
+window.DBFront = { svg:svg, matColor:matColor };
+})();
 
 </script>
 <script>
@@ -2594,7 +2849,7 @@ function inspector() {
   var rows = j.pos.map(function (a, n) {
     return '<div class="iso-pr' + (sel.idx === n ? ' on' : '') + '"><span class="iso-no">' + (n + 1) + '</span>' + chipIcon(j.type) +
       '<input type="text" inputmode="decimal" id="iso-p-' + n + '" data-iso-pos="' + n + '" value="' + f1(a) + '" aria-label="' + esc(T('jk_' + j.key) + ' ' + (n + 1)) + '"><span class="unit">mm</span>' +
-      '<button type="button" class="btn ghost" data-iso="rm" data-i="' + n + '" aria-label="' + esc(T('isoRm')) + '" title="' + esc(T('isoRm')) + '">✕</button></div>';
+      '<button type="button" class="xbtn" data-iso="rm" data-i="' + n + '" aria-label="' + esc(T('isoRm')) + '" title="' + esc(T('isoRm')) + '">✕</button></div>';
   }).join('');
   var tabs = per ? '<div class="iso-sides seg" role="group">' + ['L', 'R'].map(function (x) {
       return '<button type="button" data-iso="side" data-v="' + x + '" class="' + (sd === x ? 'on' : '') + '" aria-pressed="' + (sd === x) + '">' + esc(T(x === 'L' ? 'sideL' : 'sideR')) + '</button>'; }).join('') + '</div>' +
@@ -3663,7 +3918,7 @@ lt:{
  rotHint:'↻ — antra programa su ta pačia puse viršuje, plokštė pasukta 90° prieš laikrodžio rodyklę (priekinis kraštas tampa kairiuoju galu).',
  setRails:'Juostos ir nugara', drillsTop:'Grąžtai galvoje (viršus), mm', drillsTopL:'Iš Maestro konfigūracijos. Skylės, kurių skersmens čia nėra, neprogramuojamos.', tbHoleSet:'TANDEMBOX fasado skylė (jei Ø)', tbDef:'TANDEMBOX fasadai',
  s4:'Papildomos operacijos', s4l:'Pažymėkite, ką gręžti CNC. „Patikrinta“ — sutampa su jūsų SWOOD modeliais.',
- oLegs:'Kojelių žymės dugne', oLegsD:'4 žymės Ø5 × 2 mm kiekvienai kojelei, 55 nuo šonų, 95 nuo priekio.',
+ oLegs:'Kojelės ir jų žymės dugne', oLegsD:'4 žymės Ø5 × 2 mm kiekvienai kojelei. Plačiai ar sunkiai spintelei pridėkite daugiau kojelių.', legRow:'Kojelių eilėje', legParts:'Po pertvaromis', legRows:'Eilės', legRows2:'2 — priekis, galas', legRows3:'3 — + vidurys', legTotal:'Iš viso kojelių', legFront:'priekis', legDense:'Per tankiai — tarp kojelių būtų mažiau nei 70 mm',
  oRun:'Bėgelių žymės šonuose', oRunD:'Blum TANDEM / TANDEMBOX šablonai pagal stalčių aukštį.',
  oTb:'TANDEMBOX fasadų tvirtinimas', oTbD:'Ø10 × 12 skylės fasado vidinėje pusėje.',
  oHinge:'Lankstų skylės', oHingeD:'Ø35 puodelis duryse + 2 × Ø5 plokštelės skylės šone. Blum katalogo matmenys.',
@@ -3732,7 +3987,7 @@ lt:{
  rm3Leg:'3D · fasadai tamsesni · tempkite tuščią vietą — sukasi', rmUnplaced1:'Nuimta nuo sienos', rmAdded:'Pridėta spintelė {n}', rmDeleted:'Spintelė ištrinta',
  parts2:'Pertvaros', part0:'Nėra', part1:'1 pertvara', part2:'2 pertvaros', colWl:'plotis', colWnote:'Plotis — iki pertvaros vidurio. Paskutinė kolona gauna, kas lieka iki spintelės pločio.',
  colOne:'Spintelė', colL:'Kairė', colM:'Vidurinė', colR:'Dešinė', backOf:'Nugara', bHdf:'Plaušas', bSolid:'Kieta 18 mm', backMountL:'Kieta nugara montuojama',
- bTopOnlyAll:'„Ant galo“ — kai visose kolonose kieta nugara; kitaip kieta nugara montuojama kolonos viduje.', bPerCol:'Nugara pasirenkama kiekvienai kolonai (2 žingsnis „Sekcijos“).', jk_part:'Pertvara ↔ dugnas/viršus',
+ cmHint:'Paspauskite koloną, kad ją redaguotumėte.', cmEmpty:'tuščia', cmNoBack:'be nugaros', secRemoved:'Sekcija pašalinta', undoBtn:'Atšaukti', colEdit:'Redaguojama kolona', bTopOnlyAll:'„Ant galo“ — kai visose kolonose kieta nugara; kitaip kieta nugara montuojama kolonos viduje.', bPerCol:'Nugara pasirenkama kiekvienai kolonai (2 žingsnis „Sekcijos“).', jk_part:'Pertvara ↔ dugnas/viršus',
  n1:'Matmenys', n2:'Sekcijos', n3:'Konstrukcija', n4:'Operacijos', n5:'Medžiagos', n6:'Papildomos',
  toHome:'Visi projektai', prNew2:'Naujas projektas', autosaved:'išsaugota', autosaveT:'Viskas išsaugoma automatiškai šioje naršyklėje',
  npLead:'Įrašykite pavadinimą — jis bus CNC programų ir sąrašo failų pavadinimuose. Toliau pasirinksite pirmą spintelę.', npName:'Projekto pavadinimas', npPh:'pvz. VIRTUVE_JONAITIS', npCreate:'Sukurti projektą',
@@ -3778,7 +4033,7 @@ en:{
  rotHint:'↻ — second program with the same face up, panel turned 90° counter-clockwise (the front edge becomes the left end).',
  setRails:'Rails and back', drillsTop:'Drills on the head (top), mm', drillsTopL:'From the Maestro configuration. Holes of a size not listed are not programmed.', tbHoleSet:'TANDEMBOX front hole (if Ø)', tbDef:'TANDEMBOX fronts',
  s4:'Extra operations', s4l:'Tick what the CNC should drill. “Verified” means it matches your SWOOD models.',
- oLegs:'Leg marks in the bottom', oLegsD:'4 marks Ø5 × 2 mm per leg, 55 from the sides, 95 from the front.',
+ oLegs:'Legs and their marks in the bottom', oLegsD:'4 marks Ø5 × 2 mm per leg. Add more legs for a wide or heavy cabinet.', legRow:'Legs in a row', legParts:'Under partitions', legRows:'Rows', legRows2:'2 — front, back', legRows3:'3 — + middle', legTotal:'Legs in total', legFront:'front', legDense:'Too dense — less than 70 mm between legs',
  oRun:'Runner marks in the sides', oRunD:'Blum TANDEM / TANDEMBOX patterns at each drawer height.',
  oTb:'TANDEMBOX front fixing', oTbD:'Ø10 × 12 holes on the inside of the front.',
  oHinge:'Hinge holes', oHingeD:'Ø35 cup in the door + 2 × Ø5 plate holes in the side. Blum catalogue values.',
@@ -3847,7 +4102,7 @@ en:{
  rm3Leg:'3D · fronts darker · drag empty space to turn', rmUnplaced1:'Taken off the wall', rmAdded:'Cabinet {n} added', rmDeleted:'Cabinet deleted',
  parts2:'Partitions', part0:'None', part1:'1 partition', part2:'2 partitions', colWl:'width', colWnote:'Width — to the middle of the partition. The last column takes what is left of the cabinet width.',
  colOne:'Cabinet', colL:'Left', colM:'Middle', colR:'Right', backOf:'Back', bHdf:'Fibreboard', bSolid:'Solid 18 mm', backMountL:'Solid back mounted',
- bTopOnlyAll:'“On the back” — when every column has a solid back; otherwise a solid back goes inside its column.', bPerCol:'The back is chosen per column (step 2 “Sections”).', jk_part:'Partition ↔ bottom/top',
+ cmHint:'Click a column to edit it.', cmEmpty:'empty', cmNoBack:'no back', secRemoved:'Section removed', undoBtn:'Undo', colEdit:'Editing column', bTopOnlyAll:'“On the back” — when every column has a solid back; otherwise a solid back goes inside its column.', bPerCol:'The back is chosen per column (step 2 “Sections”).', jk_part:'Partition ↔ bottom/top',
  n1:'Size', n2:'Sections', n3:'Construction', n4:'Operations', n5:'Materials', n6:'Extras',
  toHome:'All projects', prNew2:'New project', autosaved:'saved', autosaveT:'Everything is saved automatically in this browser',
  npLead:'Type a name — it goes into the CNC program and list file names. Next you pick the first cabinet.', npName:'Project name', npPh:'e.g. KITCHEN_SMITH', npCreate:'Create project',
@@ -4199,6 +4454,25 @@ function zoneInfo(c, col) {
   var exp = 0, nFill = 0; c.sections.forEach(function (s) { if (col != null && colOf(c, s) !== col) return; if (s.fill) nFill++; else exp += Math.max(0, num(s.height)); });
   return { Hz:Hz, exp:exp, nFill:nFill, fillH:nFill ? Math.max(0, Hz - exp) / nFill : 0, over:exp > Hz + 0.5 };
 }
+function activeCol(c) { var n = colsOf(c); return Math.min(n - 1, Math.max(0, S.colSel || 0)); }
+/* front view of the cabinet, drawn from its real parts (DBFront): click a column to edit it */
+function colMapInner(c) {
+  var nC = colsOf(c), cw = colWidths(c), ac = activeCol(c), bs = c.cnc.backs || [], inf = S._info && S._info[S.sel], r = inf && inf.r;
+  var W = num(c.W), H = num(c.H), t_ = num(c.thick) || 18, bnd = [0]; cw.forEach(function (w, k) { bnd.push(bnd[k] + w); }); bnd[nC] = W;
+  var over = [], ovens = [];
+  for (var k = 0; k < nC; k++) {
+    var z = zoneInfo(c, k), zc = 0, x0 = k === 0 ? t_ : bnd[k] + t_ / 2, x1 = k === nC - 1 ? W - t_ : bnd[k + 1] - t_ / 2; over.push(z.over);
+    c.sections.forEach(function (s) { if (colOf(c, s) !== k) return; var h = s.fill ? z.fillH : num(s.height); if (s.kind === 'oven') ovens.push({ x0:x0, x1:x1, z0:Math.max(zc, t_), z1:Math.min(zc + h, H - t_) }); zc += h; });
+  }
+  var legH = c.cnc.legs ? num(c.legH) || 100 : 0, ratio = W / (H + legH + 14);
+  var art = r && window.DBFront ? window.DBFront.svg(c, r, { bnd:bnd, sel:ac, over:over, ovens:ovens, legs:!!c.cnc.legs, legH:legH, type:c.type, label:t('colEdit') }) : '';
+  var row = function (fn, cls) { return '<div class="fr-row ' + cls + '">' + cw.map(function (w, k) { return fn(w, k); }).join('') + '</div>'; };
+  return '<div class="fr-wrap" style="width:clamp(240px,' + Math.round(340 * ratio) + 'px,100%)">' +
+    (nC < 2 ? '' : row(function (w, k) { return '<button type="button" role="tab" class="fr-tab' + (k === ac ? ' on' : '') + (over[k] ? ' over' : '') + '" style="flex:' + w.toFixed(0) + ' 1 0" data-act="colsel" data-v="' + k + '" aria-selected="' + (k === ac) + '"><b>' + colName(nC, k) + '</b><span>' + fmt(w) + '</span></button>'; }, 'fr-tabs')) +
+    '<div class="fr-stage">' + art + '</div>' +
+    row(function (w, k) { var bk = bs[k] || 'none'; return '<span class="fr-back b-' + bk + (k === ac && nC > 1 ? ' on' : '') + '" style="flex:' + w.toFixed(0) + ' 1 0"><i aria-hidden="true"></i>' + (bk === 'none' ? t('cmNoBack') : bk === 'hdf' ? t('bHdf') : t('bSolid')) + '</span>'; }, 'fr-backs') +
+    '</div>';
+}
 function zoneHtml(z) { return t('zone') + ' <b>' + fmt(z.Hz) + '</b> mm · ' + t('used') + ' <b>' + fmt(z.exp + z.fillH * z.nFill) + '</b>' + (z.over ? ' · <b>' + t('over') + ' ' + fmt(z.exp - z.Hz) + '</b>' : ''); }
 function viewEditor(c) {
   var b = 'c.', o = c.cnc, h = '';
@@ -4215,15 +4489,18 @@ function viewEditor(c) {
   var secs = '<div class="colbar"><div class="f"><span>' + t('parts2') + '</span>' + seg(b + 'cols', nC, [[1, t('part0')], [2, t('part1')], [3, t('part2')]]) + '</div>' +
     (nC > 1 ? '<div class="colw">' + cw.slice(0, nC - 1).map(function (w, k) { return fN(colName(nC, k) + ' ' + t('colWl'), b + 'colW.' + k, fmt(w), 's'); }).join('') +
       '<div class="f s"><span>' + colName(nC, nC - 1) + ' ' + t('colWl') + '</span><b class="colrest" id="colw-last">' + fmt(cw[nC - 1]) + ' mm</b></div></div><p class="note" style="margin:0">' + t('colWnote') + '</p>' : '') + '</div>' +
-    '<div class="colgrid cols' + nC + '">';
+    '<div class="colmap" id="colmap"' + (nC > 1 ? ' role="tablist" aria-label="' + esc(t('colEdit')) + '"' : '') + '>' + colMapInner(c) + '</div>' + (nC > 1 ? '<p class="note cmhint">' + t('cmHint') + '</p>' : '<div style="height:12px"></div>') +
+    '<div class="colgrid cols' + (nC > 1 ? 'one' : '1') + '">';
+  var ac = activeCol(c);
   for (var k = 0; k < nC; k++) {
+    if (nC > 1 && k !== ac) continue;   // one column at a time, at full width; the map above shows them all
     var z = zoneInfo(c, k), bk = (c.cnc.backs || [])[k] || 'none';
-    secs += '<div class="colblk">' + (nC > 1 ? '<div class="colh"><b>' + colName(nC, k) + '</b><span class="unit">' + fmt(cw[k]) + ' mm</span></div>' : '') +
+    secs += '<div class="colblk" role="tabpanel">' + (nC > 1 ? '<div class="colh"><span class="unit">' + t('colEdit') + '</span><b>' + colName(nC, k) + '</b><span class="unit">' + fmt(cw[k]) + ' mm</span></div>' : '') +
       '<div class="backsel"><span>' + t('backOf') + '</span>' + seg(b + 'cnc.backs.' + k, bk, [['none', t('bNone')], ['hdf', t('bHdf')], ['solid', t('bSolid')]]) + '</div>' +
       '<div class="zone" data-col="' + k + '">' + zoneHtml(z) + '</div><div class="secs">';
     for (var i = c.sections.length - 1; i >= 0; i--) if (colOf(c, c.sections[i]) === k) secs += viewSection(c, c.sections[i], i, z);
     secs += '</div><div class="addsec"><span class="unit" style="align-self:center">' + t('add') + ':</span>' +
-      ['drawers', 'doors', 'open', 'oven'].map(function (kd) { return '<button class="btn" data-act="addsec" data-v="' + kd + '" data-i="' + k + '">＋ ' + t({ drawers:'kDrawers', doors:'kDoors', open:'kOpen', oven:'kOven' }[kd]) + '</button>'; }).join('') + '</div></div>';
+      ['drawers', 'doors', 'open', 'oven'].map(function (kd) { return '<button class="btn addk k-' + kd + '" data-act="addsec" data-v="' + kd + '" data-i="' + k + '"><i class="kdot" aria-hidden="true"></i>＋ ' + t({ drawers:'kDrawers', doors:'kDoors', open:'kOpen', oven:'kOven' }[kd]) + '</button>'; }).join('') + '</div></div>';
   }
   secs += '</div>';
   h += step(2, t('s2'), t('s2l'), secs, 'secs');
@@ -4253,7 +4530,7 @@ function viewEditor(c) {
   var hasDr = has(function (s) { return s.kind === 'drawers' && E.R.runner[s.hw]; }), hasTb = has(function (s) { return s.kind === 'drawers' && s.hw === 'BLUM TANDEMBOX'; });
   var hasDoor = has(function (s) { return s.kind === 'doors' && s.hinge !== 'BE FURNITŪROS'; }), hasSh = has(function (s) { return (s.kind === 'doors' || s.kind === 'open') && num(s.shelves) > 0 && s.shelfAdj !== false; });
   var ops = '<div class="ops">' +
-    opRow(b + 'cnc.legs', o.legs, t('oLegs'), t('oLegsD'), true, true, o.legs ? fN(t('legH'), b + 'legH', c.legH, 's') : '') +
+    opRow(b + 'cnc.legs', o.legs, t('oLegs'), t('oLegsD'), true, true, o.legs ? legsEditor(c, rInfo) : '') +
     opRow(b + 'cnc.runnerMarks', o.runnerMarks, t('oRun'), t('oRunD'), true, hasDr) +
     opRow(b + 'cnc.tbOn', o.tbFront !== 'off', t('oTb'), o.tbFront === 'hole' ? t('oTbD') : t('oTbDm'), true, hasTb, seg(b + 'cnc.tbFront', o.tbFront === 'off' ? 'mark' : o.tbFront, [['mark', t('tbMark')], ['hole', t('tbHole')]])) +
     opRow(b + 'cnc.hinges', o.hinges, t('oHinge'), t('oHingeD'), false, hasDoor, seg(b + 'cnc.hingeFix', o.hingeFix, [['screw', t('hfScrew')], ['press', t('hfPress')]])) +
@@ -4319,7 +4596,8 @@ function sectionSVG(c, res, side) {
   if (eb === 'top') sv += rect(Ds, 0, D, full ? H - t_ : H, 'xs-b');
   else if (eb === 'inside') sv += rect(Ds - t_, t_, Ds, full || bH ? H - t_ : H, 'xs-b');
   else if (eb === 'hdf') sv += rect(Ds, 0, D, H, 'xs-hdf');
-  if (o.legs) [E.R.legs.fromFront, Ds - E.R.legs.fromBack].forEach(function (y) { sv += '<rect class="xs-leg" x="' + (X(y) - 3).toFixed(1) + '" y="' + Y(0).toFixed(1) + '" width="6" height="' + legs + '"/>'; });
+  var legYs = res && res.legs && res.legs.length ? res.legs.map(function (l) { return l.y; }).filter(function (y, i, a) { return a.indexOf(y) === i; }) : [E.R.legs.fromFront, Ds - E.R.legs.fromBack];
+  if (o.legs) legYs.forEach(function (y) { sv += '<rect class="xs-leg" x="' + (X(y) - 3).toFixed(1) + '" y="' + Y(0).toFixed(1) + '" width="6" height="' + legs + '"/>'; });
   sv += connectorMarks(res, X, Y, flip ? 'DESINE' : 'KAIRE');
   sv += flip ? '<text class="xs-t" x="' + pad + '" y="' + (H_ - 3).toFixed(0) + '">' + t('xBack') + '</text><text class="xs-t" text-anchor="end" x="' + (W_ - pad).toFixed(0) + '" y="' + (H_ - 3).toFixed(0) + '">' + t('xFront') + ' ▸</text>'
              : '<text class="xs-t" x="' + pad + '" y="' + (H_ - 3).toFixed(0) + '">◂ ' + t('xFront') + '</text><text class="xs-t" text-anchor="end" x="' + (W_ - pad).toFixed(0) + '" y="' + (H_ - 3).toFixed(0) + '">' + t('xBack') + '</text>';
@@ -4353,10 +4631,36 @@ function extrasBlock(c) {
     var b = 'c.extras.' + i + '.';
     var eb = ['e1', 'e2', 'e3', 'e4'].map(function (e, j) { var id = 'f-x-' + i + '-' + e; return '<label class="ebx" for="' + id + '"><input id="' + id + '" type="checkbox" data-bind="' + b + e + '"' + (x[e] ? ' checked' : '') + '>' + ['L1', 'L2', 'W1', 'W2'][j] + '</label>'; }).join('');
     var cell = function (k, cls, list) { var id = 'f-x-' + i + '-' + k; return '<td><input id="' + id + '" class="' + cls + '" type="text" data-bind="' + b + k + '"' + (cls === 'xn' ? ' data-num="1" inputmode="decimal"' : '') + (list ? ' list="' + list + '"' : '') + ' value="' + esc(x[k]) + '" aria-label="' + k + '" autocomplete="off"></td>'; };
-    return '<tr>' + cell('name', 'xt') + cell('L', 'xn') + cell('W', 'xn') + cell('T', 'xn') + cell('qty', 'xn') + cell('mat', 'xt', 'dl-mat') + '<td><span class="ebs">' + eb + '</span></td><td><button class="btn ghost danger" data-act="rmx" data-i="' + i + '" aria-label="' + t('rm') + '">✕</button></td></tr>';
+    return '<tr>' + cell('name', 'xt') + cell('L', 'xn') + cell('W', 'xn') + cell('T', 'xn') + cell('qty', 'xn') + cell('mat', 'xt', 'dl-mat') + '<td><span class="ebs">' + eb + '</span></td><td><button class="xbtn" data-act="rmx" data-i="' + i + '" aria-label="' + t('rm') + '" title="' + t('rm') + '">✕</button></td></tr>';
   }).join('');
   return (c.extras.length ? '<div class="tablewrap xtab"><table><thead><tr><th>' + t('exName') + '</th><th class="n">' + t('cL') + '</th><th class="n">' + t('cW') + '</th><th class="n">' + t('cT') + '</th><th class="n">' + t('cQ') + '</th><th>' + t('cMat') + '</th><th>' + t('exEdges') + '</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<p class="note" style="margin:0 0 8px">' + t('exNone') + '</p>') +
     '<div class="row" style="margin-top:10px"><button class="btn" data-act="addx" data-v="part">＋ ' + t('exAdd') + '</button><button class="btn" data-act="addx" data-v="plinth">＋ ' + t('exPlinth') + '</button></div>';
+}
+/* legs: how many in a row across the width, how many rows, and where they land (plan view, front at the bottom) */
+function legsEditor(c, r) {
+  var o = c.cnc, b = 'c.cnc.', nC = colsOf(c), W = num(c.W), fs = E.R.legs.fromSide, lx = o.legsX || 2, ly = +o.legsY === 3 ? 3 : 2;
+  var opts = [2, 3, 4, 5, 6].map(function (n) { return [n, String(n), (W - 2 * fs) / (n - 1) < 70]; });
+  var segX = '<div class="seg" role="group">' + opts.map(function (q) { var on = String(lx) === String(q[0]);
+      return '<button type="button" data-act="set" data-bind="' + b + 'legsX" data-v="' + q[0] + '" class="' + (on ? 'on' : '') + '" aria-pressed="' + on + '"' + (q[2] && !on ? ' disabled title="' + esc(t('legDense')) + '"' : '') + '>' + q[1] + '</button>'; }).join('') +
+    (nC > 1 ? '<button type="button" data-act="set" data-bind="' + b + 'legsX" data-v="parts" class="' + (lx === 'parts' ? 'on' : '') + '" aria-pressed="' + (lx === 'parts') + '">' + t('legParts') + '</button>' : '') + '</div>';
+  var n = r && r.legs ? r.legs.length : 0;
+  return '<div class="legs-ed"><div class="legs-f"><div class="f"><span>' + t('legRow') + '</span>' + segX + '</div>' +
+    '<div class="f"><span>' + t('legRows') + '</span>' + seg(b + 'legsY', ly, [[2, t('legRows2')], [3, t('legRows3')]]) + '</div>' +
+    fN(t('legH'), 'c.legH', c.legH, 's') + '</div>' +
+    '<figure class="legplan">' + legPlanSVG(c, r) + '<figcaption>' + t('legTotal') + ': <b>' + n + '</b> ' + (S.lang === 'lt' ? 'vnt.' : 'pcs') + '</figcaption></figure></div>';
+}
+function legPlanSVG(c, r) {
+  if (!r || !r.dims) return '';
+  var W = r.dims.W, bot = (r.panels || []).filter(function (p) { return p.role === 'DUGNAS'; })[0], Dd = bot ? (Math.abs(bot.L - W) < 0.01 ? bot.W : bot.L) : r.dims.D;
+  var k = Math.min(260 / W, 120 / Dd), pad = 8, w = W * k + 2 * pad, h = Dd * k + 2 * pad + 14;
+  var X = function (x) { return pad + x * k; }, Y = function (y) { return pad + (Dd - y) * k; };   // plan view, the front at the bottom
+  var sv = '<svg viewBox="0 0 ' + w.toFixed(0) + ' ' + h.toFixed(0) + '" width="' + w.toFixed(0) + '" xmlns="http://www.w3.org/2000/svg">' +
+    '<rect class="lp-bot" x="' + pad + '" y="' + pad + '" width="' + (W * k).toFixed(1) + '" height="' + (Dd * k).toFixed(1) + '" rx="2"/>';
+  var nC = colsOf(c), cw = colWidths(c), x = 0;
+  for (var q = 0; q < nC - 1; q++) { x += cw[q]; sv += '<line class="lp-part" x1="' + X(x).toFixed(1) + '" y1="' + pad + '" x2="' + X(x).toFixed(1) + '" y2="' + (pad + Dd * k).toFixed(1) + '"/>'; }
+  (r.legs || []).forEach(function (l) { sv += '<circle class="lp-plate" cx="' + X(l.x).toFixed(1) + '" cy="' + Y(l.y).toFixed(1) + '" r="' + Math.max(3, 30 * k).toFixed(1) + '"/><circle class="lp-leg" cx="' + X(l.x).toFixed(1) + '" cy="' + Y(l.y).toFixed(1) + '" r="' + Math.max(2.2, 20 * k).toFixed(1) + '"/>'; });
+  sv += '<text class="lp-t" x="' + (w / 2).toFixed(0) + '" y="' + (h - 3).toFixed(0) + '" text-anchor="middle">▼ ' + t('legFront') + '</text>';
+  return sv + '</svg>';
 }
 function artOf(type) { return window.DBArt ? '<span class="cart">' + window.DBArt.pic(type, t('isoT_' + type)) + '</span>' : ico(type === 'cam' ? 'cam' : 'conf'); }
 function choice(bind, val, v, icon, title, desc) { return '<button type="button" class="choice' + (val === v ? ' on' : '') + '" data-act="set" data-bind="' + bind + '" data-v="' + v + '" aria-pressed="' + (val === v) + '">' + icon + '<span><b>' + title + '</b><small>' + desc + '</small></span></button>'; }
@@ -4396,10 +4700,10 @@ function viewSection(c, s, i, z) {
     body += fS(t('sup'), b + 'shelves', Math.min(2, num(s.shelves)), [[0, '0'], [1, '1 — ' + (S.lang === 'lt' ? 'apačioje' : 'below')], [2, '2 — ' + (S.lang === 'lt' ? 'apačioje ir viršuje' : 'below and above')]]);
   }
   body += '</div>';
-  return '<div class="sec"><div>' + head + body + '</div><div class="tools">' +
+  return '<div class="sec k-' + s.kind + '"><div>' + head + body + '</div><div class="tools">' +
     '<button title="' + t('up') + '" aria-label="' + t('up') + '" data-act="mv" data-i="' + i + '" data-v="1"' + (lastInCol(c, i) ? ' disabled' : '') + '>▲</button>' +
     '<button title="' + t('down') + '" aria-label="' + t('down') + '" data-act="mv" data-i="' + i + '" data-v="-1"' + (firstInCol(c, i) ? ' disabled' : '') + '>▼</button>' +
-    '<button title="' + t('rm') + '" aria-label="' + t('rm') + '" data-act="rmsec" data-i="' + i + '">✕</button></div></div>';
+    '<button class="xbtn" title="' + t('rm') + '" aria-label="' + t('rm') + '" data-act="rmsec" data-i="' + i + '">✕</button></div></div>';
 }
 function viewSheet(c, inf) {
   var nParts = inf.r.panels.length;
@@ -4410,7 +4714,7 @@ function viewSheet(c, inf) {
     (w ? '<div class="warns" id="warns">' + w + '</div>' : '<div class="warns" id="warns"></div>') +
     '<button class="btn pri big go" data-act="tab" data-v="res">' + t('toRes') + '</button></aside>';
 }
-function sketchOf(c) { try { var d = engineDef(c); d.colW = colsOf(c) > 1 ? colWidths(c) : []; var bs = c.cnc.backs || []; d.hasBack = bs.some(function (x) { return x !== 'none'; }); d.backType = bs.indexOf('hdf') >= 0 ? 'hdf' : 'carcass'; return SK.svg(d, S.lang); } catch (e) { return '<div class="empty">' + esc(e.message) + '</div>'; } }
+function sketchOf(c) { try { var d = engineDef(c); d.colW = colsOf(c) > 1 ? colWidths(c) : []; var bs = c.cnc.backs || []; d.hasBack = bs.some(function (x) { return x !== 'none'; }); d.backs = colsOf(c) > 1 && bs.length === colsOf(c) ? bs.slice() : null; d.backType = bs.indexOf('hdf') >= 0 ? 'hdf' : 'carcass'; return SK.svg(d, S.lang); } catch (e) { return '<div class="empty">' + esc(e.message) + '</div>'; } }
 
 /* ----------------------------------------------------------------- render: results */
 function viewRes(pj) {
@@ -4606,6 +4910,7 @@ function refreshLive() {
   var wr = document.getElementById('warns'); if (wr) wr.innerHTML = inf.warnings.map(function (x) { var lv = level(x); return '<div class="w ' + lv + '"><span class="tag">' + t(lv === 'bad' ? 'errTag' : lv === 'warn' ? 'warnTag' : 'infoTag') + '</span><span>' + esc(x) + '</span></div>'; }).join('');
   var tb = document.querySelector('.paper .tb'); var c = cur();
   if (tb) tb.innerHTML = '<b>' + (S.sel + 1) + ' · ' + esc(c.name || typeName(c)) + '</b><span>' + fmt(c.dishwasher ? c.dishWidth : c.W) + '×' + fmt(c.H) + '×' + fmt(c.D) + '</span>';
+  var cmap = document.getElementById('colmap'); if (cmap && !c.dishwasher) cmap.innerHTML = colMapInner(c);
   if (!c.dishwasher) document.querySelectorAll('.zone[data-col]').forEach(function (zn) { var z2 = zoneInfo(c, +zn.getAttribute('data-col')); zn.className = 'zone' + (z2.over ? ' over' : ''); zn.innerHTML = zoneHtml(z2); });
   var zone = null; if (zone && !c.dishwasher) { var z = zoneInfo(c); zone.className = 'zone' + (z.over ? ' over' : ''); zone.innerHTML = t('zone') + ' <b>' + fmt(z.Hz) + '</b> mm · ' + t('used') + ' <b>' + fmt(z.exp + z.fillH * z.nFill) + '</b>' + (z.over ? ' · <b>' + t('over') + ' ' + fmt(z.exp - z.Hz) + '</b>' : ''); }
 }
@@ -4759,17 +5064,20 @@ app.addEventListener('click', function (e) {
   switch (act) {
     case 'tab': S.tab = v; S.picking = false; window.scrollTo(0, 0); break;
     case 'lang': S.lang = v; store('dbKurejas.lang', v); break;
-    case 'sel': S.sel = i; S.picking = false; S.iso = null; break;
+    case 'sel': S.sel = i; S.picking = false; S.iso = null; S.colSel = 0; break;
     case 'pick': S.picking = true; break;
     case 'unpick': S.picking = false; break;
     case 'preset': S.proj.cabinets.push(fromPreset(PRESETS[i])); S.sel = S.proj.cabinets.length - 1; S.picking = false; save(); break;
     case 'dup': { var cp = clone(cur()); cp.id = uid(); cp.name = cp.name ? cp.name + ' (2)' : ''; S.proj.cabinets.splice(S.sel + 1, 0, cp); S.sel++; save(); break; }
     case 'del': if (S.confirm !== 'del') { S.confirm = 'del'; break; } S.confirm = null; S.proj.cabinets.splice(S.sel, 1); S.sel = Math.max(0, S.sel - 1); save(); break;
     case 'set': assign(el.getAttribute('data-bind'), v); after(el.getAttribute('data-bind'), true); return;
-    case 'addsec': { var ns = newSection(v); ns.col = isNaN(i) ? 0 : i; cur().sections.push(ns); save(); break; }
+    case 'addsec': { var ns = newSection(v); ns.col = isNaN(i) ? 0 : i; S.colSel = ns.col; cur().sections.push(ns); save(); break; }
+    case 'colsel': S.colSel = +v; break;
     case 'mv': { var cc0 = cur(), a = cc0.sections, cl = colOf(cc0, a[i]), idx = a.map(function (s, q) { return q; }).filter(function (q) { return colOf(cc0, a[q]) === cl; }), p0 = idx.indexOf(i), j = idx[p0 + (+v)];
       if (j == null) return; var tmp = a[i]; a[i] = a[j]; a[j] = tmp; save(); break; }
-    case 'rmsec': cur().sections.splice(i, 1); save(); break;
+    case 'rmsec': { var rc = cur(), gone = rc.sections.splice(i, 1)[0]; save(); render();
+      toast(t('secRemoved'), false, t('undoBtn'), function () { var c2 = S.proj && S.proj.cabinets.filter(function (x) { return x.id === rc.id; })[0]; if (!c2) return; c2.sections.splice(Math.min(i, c2.sections.length), 0, gone); save(); render(); });
+      return; }
     case 'addx': { var cc = cur(); cc.extras.push(v === 'plinth' ? { name:t('exPlinth'), L:num(cc.W), W:Math.max(40, num(cc.legH) - 2), T:num(cc.thick) || 18, qty:1, mat:cc.mat.facade || cc.mat.carc, e1:true }
                                                    : { name:t('exAdd'), L:num(cc.W), W:100, T:num(cc.thick) || 18, qty:1, mat:cc.mat.carc }); save(); break; }
     case 'rmx': cur().extras.splice(i, 1); save(); break;
@@ -4808,7 +5116,13 @@ app.addEventListener('click', function (e) {
   render();
 });
 var tTimer;
-function toast(msg, err) { var d = document.getElementById('toast'); if (!d) { d = document.createElement('div'); d.id = 'toast'; document.body.appendChild(d); } d.className = 'toast' + (err ? ' err' : ''); d.textContent = msg; d.hidden = false; clearTimeout(tTimer); tTimer = setTimeout(function () { d.hidden = true; }, 2600); }
+function toast(msg, err, actLabel, actFn) {
+  var d = document.getElementById('toast'); if (!d) { d = document.createElement('div'); d.id = 'toast'; d.setAttribute('role', 'status'); document.body.appendChild(d); }
+  d.className = 'toast' + (err ? ' err' : ''); d.textContent = msg;
+  if (actLabel && actFn) { var bt = document.createElement('button'); bt.type = 'button'; bt.className = 'toast-act'; bt.textContent = '↶ ' + actLabel;
+    bt.addEventListener('click', function () { d.hidden = true; clearTimeout(tTimer); actFn(); }); d.appendChild(bt); }
+  d.hidden = false; clearTimeout(tTimer); tTimer = setTimeout(function () { d.hidden = true; }, actFn ? 6000 : 2600);
+}
 
 /* ----------------------------------------------------------------- import (own JSON or the offer app's export) */
 function importFile(file) {

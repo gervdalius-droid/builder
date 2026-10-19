@@ -320,7 +320,7 @@ function inspector() {
   var rows = j.pos.map(function (a, n) {
     return '<div class="iso-pr' + (sel.idx === n ? ' on' : '') + '"><span class="iso-no">' + (n + 1) + '</span>' + chipIcon(j.type) +
       '<input type="text" inputmode="decimal" id="iso-p-' + n + '" data-iso-pos="' + n + '" value="' + f1(a) + '" aria-label="' + esc(T('jk_' + j.key) + ' ' + (n + 1)) + '"><span class="unit">mm</span>' +
-      '<button type="button" class="btn ghost" data-iso="rm" data-i="' + n + '" aria-label="' + esc(T('isoRm')) + '" title="' + esc(T('isoRm')) + '">✕</button></div>';
+      '<button type="button" class="xbtn" data-iso="rm" data-i="' + n + '" aria-label="' + esc(T('isoRm')) + '" title="' + esc(T('isoRm')) + '">✕</button></div>';
   }).join('');
   var tabs = per ? '<div class="iso-sides seg" role="group">' + ['L', 'R'].map(function (x) {
       return '<button type="button" data-iso="side" data-v="' + x + '" class="' + (sd === x ? 'on' : '') + '" aria-pressed="' + (sd === x) + '">' + esc(T(x === 'L' ? 'sideL' : 'sideR')) + '</button>'; }).join('') + '</div>' +

@@ -16,12 +16,14 @@ async def main():
         await pg.fill('#f-c-colW-0','500'); await pg.press('#f-c-colW-0','Tab'); await pg.wait_for_timeout(300)
         print('widths:', await pg.evaluate("()=>JSON.stringify(__dbk.S.proj.cabinets[0].colW)"))
         # add drawers to the middle column, open shelves to the right
+        await pg.click('[data-act=colsel][data-v="1"]'); await pg.wait_for_timeout(200)
         await pg.click('[data-act=addsec][data-v=drawers][data-i="1"]'); await pg.wait_for_timeout(250)
+        await pg.click('[data-act=colsel][data-v="2"]'); await pg.wait_for_timeout(200)
         await pg.click('[data-act=addsec][data-v=open][data-i="2"]'); await pg.wait_for_timeout(250)
         # backs: left plaušas, middle none, right solid
-        await pg.click('[data-act=set][data-bind="c.cnc.backs.0"][data-v=hdf]'); await pg.wait_for_timeout(200)
-        await pg.click('[data-act=set][data-bind="c.cnc.backs.1"][data-v=none]'); await pg.wait_for_timeout(200)
-        await pg.click('[data-act=set][data-bind="c.cnc.backs.2"][data-v=solid]'); await pg.wait_for_timeout(250)
+        for k,v in [(0,'hdf'),(1,'none'),(2,'solid')]:
+            await pg.click('[data-act=colsel][data-v="%d"]'%k); await pg.wait_for_timeout(150)
+            await pg.click('[data-act=set][data-bind="c.cnc.backs.%d"][data-v=%s]'%(k,v)); await pg.wait_for_timeout(200)
         print('backs:', await pg.evaluate("()=>JSON.stringify(__dbk.S.proj.cabinets[0].cnc.backs)"), 'sections:', await pg.evaluate("()=>__dbk.S.proj.cabinets[0].sections.map(s=>s.kind+'@'+s.col).join(' ')"))
         parts = await pg.evaluate("()=>__dbk.S._info[0].r.panels.map(p=>p.role+' '+Math.round(p.L)+'x'+Math.round(p.W)+'x'+p.T).join(' | ')")
         print('parts:', parts)

@@ -209,11 +209,15 @@ function cabinetSVG(c,r){
     s+=slab(W-t_,0,0,W,H,D,(c.visRight?FAC:CK),W_SHELL);  // right side
     s+=slab(t_,0,0,W-t_,t_,D,CK,W_SHELL);        // bottom
     s+=slab(t_,H-t_,0,W-t_,H,D,CK,W_SHELL);      // top
-    if(c.hasBack!==false){const bt=Math.max(3,t_*0.5);const bc=(c.backType==='facade')?FAC:BACKC;s+=slab(t_,t_,D-bt,W-t_,H-t_,D,bc,W_BACK,HID);} // back panel
     // columns & partitions
     const cols=Math.max(1,r.cols||1);
     const colW=(r.colW&&r.colW.length===cols)?r.colW:Array(cols).fill(W/cols);
     const bnd=[0]; for(let k=0;k<cols;k++)bnd.push(bnd[k]+colW[k]); bnd[cols]=W;
+    if(Array.isArray(c.backs)&&c.backs.length===cols){   // a back per column: only where the column has one
+      for(let k=0;k<cols;k++){const bk=c.backs[k]; if(!bk||bk==='none')continue;
+        const bx0=(k===0)?t_:bnd[k]+t_/2, bx1=(k===cols-1)?W-t_:bnd[k+1]-t_/2, bt=bk==='hdf'?3:Math.max(3,t_*0.5);
+        s+=slab(bx0,t_,D-bt,bx1,H-t_,D,BACKC,W_BACK,HID);}
+    } else if(c.hasBack!==false){const bt=Math.max(3,t_*0.5);const bc=(c.backType==='facade')?FAC:BACKC;s+=slab(t_,t_,D-bt,W-t_,H-t_,D,bc,W_BACK,HID);} // back panel
     for(let k=1;k<cols;k++){s+=slab(bnd[k]-t_/2,t_,0,bnd[k]+t_/2,H-t_,D,PK,W_PART);} // partitions
     // sections per column (bottom -> top within each column)
     for(let k=0;k<cols;k++){

@@ -42,7 +42,7 @@ lt:{
  rotHint:'↻ — antra programa su ta pačia puse viršuje, plokštė pasukta 90° prieš laikrodžio rodyklę (priekinis kraštas tampa kairiuoju galu).',
  setRails:'Juostos ir nugara', drillsTop:'Grąžtai galvoje (viršus), mm', drillsTopL:'Iš Maestro konfigūracijos. Skylės, kurių skersmens čia nėra, neprogramuojamos.', tbHoleSet:'TANDEMBOX fasado skylė (jei Ø)', tbDef:'TANDEMBOX fasadai',
  s4:'Papildomos operacijos', s4l:'Pažymėkite, ką gręžti CNC. „Patikrinta“ — sutampa su jūsų SWOOD modeliais.',
- oLegs:'Kojelių žymės dugne', oLegsD:'4 žymės Ø5 × 2 mm kiekvienai kojelei, 55 nuo šonų, 95 nuo priekio.',
+ oLegs:'Kojelės ir jų žymės dugne', oLegsD:'4 žymės Ø5 × 2 mm kiekvienai kojelei. Plačiai ar sunkiai spintelei pridėkite daugiau kojelių.', legRow:'Kojelių eilėje', legParts:'Po pertvaromis', legRows:'Eilės', legRows2:'2 — priekis, galas', legRows3:'3 — + vidurys', legTotal:'Iš viso kojelių', legFront:'priekis', legDense:'Per tankiai — tarp kojelių būtų mažiau nei 70 mm',
  oRun:'Bėgelių žymės šonuose', oRunD:'Blum TANDEM / TANDEMBOX šablonai pagal stalčių aukštį.',
  oTb:'TANDEMBOX fasadų tvirtinimas', oTbD:'Ø10 × 12 skylės fasado vidinėje pusėje.',
  oHinge:'Lankstų skylės', oHingeD:'Ø35 puodelis duryse + 2 × Ø5 plokštelės skylės šone. Blum katalogo matmenys.',
@@ -111,7 +111,7 @@ lt:{
  rm3Leg:'3D · fasadai tamsesni · tempkite tuščią vietą — sukasi', rmUnplaced1:'Nuimta nuo sienos', rmAdded:'Pridėta spintelė {n}', rmDeleted:'Spintelė ištrinta',
  parts2:'Pertvaros', part0:'Nėra', part1:'1 pertvara', part2:'2 pertvaros', colWl:'plotis', colWnote:'Plotis — iki pertvaros vidurio. Paskutinė kolona gauna, kas lieka iki spintelės pločio.',
  colOne:'Spintelė', colL:'Kairė', colM:'Vidurinė', colR:'Dešinė', backOf:'Nugara', bHdf:'Plaušas', bSolid:'Kieta 18 mm', backMountL:'Kieta nugara montuojama',
- bTopOnlyAll:'„Ant galo“ — kai visose kolonose kieta nugara; kitaip kieta nugara montuojama kolonos viduje.', bPerCol:'Nugara pasirenkama kiekvienai kolonai (2 žingsnis „Sekcijos“).', jk_part:'Pertvara ↔ dugnas/viršus',
+ cmHint:'Paspauskite koloną, kad ją redaguotumėte.', cmEmpty:'tuščia', cmNoBack:'be nugaros', secRemoved:'Sekcija pašalinta', undoBtn:'Atšaukti', colEdit:'Redaguojama kolona', bTopOnlyAll:'„Ant galo“ — kai visose kolonose kieta nugara; kitaip kieta nugara montuojama kolonos viduje.', bPerCol:'Nugara pasirenkama kiekvienai kolonai (2 žingsnis „Sekcijos“).', jk_part:'Pertvara ↔ dugnas/viršus',
  n1:'Matmenys', n2:'Sekcijos', n3:'Konstrukcija', n4:'Operacijos', n5:'Medžiagos', n6:'Papildomos',
  toHome:'Visi projektai', prNew2:'Naujas projektas', autosaved:'išsaugota', autosaveT:'Viskas išsaugoma automatiškai šioje naršyklėje',
  npLead:'Įrašykite pavadinimą — jis bus CNC programų ir sąrašo failų pavadinimuose. Toliau pasirinksite pirmą spintelę.', npName:'Projekto pavadinimas', npPh:'pvz. VIRTUVE_JONAITIS', npCreate:'Sukurti projektą',
@@ -157,7 +157,7 @@ en:{
  rotHint:'↻ — second program with the same face up, panel turned 90° counter-clockwise (the front edge becomes the left end).',
  setRails:'Rails and back', drillsTop:'Drills on the head (top), mm', drillsTopL:'From the Maestro configuration. Holes of a size not listed are not programmed.', tbHoleSet:'TANDEMBOX front hole (if Ø)', tbDef:'TANDEMBOX fronts',
  s4:'Extra operations', s4l:'Tick what the CNC should drill. “Verified” means it matches your SWOOD models.',
- oLegs:'Leg marks in the bottom', oLegsD:'4 marks Ø5 × 2 mm per leg, 55 from the sides, 95 from the front.',
+ oLegs:'Legs and their marks in the bottom', oLegsD:'4 marks Ø5 × 2 mm per leg. Add more legs for a wide or heavy cabinet.', legRow:'Legs in a row', legParts:'Under partitions', legRows:'Rows', legRows2:'2 — front, back', legRows3:'3 — + middle', legTotal:'Legs in total', legFront:'front', legDense:'Too dense — less than 70 mm between legs',
  oRun:'Runner marks in the sides', oRunD:'Blum TANDEM / TANDEMBOX patterns at each drawer height.',
  oTb:'TANDEMBOX front fixing', oTbD:'Ø10 × 12 holes on the inside of the front.',
  oHinge:'Hinge holes', oHingeD:'Ø35 cup in the door + 2 × Ø5 plate holes in the side. Blum catalogue values.',
@@ -226,7 +226,7 @@ en:{
  rm3Leg:'3D · fronts darker · drag empty space to turn', rmUnplaced1:'Taken off the wall', rmAdded:'Cabinet {n} added', rmDeleted:'Cabinet deleted',
  parts2:'Partitions', part0:'None', part1:'1 partition', part2:'2 partitions', colWl:'width', colWnote:'Width — to the middle of the partition. The last column takes what is left of the cabinet width.',
  colOne:'Cabinet', colL:'Left', colM:'Middle', colR:'Right', backOf:'Back', bHdf:'Fibreboard', bSolid:'Solid 18 mm', backMountL:'Solid back mounted',
- bTopOnlyAll:'“On the back” — when every column has a solid back; otherwise a solid back goes inside its column.', bPerCol:'The back is chosen per column (step 2 “Sections”).', jk_part:'Partition ↔ bottom/top',
+ cmHint:'Click a column to edit it.', cmEmpty:'empty', cmNoBack:'no back', secRemoved:'Section removed', undoBtn:'Undo', colEdit:'Editing column', bTopOnlyAll:'“On the back” — when every column has a solid back; otherwise a solid back goes inside its column.', bPerCol:'The back is chosen per column (step 2 “Sections”).', jk_part:'Partition ↔ bottom/top',
  n1:'Size', n2:'Sections', n3:'Construction', n4:'Operations', n5:'Materials', n6:'Extras',
  toHome:'All projects', prNew2:'New project', autosaved:'saved', autosaveT:'Everything is saved automatically in this browser',
  npLead:'Type a name — it goes into the CNC program and list file names. Next you pick the first cabinet.', npName:'Project name', npPh:'e.g. KITCHEN_SMITH', npCreate:'Create project',
@@ -578,6 +578,25 @@ function zoneInfo(c, col) {
   var exp = 0, nFill = 0; c.sections.forEach(function (s) { if (col != null && colOf(c, s) !== col) return; if (s.fill) nFill++; else exp += Math.max(0, num(s.height)); });
   return { Hz:Hz, exp:exp, nFill:nFill, fillH:nFill ? Math.max(0, Hz - exp) / nFill : 0, over:exp > Hz + 0.5 };
 }
+function activeCol(c) { var n = colsOf(c); return Math.min(n - 1, Math.max(0, S.colSel || 0)); }
+/* front view of the cabinet, drawn from its real parts (DBFront): click a column to edit it */
+function colMapInner(c) {
+  var nC = colsOf(c), cw = colWidths(c), ac = activeCol(c), bs = c.cnc.backs || [], inf = S._info && S._info[S.sel], r = inf && inf.r;
+  var W = num(c.W), H = num(c.H), t_ = num(c.thick) || 18, bnd = [0]; cw.forEach(function (w, k) { bnd.push(bnd[k] + w); }); bnd[nC] = W;
+  var over = [], ovens = [];
+  for (var k = 0; k < nC; k++) {
+    var z = zoneInfo(c, k), zc = 0, x0 = k === 0 ? t_ : bnd[k] + t_ / 2, x1 = k === nC - 1 ? W - t_ : bnd[k + 1] - t_ / 2; over.push(z.over);
+    c.sections.forEach(function (s) { if (colOf(c, s) !== k) return; var h = s.fill ? z.fillH : num(s.height); if (s.kind === 'oven') ovens.push({ x0:x0, x1:x1, z0:Math.max(zc, t_), z1:Math.min(zc + h, H - t_) }); zc += h; });
+  }
+  var legH = c.cnc.legs ? num(c.legH) || 100 : 0, ratio = W / (H + legH + 14);
+  var art = r && window.DBFront ? window.DBFront.svg(c, r, { bnd:bnd, sel:ac, over:over, ovens:ovens, legs:!!c.cnc.legs, legH:legH, type:c.type, label:t('colEdit') }) : '';
+  var row = function (fn, cls) { return '<div class="fr-row ' + cls + '">' + cw.map(function (w, k) { return fn(w, k); }).join('') + '</div>'; };
+  return '<div class="fr-wrap" style="width:clamp(240px,' + Math.round(340 * ratio) + 'px,100%)">' +
+    (nC < 2 ? '' : row(function (w, k) { return '<button type="button" role="tab" class="fr-tab' + (k === ac ? ' on' : '') + (over[k] ? ' over' : '') + '" style="flex:' + w.toFixed(0) + ' 1 0" data-act="colsel" data-v="' + k + '" aria-selected="' + (k === ac) + '"><b>' + colName(nC, k) + '</b><span>' + fmt(w) + '</span></button>'; }, 'fr-tabs')) +
+    '<div class="fr-stage">' + art + '</div>' +
+    row(function (w, k) { var bk = bs[k] || 'none'; return '<span class="fr-back b-' + bk + (k === ac && nC > 1 ? ' on' : '') + '" style="flex:' + w.toFixed(0) + ' 1 0"><i aria-hidden="true"></i>' + (bk === 'none' ? t('cmNoBack') : bk === 'hdf' ? t('bHdf') : t('bSolid')) + '</span>'; }, 'fr-backs') +
+    '</div>';
+}
 function zoneHtml(z) { return t('zone') + ' <b>' + fmt(z.Hz) + '</b> mm · ' + t('used') + ' <b>' + fmt(z.exp + z.fillH * z.nFill) + '</b>' + (z.over ? ' · <b>' + t('over') + ' ' + fmt(z.exp - z.Hz) + '</b>' : ''); }
 function viewEditor(c) {
   var b = 'c.', o = c.cnc, h = '';
@@ -594,15 +613,18 @@ function viewEditor(c) {
   var secs = '<div class="colbar"><div class="f"><span>' + t('parts2') + '</span>' + seg(b + 'cols', nC, [[1, t('part0')], [2, t('part1')], [3, t('part2')]]) + '</div>' +
     (nC > 1 ? '<div class="colw">' + cw.slice(0, nC - 1).map(function (w, k) { return fN(colName(nC, k) + ' ' + t('colWl'), b + 'colW.' + k, fmt(w), 's'); }).join('') +
       '<div class="f s"><span>' + colName(nC, nC - 1) + ' ' + t('colWl') + '</span><b class="colrest" id="colw-last">' + fmt(cw[nC - 1]) + ' mm</b></div></div><p class="note" style="margin:0">' + t('colWnote') + '</p>' : '') + '</div>' +
-    '<div class="colgrid cols' + nC + '">';
+    '<div class="colmap" id="colmap"' + (nC > 1 ? ' role="tablist" aria-label="' + esc(t('colEdit')) + '"' : '') + '>' + colMapInner(c) + '</div>' + (nC > 1 ? '<p class="note cmhint">' + t('cmHint') + '</p>' : '<div style="height:12px"></div>') +
+    '<div class="colgrid cols' + (nC > 1 ? 'one' : '1') + '">';
+  var ac = activeCol(c);
   for (var k = 0; k < nC; k++) {
+    if (nC > 1 && k !== ac) continue;   // one column at a time, at full width; the map above shows them all
     var z = zoneInfo(c, k), bk = (c.cnc.backs || [])[k] || 'none';
-    secs += '<div class="colblk">' + (nC > 1 ? '<div class="colh"><b>' + colName(nC, k) + '</b><span class="unit">' + fmt(cw[k]) + ' mm</span></div>' : '') +
+    secs += '<div class="colblk" role="tabpanel">' + (nC > 1 ? '<div class="colh"><span class="unit">' + t('colEdit') + '</span><b>' + colName(nC, k) + '</b><span class="unit">' + fmt(cw[k]) + ' mm</span></div>' : '') +
       '<div class="backsel"><span>' + t('backOf') + '</span>' + seg(b + 'cnc.backs.' + k, bk, [['none', t('bNone')], ['hdf', t('bHdf')], ['solid', t('bSolid')]]) + '</div>' +
       '<div class="zone" data-col="' + k + '">' + zoneHtml(z) + '</div><div class="secs">';
     for (var i = c.sections.length - 1; i >= 0; i--) if (colOf(c, c.sections[i]) === k) secs += viewSection(c, c.sections[i], i, z);
     secs += '</div><div class="addsec"><span class="unit" style="align-self:center">' + t('add') + ':</span>' +
-      ['drawers', 'doors', 'open', 'oven'].map(function (kd) { return '<button class="btn" data-act="addsec" data-v="' + kd + '" data-i="' + k + '">＋ ' + t({ drawers:'kDrawers', doors:'kDoors', open:'kOpen', oven:'kOven' }[kd]) + '</button>'; }).join('') + '</div></div>';
+      ['drawers', 'doors', 'open', 'oven'].map(function (kd) { return '<button class="btn addk k-' + kd + '" data-act="addsec" data-v="' + kd + '" data-i="' + k + '"><i class="kdot" aria-hidden="true"></i>＋ ' + t({ drawers:'kDrawers', doors:'kDoors', open:'kOpen', oven:'kOven' }[kd]) + '</button>'; }).join('') + '</div></div>';
   }
   secs += '</div>';
   h += step(2, t('s2'), t('s2l'), secs, 'secs');
@@ -632,7 +654,7 @@ function viewEditor(c) {
   var hasDr = has(function (s) { return s.kind === 'drawers' && E.R.runner[s.hw]; }), hasTb = has(function (s) { return s.kind === 'drawers' && s.hw === 'BLUM TANDEMBOX'; });
   var hasDoor = has(function (s) { return s.kind === 'doors' && s.hinge !== 'BE FURNITŪROS'; }), hasSh = has(function (s) { return (s.kind === 'doors' || s.kind === 'open') && num(s.shelves) > 0 && s.shelfAdj !== false; });
   var ops = '<div class="ops">' +
-    opRow(b + 'cnc.legs', o.legs, t('oLegs'), t('oLegsD'), true, true, o.legs ? fN(t('legH'), b + 'legH', c.legH, 's') : '') +
+    opRow(b + 'cnc.legs', o.legs, t('oLegs'), t('oLegsD'), true, true, o.legs ? legsEditor(c, rInfo) : '') +
     opRow(b + 'cnc.runnerMarks', o.runnerMarks, t('oRun'), t('oRunD'), true, hasDr) +
     opRow(b + 'cnc.tbOn', o.tbFront !== 'off', t('oTb'), o.tbFront === 'hole' ? t('oTbD') : t('oTbDm'), true, hasTb, seg(b + 'cnc.tbFront', o.tbFront === 'off' ? 'mark' : o.tbFront, [['mark', t('tbMark')], ['hole', t('tbHole')]])) +
     opRow(b + 'cnc.hinges', o.hinges, t('oHinge'), t('oHingeD'), false, hasDoor, seg(b + 'cnc.hingeFix', o.hingeFix, [['screw', t('hfScrew')], ['press', t('hfPress')]])) +
@@ -698,7 +720,8 @@ function sectionSVG(c, res, side) {
   if (eb === 'top') sv += rect(Ds, 0, D, full ? H - t_ : H, 'xs-b');
   else if (eb === 'inside') sv += rect(Ds - t_, t_, Ds, full || bH ? H - t_ : H, 'xs-b');
   else if (eb === 'hdf') sv += rect(Ds, 0, D, H, 'xs-hdf');
-  if (o.legs) [E.R.legs.fromFront, Ds - E.R.legs.fromBack].forEach(function (y) { sv += '<rect class="xs-leg" x="' + (X(y) - 3).toFixed(1) + '" y="' + Y(0).toFixed(1) + '" width="6" height="' + legs + '"/>'; });
+  var legYs = res && res.legs && res.legs.length ? res.legs.map(function (l) { return l.y; }).filter(function (y, i, a) { return a.indexOf(y) === i; }) : [E.R.legs.fromFront, Ds - E.R.legs.fromBack];
+  if (o.legs) legYs.forEach(function (y) { sv += '<rect class="xs-leg" x="' + (X(y) - 3).toFixed(1) + '" y="' + Y(0).toFixed(1) + '" width="6" height="' + legs + '"/>'; });
   sv += connectorMarks(res, X, Y, flip ? 'DESINE' : 'KAIRE');
   sv += flip ? '<text class="xs-t" x="' + pad + '" y="' + (H_ - 3).toFixed(0) + '">' + t('xBack') + '</text><text class="xs-t" text-anchor="end" x="' + (W_ - pad).toFixed(0) + '" y="' + (H_ - 3).toFixed(0) + '">' + t('xFront') + ' ▸</text>'
              : '<text class="xs-t" x="' + pad + '" y="' + (H_ - 3).toFixed(0) + '">◂ ' + t('xFront') + '</text><text class="xs-t" text-anchor="end" x="' + (W_ - pad).toFixed(0) + '" y="' + (H_ - 3).toFixed(0) + '">' + t('xBack') + '</text>';
@@ -732,10 +755,36 @@ function extrasBlock(c) {
     var b = 'c.extras.' + i + '.';
     var eb = ['e1', 'e2', 'e3', 'e4'].map(function (e, j) { var id = 'f-x-' + i + '-' + e; return '<label class="ebx" for="' + id + '"><input id="' + id + '" type="checkbox" data-bind="' + b + e + '"' + (x[e] ? ' checked' : '') + '>' + ['L1', 'L2', 'W1', 'W2'][j] + '</label>'; }).join('');
     var cell = function (k, cls, list) { var id = 'f-x-' + i + '-' + k; return '<td><input id="' + id + '" class="' + cls + '" type="text" data-bind="' + b + k + '"' + (cls === 'xn' ? ' data-num="1" inputmode="decimal"' : '') + (list ? ' list="' + list + '"' : '') + ' value="' + esc(x[k]) + '" aria-label="' + k + '" autocomplete="off"></td>'; };
-    return '<tr>' + cell('name', 'xt') + cell('L', 'xn') + cell('W', 'xn') + cell('T', 'xn') + cell('qty', 'xn') + cell('mat', 'xt', 'dl-mat') + '<td><span class="ebs">' + eb + '</span></td><td><button class="btn ghost danger" data-act="rmx" data-i="' + i + '" aria-label="' + t('rm') + '">✕</button></td></tr>';
+    return '<tr>' + cell('name', 'xt') + cell('L', 'xn') + cell('W', 'xn') + cell('T', 'xn') + cell('qty', 'xn') + cell('mat', 'xt', 'dl-mat') + '<td><span class="ebs">' + eb + '</span></td><td><button class="xbtn" data-act="rmx" data-i="' + i + '" aria-label="' + t('rm') + '" title="' + t('rm') + '">✕</button></td></tr>';
   }).join('');
   return (c.extras.length ? '<div class="tablewrap xtab"><table><thead><tr><th>' + t('exName') + '</th><th class="n">' + t('cL') + '</th><th class="n">' + t('cW') + '</th><th class="n">' + t('cT') + '</th><th class="n">' + t('cQ') + '</th><th>' + t('cMat') + '</th><th>' + t('exEdges') + '</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '<p class="note" style="margin:0 0 8px">' + t('exNone') + '</p>') +
     '<div class="row" style="margin-top:10px"><button class="btn" data-act="addx" data-v="part">＋ ' + t('exAdd') + '</button><button class="btn" data-act="addx" data-v="plinth">＋ ' + t('exPlinth') + '</button></div>';
+}
+/* legs: how many in a row across the width, how many rows, and where they land (plan view, front at the bottom) */
+function legsEditor(c, r) {
+  var o = c.cnc, b = 'c.cnc.', nC = colsOf(c), W = num(c.W), fs = E.R.legs.fromSide, lx = o.legsX || 2, ly = +o.legsY === 3 ? 3 : 2;
+  var opts = [2, 3, 4, 5, 6].map(function (n) { return [n, String(n), (W - 2 * fs) / (n - 1) < 70]; });
+  var segX = '<div class="seg" role="group">' + opts.map(function (q) { var on = String(lx) === String(q[0]);
+      return '<button type="button" data-act="set" data-bind="' + b + 'legsX" data-v="' + q[0] + '" class="' + (on ? 'on' : '') + '" aria-pressed="' + on + '"' + (q[2] && !on ? ' disabled title="' + esc(t('legDense')) + '"' : '') + '>' + q[1] + '</button>'; }).join('') +
+    (nC > 1 ? '<button type="button" data-act="set" data-bind="' + b + 'legsX" data-v="parts" class="' + (lx === 'parts' ? 'on' : '') + '" aria-pressed="' + (lx === 'parts') + '">' + t('legParts') + '</button>' : '') + '</div>';
+  var n = r && r.legs ? r.legs.length : 0;
+  return '<div class="legs-ed"><div class="legs-f"><div class="f"><span>' + t('legRow') + '</span>' + segX + '</div>' +
+    '<div class="f"><span>' + t('legRows') + '</span>' + seg(b + 'legsY', ly, [[2, t('legRows2')], [3, t('legRows3')]]) + '</div>' +
+    fN(t('legH'), 'c.legH', c.legH, 's') + '</div>' +
+    '<figure class="legplan">' + legPlanSVG(c, r) + '<figcaption>' + t('legTotal') + ': <b>' + n + '</b> ' + (S.lang === 'lt' ? 'vnt.' : 'pcs') + '</figcaption></figure></div>';
+}
+function legPlanSVG(c, r) {
+  if (!r || !r.dims) return '';
+  var W = r.dims.W, bot = (r.panels || []).filter(function (p) { return p.role === 'DUGNAS'; })[0], Dd = bot ? (Math.abs(bot.L - W) < 0.01 ? bot.W : bot.L) : r.dims.D;
+  var k = Math.min(260 / W, 120 / Dd), pad = 8, w = W * k + 2 * pad, h = Dd * k + 2 * pad + 14;
+  var X = function (x) { return pad + x * k; }, Y = function (y) { return pad + (Dd - y) * k; };   // plan view, the front at the bottom
+  var sv = '<svg viewBox="0 0 ' + w.toFixed(0) + ' ' + h.toFixed(0) + '" width="' + w.toFixed(0) + '" xmlns="http://www.w3.org/2000/svg">' +
+    '<rect class="lp-bot" x="' + pad + '" y="' + pad + '" width="' + (W * k).toFixed(1) + '" height="' + (Dd * k).toFixed(1) + '" rx="2"/>';
+  var nC = colsOf(c), cw = colWidths(c), x = 0;
+  for (var q = 0; q < nC - 1; q++) { x += cw[q]; sv += '<line class="lp-part" x1="' + X(x).toFixed(1) + '" y1="' + pad + '" x2="' + X(x).toFixed(1) + '" y2="' + (pad + Dd * k).toFixed(1) + '"/>'; }
+  (r.legs || []).forEach(function (l) { sv += '<circle class="lp-plate" cx="' + X(l.x).toFixed(1) + '" cy="' + Y(l.y).toFixed(1) + '" r="' + Math.max(3, 30 * k).toFixed(1) + '"/><circle class="lp-leg" cx="' + X(l.x).toFixed(1) + '" cy="' + Y(l.y).toFixed(1) + '" r="' + Math.max(2.2, 20 * k).toFixed(1) + '"/>'; });
+  sv += '<text class="lp-t" x="' + (w / 2).toFixed(0) + '" y="' + (h - 3).toFixed(0) + '" text-anchor="middle">▼ ' + t('legFront') + '</text>';
+  return sv + '</svg>';
 }
 function artOf(type) { return window.DBArt ? '<span class="cart">' + window.DBArt.pic(type, t('isoT_' + type)) + '</span>' : ico(type === 'cam' ? 'cam' : 'conf'); }
 function choice(bind, val, v, icon, title, desc) { return '<button type="button" class="choice' + (val === v ? ' on' : '') + '" data-act="set" data-bind="' + bind + '" data-v="' + v + '" aria-pressed="' + (val === v) + '">' + icon + '<span><b>' + title + '</b><small>' + desc + '</small></span></button>'; }
@@ -775,10 +824,10 @@ function viewSection(c, s, i, z) {
     body += fS(t('sup'), b + 'shelves', Math.min(2, num(s.shelves)), [[0, '0'], [1, '1 — ' + (S.lang === 'lt' ? 'apačioje' : 'below')], [2, '2 — ' + (S.lang === 'lt' ? 'apačioje ir viršuje' : 'below and above')]]);
   }
   body += '</div>';
-  return '<div class="sec"><div>' + head + body + '</div><div class="tools">' +
+  return '<div class="sec k-' + s.kind + '"><div>' + head + body + '</div><div class="tools">' +
     '<button title="' + t('up') + '" aria-label="' + t('up') + '" data-act="mv" data-i="' + i + '" data-v="1"' + (lastInCol(c, i) ? ' disabled' : '') + '>▲</button>' +
     '<button title="' + t('down') + '" aria-label="' + t('down') + '" data-act="mv" data-i="' + i + '" data-v="-1"' + (firstInCol(c, i) ? ' disabled' : '') + '>▼</button>' +
-    '<button title="' + t('rm') + '" aria-label="' + t('rm') + '" data-act="rmsec" data-i="' + i + '">✕</button></div></div>';
+    '<button class="xbtn" title="' + t('rm') + '" aria-label="' + t('rm') + '" data-act="rmsec" data-i="' + i + '">✕</button></div></div>';
 }
 function viewSheet(c, inf) {
   var nParts = inf.r.panels.length;
@@ -789,7 +838,7 @@ function viewSheet(c, inf) {
     (w ? '<div class="warns" id="warns">' + w + '</div>' : '<div class="warns" id="warns"></div>') +
     '<button class="btn pri big go" data-act="tab" data-v="res">' + t('toRes') + '</button></aside>';
 }
-function sketchOf(c) { try { var d = engineDef(c); d.colW = colsOf(c) > 1 ? colWidths(c) : []; var bs = c.cnc.backs || []; d.hasBack = bs.some(function (x) { return x !== 'none'; }); d.backType = bs.indexOf('hdf') >= 0 ? 'hdf' : 'carcass'; return SK.svg(d, S.lang); } catch (e) { return '<div class="empty">' + esc(e.message) + '</div>'; } }
+function sketchOf(c) { try { var d = engineDef(c); d.colW = colsOf(c) > 1 ? colWidths(c) : []; var bs = c.cnc.backs || []; d.hasBack = bs.some(function (x) { return x !== 'none'; }); d.backs = colsOf(c) > 1 && bs.length === colsOf(c) ? bs.slice() : null; d.backType = bs.indexOf('hdf') >= 0 ? 'hdf' : 'carcass'; return SK.svg(d, S.lang); } catch (e) { return '<div class="empty">' + esc(e.message) + '</div>'; } }
 
 /* ----------------------------------------------------------------- render: results */
 function viewRes(pj) {
@@ -985,6 +1034,7 @@ function refreshLive() {
   var wr = document.getElementById('warns'); if (wr) wr.innerHTML = inf.warnings.map(function (x) { var lv = level(x); return '<div class="w ' + lv + '"><span class="tag">' + t(lv === 'bad' ? 'errTag' : lv === 'warn' ? 'warnTag' : 'infoTag') + '</span><span>' + esc(x) + '</span></div>'; }).join('');
   var tb = document.querySelector('.paper .tb'); var c = cur();
   if (tb) tb.innerHTML = '<b>' + (S.sel + 1) + ' · ' + esc(c.name || typeName(c)) + '</b><span>' + fmt(c.dishwasher ? c.dishWidth : c.W) + '×' + fmt(c.H) + '×' + fmt(c.D) + '</span>';
+  var cmap = document.getElementById('colmap'); if (cmap && !c.dishwasher) cmap.innerHTML = colMapInner(c);
   if (!c.dishwasher) document.querySelectorAll('.zone[data-col]').forEach(function (zn) { var z2 = zoneInfo(c, +zn.getAttribute('data-col')); zn.className = 'zone' + (z2.over ? ' over' : ''); zn.innerHTML = zoneHtml(z2); });
   var zone = null; if (zone && !c.dishwasher) { var z = zoneInfo(c); zone.className = 'zone' + (z.over ? ' over' : ''); zone.innerHTML = t('zone') + ' <b>' + fmt(z.Hz) + '</b> mm · ' + t('used') + ' <b>' + fmt(z.exp + z.fillH * z.nFill) + '</b>' + (z.over ? ' · <b>' + t('over') + ' ' + fmt(z.exp - z.Hz) + '</b>' : ''); }
 }
@@ -1138,17 +1188,20 @@ app.addEventListener('click', function (e) {
   switch (act) {
     case 'tab': S.tab = v; S.picking = false; window.scrollTo(0, 0); break;
     case 'lang': S.lang = v; store('dbKurejas.lang', v); break;
-    case 'sel': S.sel = i; S.picking = false; S.iso = null; break;
+    case 'sel': S.sel = i; S.picking = false; S.iso = null; S.colSel = 0; break;
     case 'pick': S.picking = true; break;
     case 'unpick': S.picking = false; break;
     case 'preset': S.proj.cabinets.push(fromPreset(PRESETS[i])); S.sel = S.proj.cabinets.length - 1; S.picking = false; save(); break;
     case 'dup': { var cp = clone(cur()); cp.id = uid(); cp.name = cp.name ? cp.name + ' (2)' : ''; S.proj.cabinets.splice(S.sel + 1, 0, cp); S.sel++; save(); break; }
     case 'del': if (S.confirm !== 'del') { S.confirm = 'del'; break; } S.confirm = null; S.proj.cabinets.splice(S.sel, 1); S.sel = Math.max(0, S.sel - 1); save(); break;
     case 'set': assign(el.getAttribute('data-bind'), v); after(el.getAttribute('data-bind'), true); return;
-    case 'addsec': { var ns = newSection(v); ns.col = isNaN(i) ? 0 : i; cur().sections.push(ns); save(); break; }
+    case 'addsec': { var ns = newSection(v); ns.col = isNaN(i) ? 0 : i; S.colSel = ns.col; cur().sections.push(ns); save(); break; }
+    case 'colsel': S.colSel = +v; break;
     case 'mv': { var cc0 = cur(), a = cc0.sections, cl = colOf(cc0, a[i]), idx = a.map(function (s, q) { return q; }).filter(function (q) { return colOf(cc0, a[q]) === cl; }), p0 = idx.indexOf(i), j = idx[p0 + (+v)];
       if (j == null) return; var tmp = a[i]; a[i] = a[j]; a[j] = tmp; save(); break; }
-    case 'rmsec': cur().sections.splice(i, 1); save(); break;
+    case 'rmsec': { var rc = cur(), gone = rc.sections.splice(i, 1)[0]; save(); render();
+      toast(t('secRemoved'), false, t('undoBtn'), function () { var c2 = S.proj && S.proj.cabinets.filter(function (x) { return x.id === rc.id; })[0]; if (!c2) return; c2.sections.splice(Math.min(i, c2.sections.length), 0, gone); save(); render(); });
+      return; }
     case 'addx': { var cc = cur(); cc.extras.push(v === 'plinth' ? { name:t('exPlinth'), L:num(cc.W), W:Math.max(40, num(cc.legH) - 2), T:num(cc.thick) || 18, qty:1, mat:cc.mat.facade || cc.mat.carc, e1:true }
                                                    : { name:t('exAdd'), L:num(cc.W), W:100, T:num(cc.thick) || 18, qty:1, mat:cc.mat.carc }); save(); break; }
     case 'rmx': cur().extras.splice(i, 1); save(); break;
@@ -1187,7 +1240,13 @@ app.addEventListener('click', function (e) {
   render();
 });
 var tTimer;
-function toast(msg, err) { var d = document.getElementById('toast'); if (!d) { d = document.createElement('div'); d.id = 'toast'; document.body.appendChild(d); } d.className = 'toast' + (err ? ' err' : ''); d.textContent = msg; d.hidden = false; clearTimeout(tTimer); tTimer = setTimeout(function () { d.hidden = true; }, 2600); }
+function toast(msg, err, actLabel, actFn) {
+  var d = document.getElementById('toast'); if (!d) { d = document.createElement('div'); d.id = 'toast'; d.setAttribute('role', 'status'); document.body.appendChild(d); }
+  d.className = 'toast' + (err ? ' err' : ''); d.textContent = msg;
+  if (actLabel && actFn) { var bt = document.createElement('button'); bt.type = 'button'; bt.className = 'toast-act'; bt.textContent = '↶ ' + actLabel;
+    bt.addEventListener('click', function () { d.hidden = true; clearTimeout(tTimer); actFn(); }); d.appendChild(bt); }
+  d.hidden = false; clearTimeout(tTimer); tTimer = setTimeout(function () { d.hidden = true; }, actFn ? 6000 : 2600);
+}
 
 /* ----------------------------------------------------------------- import (own JSON or the offer app's export) */
 function importFile(file) {

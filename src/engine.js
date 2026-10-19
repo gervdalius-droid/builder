@@ -671,13 +671,39 @@ function buildCabinet(c, idx, projName) {
   };
   for (var kp = 0; kp < cols - 1; kp++) out.push(mkPart(kp));
 
+  /* ---- legs: o.legsX = legs in a row across the width (2–6, or 'parts' = at both sides and under every partition), o.legsY = rows (2 or 3).
+     A leg's plate (Ø60) must not cover a connector head on the underside: such a leg moves sideways, and the worker is told. */
+  var legPos = null;
+  function legSpots(bp) {
+    if (legPos) return legPos;
+    var fs = R.legs.fromSide, nx = o.legsX === 'parts' ? 'parts' : Math.max(2, Math.min(6, Math.round(+o.legsX) || 2)), ny = +o.legsY === 3 ? 3 : 2, xs = [];
+    if (nx === 'parts') { xs.push(fs); for (var q = 1; q < cols; q++) xs.push(bnd[q]); xs.push(W - fs); }
+    else for (var q2 = 0; q2 < nx; q2++) xs.push(fs + (W - 2*fs) * q2 / (nx - 1));
+    var yf = R.legs.fromFront, yb = Dside - R.legs.fromBack, ys = ny === 3 ? [yf, (yf + yb) / 2, yb] : [yf, yb];
+    var heads = bp ? bp.holes.filter(function (h) { return !h.mark && (h.through || h.face === 'B'); }) : [];
+    var free = function (x, y) { return x >= 35 && x <= W - 35 && heads.every(function (h) { return Math.hypot(h.x - x, h.y - y) >= 30 + h.d/2 + 4; }); };
+    legPos = []; var moved = 0;
+    var shift = function (x0, rows) { for (var m = 0; m <= 12; m++) for (var sg = 0; sg < 2; sg++) { var d = sg ? -m * 8 : m * 8; if (rows.every(function (y) { return free(x0 + d, y); })) return d; } return null; };
+    xs.forEach(function (x0) {
+      var dAll = shift(x0, ys);   // the whole line of legs front to back moves together, so they stay in a line
+      ys.forEach(function (y) {
+        var dx = dAll !== null ? dAll : shift(x0, [y]);
+        if (dx === null) { dx = 0; warnOnce('kojelė ' + num(x0) + ' mm: plokštelė uždengia jungties galvutę dugno apačioje — patikrinkite'); }
+        else if (dx) moved++;
+        legPos.push({ x:x0 + dx, y:y });
+      });
+    });
+    for (var g = 1; g < xs.length; g++) if (xs[g] - xs[g - 1] < 70) { warnOnce('kojelės per tankiai: tarp kojelių mažiau nei 70 mm — sumažinkite kojelių skaičių eilėje'); break; }
+    if (moved) warnOnce('kojelės: ' + moved + ' vnt. pastumtos šonu, kad plokštelė neuždengtų jungčių dugno apačioje');
+    return legPos;
+  }
   /* ---- bottom (face A = top face, Y from front) */
   (function () {
     var p = panel(nm('DUGNAS'), 'DUGNAS', W, Dside, t, 'viršus viršuje, priekis Y=0');
     faceJoint(p, jBot, 'A', [t/2, W - t/2], 0);
     for (var kq = 0; kq < cols - 1; kq++) faceJoint(p, { L:jPB[kq].L, R:jPB[kq].L }, 'A', [bnd[kq + 1]], y0p);
     bottomRailHoles.forEach(function (h) { hole(p, 'A', h.x, Dside - t/2, h.d, h.depth, h.through ? { through:true } : null); });   // the standing bottom back rail
-    if (o.legs) [R.legs.fromSide, W - R.legs.fromSide].forEach(function (x) { [R.legs.fromFront, Dside - R.legs.fromBack].forEach(function (y) { legMarks(p, 'B', x, y); }); });
+    if (o.legs) legSpots(p).forEach(function (l) { legMarks(p, 'B', l.x, l.y); });
     place(p, [0, 0, t], X, Y, Z); p.mat = mCarc; p.eb.y0 = eCarc;
     out.push(p);
   })();
@@ -729,7 +755,7 @@ function buildCabinet(c, idx, projName) {
 
   /* ---- legs (drawn under the bottom; only marks are drilled) */
   var legs = [];
-  if (o.legs) [R.legs.fromSide, W - R.legs.fromSide].forEach(function (x) { [R.legs.fromFront, Dside - R.legs.fromBack].forEach(function (y) { legs.push({ x:x, y:y, d:R.legs.drawD, h:+c.legH || 100 }); }); });
+  if (o.legs) legSpots(null).forEach(function (l) { legs.push({ x:l.x, y:l.y, d:R.legs.drawD, h:+c.legH || 100 }); });
   if (legs.length) hw.push({ item:'Kojelės', qty:legs.length, unit:'vnt.' });
 
   out.forEach(orient);
