@@ -19,19 +19,19 @@ for(let it=0;it<1500;it++){
   const [W,H,D]=it%3===2?[600,2100,580]:[[600,720,560],[400,720,330],[900,720,600]][Math.floor(it/27)%3];
   const mk=(k)=>{ const ty=T3[Math.floor(rnd()*3)], n=Math.floor(rnd()*5); const L=k.indexOf('rail')===0?100:k==='back'?H:D;
     const r=rnd(); return r<0.2?{type:ty}:{type:ty,pos:Array.from({length:n},()=>Math.round(rnd()*L))}; };
-  const joints={}; keys.forEach(k=>{ joints[k]= it%2 ? {L:mk(k),R:mk(k)} : mk(k); });   // every other cabinet: left and right sides differ
+  const joints={}; keys.forEach(k=>{ joints[k]= it%2 ? {L:mk(k),R:mk(k)} : mk(k); }); ['railVH','railBotB'].forEach(k=>{ const ty=T3[Math.floor(rnd()*3)], n=Math.floor(rnd()*5); joints[k]={type:ty,pos:Array.from({length:n},()=>Math.round(rnd()*W))}; });   // long rail joints: one line   // every other cabinet: left and right sides differ
   const c={name:'T',W,H,D,thick:18,cnc:{joinery:'confirmat',back,backFix:'confirmat',joints,top,rails,legs:true,hinges:true,pins:'shelf',topOverFacade:false},sections:JSON.parse(JSON.stringify(ss))};
   const r=E.buildCabinet(c,0,'P'); if(r.warnings.some(w=>/didesnė už fasadų zoną/.test(w))) continue; cabs++;
   const ps=r.panels, flagged=r.warnings.some(w=>/persidengia/.test(w));
   const side={L:ps.find(p=>p.role==='KAIRE'),R:ps.find(p=>p.role==='DESINE')};
   // 1) seams ↔ side connectors
   r.seams.forEach(sm=>{ const j0=r.joints.find(x=>x.key===sm.key); if(!j0){B('seam without joint '+sm.key);return;} const j=Object.assign({w:j0.w},j0.sides[sm.side]);
-    const sp=side[sm.side]; const spots=[];
+    const spots=[]; (keys.includes(sm.key)?[side[sm.side]]:ps).forEach(sp=>{   // side joints: that side; the rest (rails, partitions): any part
     sp.edges.forEach(e=>{ let a,b; if(e.edge==='x0'){a=0;b=e.pos;} else if(e.edge==='x1'){a=sp.L;b=e.pos;} else if(e.edge==='y0'){a=e.pos;b=0;} else {a=e.pos;b=sp.W;} spots.push(P(sp,a,b,sp.T/2)); });
-    sp.holes.forEach(h=>{ if(!h.mark&&!h.op) spots.push(P(sp,h.x,h.y,0)); });
+    sp.holes.forEach(h=>{ if(!h.mark&&!h.op) spots.push(P(sp,h.x,h.y,0)); }); });
     j.pos.concat(j.dowels).forEach(a=>{ pts++; const q=sm.o.map((v,i)=>v+a*sm.d[i]); if(!spots.some(s=>dist(s,q)<0.6)) B('SEAM POINT NOT DRILLED '+sm.key+' '+sm.side+' a='+a+' '+JSON.stringify(q)+' '+JSON.stringify(c.cnc.rails)+' back '+back+' '+top); });
     // 3) given positions survive when inside limits and far enough apart
-    const spec=joints[sm.key].L?joints[sm.key][sm.side]:joints[sm.key]; if(!spec.pos) return;
+    if(!joints[sm.key]) return; const spec=joints[sm.key].L?joints[sm.key][sm.side]:joints[sm.key]; if(!spec.pos) return;
     const given=spec.pos.map(Number).sort((a,b)=>a-b);
     const ok=given.every(a=>a>=j.minEdge&&a<=j.w-j.minEdge) && given.every((a,i)=>i===0||a-given[i-1]>=j.minGap);
     if(ok && JSON.stringify(given)!==JSON.stringify(j.pos)) B('POSITIONS CHANGED '+sm.key+' '+given+' → '+j.pos);

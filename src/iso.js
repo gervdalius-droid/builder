@@ -74,7 +74,7 @@ function drawGeo() {
 /* ---------------------------------------------------------------- joints / seams */
 function jointOf(key) { return (C.o.r.joints || []).filter(function (j) { return j.key === key; })[0]; }
 function sideOf(key, side) { var j = jointOf(key); return j ? Object.assign({ key:key, w:j.w }, j.sides ? j.sides[side || 'L'] : j) : null; }
-function perSide(key) { var j = jointOf(key); return MODE === 'sep' || !!(j && j.split); }   // a joint whose sides already differ is always edited per side
+function perSide(key) { var j = jointOf(key); if (j && j.single) return false; return MODE === 'sep' || !!(j && j.split); }   // a partition / rail joint has one line only   // a joint whose sides already differ is always edited per side
 function sameGroup(key, side, k2, s2) { return key === k2 && (side === s2 || !perSide(key)); }
 function selOn(key, side) { var q = C.o.sel; return !!q && sameGroup(q.key, q.side || 'L', key, side); }
 function seamPx(s) { var a = P(s.o), b = P(along(s, s.w)); return { s:s, a:a, b:b, len:Math.hypot(b[0] - a[0], b[1] - a[1]) }; }
@@ -114,14 +114,14 @@ function drawMarks() {
   var s = '', sel = C.o.sel || {};
   C.seams.forEach(function (sp, i) {
     var key = sp.s.key, sd = sp.s.side, j = sideOf(key, sd); if (!j) return;
-    var pos = posOf(key, sd), type = typeOf(key, sd), dws = type === 'cam' ? (inDrag(key, sd) ? camDowels(pos, sp.s.w) : j.dowels) : [];
+    var own = sp.s.at && !inDrag(key, sd), pos = own ? sp.s.at.pos : posOf(key, sd), type = own ? sp.s.at.type : typeOf(key, sd), dws = type === 'cam' ? (inDrag(key, sd) ? camDowels(pos, sp.s.w) : own ? sp.s.at.dowels : j.dowels) : [];
     var drg = D && D.mode === 'move' && sameGroup(D.key, D.side, key, sd), jsel = selOn(key, sd);
     dws.forEach(function (a) { var p = P(along(sp.s, a)); s += '<circle class="iso-dw" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3.2"/>'; });
     pos.forEach(function (a, n) {
       var p = P(along(sp.s, a)), isSel = jsel && sel.idx === n && !drg;
       var act = drg && D.idx === n, off = act && D.off;
       s += mk(type, p[0], p[1], (jsel ? 'jsel ' : '') + (isSel ? 'sel ' : '') + (act ? 'act ' : '') + (off ? 'off ' : '') + (act && D.bad ? 'bad' : ''));
-      if (!D || D.mode !== 'add') s += '<circle class="iso-hit" data-key="' + key + '" data-side="' + sd + '" data-i="' + n + '" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="16"><title>' + esc(T('jk_' + key) + ' · ' + T(sd === 'R' ? 'sideR' : 'sideL') + ' · ' + f1(a) + ' mm ' + T(refKey(sp.s))) + '</title></circle>';
+      if (!D || D.mode !== 'add') s += '<circle class="iso-hit" data-key="' + key + '" data-side="' + sd + '" data-i="' + n + '" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="16"><title>' + esc(T('jk_' + key) + ' · ' + sideTxt(key, sd) + ' · ' + f1(a) + ' mm ' + T(refKey(sp.s))) + '</title></circle>';
     });
   });
   if (D && D.mode === 'add' && D.cand) C.seams.forEach(function (sp, i) {   // the new connector on this side, or on both when the sides go together
@@ -130,8 +130,16 @@ function drawMarks() {
   if (D && D.tip) s += tipSVG(D.tip.x, D.tip.y, D.tip.lines, D.tip.bad);
   return s;
 }
-function sideTxt(key, side) { return perSide(key) ? T(side === 'R' ? 'sideR' : 'sideL') : T('isoBoth'); }
-function refKey(s) { return s.key === 'railF' ? (Math.abs(s.d[2]) > 0.5 ? 'isoRefRail' : 'isoRefFront') : (REF[s.key] || 'isoRefFront'); }
+function isSingle(key) { var j = jointOf(key); return !!(j && j.single); }
+function sideTxt(key, side) { return isSingle(key) ? T('isoOneLine') : perSide(key) ? T(side === 'R' ? 'sideR' : 'sideL') : T('isoBoth'); }
+function refKey(s) {
+  if (s.key === 'railF') return Math.abs(s.d[2]) > 0.5 ? 'isoRefRail' : 'isoRefFront';
+  if (/^partF\d/.test(s.key)) return 'isoRefPartF';
+  if (/^partR\d/.test(s.key)) return 'isoRefPartR';
+  if (/^backP\d/.test(s.key)) return 'isoRefBottom';
+  if (s.key === 'railVH' || s.key === 'railBotB') return 'isoRefLeft';
+  return REF[s.key] || 'isoRefFront';
+}
 function tipSVG(x, y, lines, bad) {
   var w = Math.min(C.w - 8, Math.max.apply(null, lines.map(function (l) { return l.length; })) * 6.6 + 14), h = lines.length * 15 + 8;
   var tx = Math.min(C.w - w - 4, Math.max(4, x + 14)), ty = Math.max(4, y - h - 12);
@@ -317,7 +325,7 @@ function inspector() {
   var tabs = per ? '<div class="iso-sides seg" role="group">' + ['L', 'R'].map(function (x) {
       return '<button type="button" data-iso="side" data-v="' + x + '" class="' + (sd === x ? 'on' : '') + '" aria-pressed="' + (sd === x) + '">' + esc(T(x === 'L' ? 'sideL' : 'sideR')) + '</button>'; }).join('') + '</div>' +
       (j0.split ? '<div class="iso-split"><span class="badge">' + esc(T('isoDiffer')) + '</span><button type="button" class="btn ghost" data-iso="copy">⇄ ' + esc(T(sd === 'L' ? 'isoCopyToR' : 'isoCopyToL')) + '</button></div>' : '')
-    : '<div class="iso-both">' + esc(T('isoBothNote')) + '</div>';
+    : isSingle(j.key) ? '' : '<div class="iso-both">' + esc(T('isoBothNote')) + '</div>';
   return '<div class="iso-ins"><div class="iso-ih"><b>' + esc(T('jk_' + j.key)) + '</b><button type="button" class="btn ghost" data-iso="desel" aria-label="' + esc(T('close')) + '">✕</button></div>' + tabs +
     '<div class="seg" role="group">' + TYPES.map(function (ty) { return '<button type="button" data-iso="type" data-v="' + ty + '" class="' + (j.type === ty ? 'on' : '') + '" aria-pressed="' + (j.type === ty) + '">' + chipIcon(ty) + esc(T('isoT_' + ty)) + '</button>'; }).join('') + '</div>' +
     '<div class="iso-insart">' + pic(j.type) + '</div><p class="note iso-insd">' + esc(T('isoD_' + j.type)) + '</p>' +

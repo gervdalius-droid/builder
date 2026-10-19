@@ -263,12 +263,16 @@ function buildCabinet(c, idx, projName) {
   /* ---- joint table: every joint can take its own connector (confirmat | cam | dowel), count and edge distance.
      Defaults are the verified SWOOD patterns; o.joints[key] = { type, n, e } overrides. */
   var J = o.joints || {}, jointsInfo = [], seenJ = {};
+  if (J.part) { J = Object.assign({}, J); for (var jk = 1; jk < 4; jk++) ['partB', 'partT'].forEach(function (b) { if (!J[b + jk]) J[b + jk] = J.part; }); }   // projects saved before each partition joint was its own
   var TYPE_LT = { confirmat:'konfirmatai', cam:'ekscentrikai', dowel:'kaiščiai' };
   /* joint lines for the 3D editor: where a joint's connectors sit in the cabinet (x across, y from the front, z up from the
      carcass bottom), the direction its positions are measured in and its length; the right side is the mirror */
-  var seams = [];
-  function seam(key, o3, d3, w) { [false, true].forEach(function (r) { seams.push({ key:key, side:r ? 'R' : 'L', o:[r ? W - o3[0] : o3[0], o3[1], o3[2]], d:d3.slice(), w:w }); }); }
-  function seam1(key, side, o3, d3, w) { seams.push({ key:key, side:side, o:o3.slice(), d:d3.slice(), w:w }); }   // one end only (parts inside a column)
+  var seams = [], lastJ = {};
+  /* a seam shorter or longer than the joint's first use (e.g. a deeper shelf in a column with plaušas) carries the spots drilled on it */
+  function at(key, sd, w) { var r = lastJ[key + '|' + w], f = jointsInfo.filter(function (j) { return j.key === key; })[0];
+    if (!r || !f || Math.abs(f.w - w) < 0.01) return null; r = r[f.single ? 'L' : sd]; return { type:r.type, pos:r.pos.slice(), dowels:r.dowels.slice() }; }
+  function seam(key, o3, d3, w) { [false, true].forEach(function (r) { var sd = r ? 'R' : 'L', q = { key:key, side:sd, o:[r ? W - o3[0] : o3[0], o3[1], o3[2]], d:d3.slice(), w:w }, a = at(key, sd, w); if (a) q.at = a; seams.push(q); }); }
+  function seam1(key, side, o3, d3, w) { var q = { key:key, side:side, o:o3.slice(), d:d3.slice(), w:w }, a = at(key, side, w); if (a) q.at = a; seams.push(q); }   // one end only (parts inside a column)
   function lin(w, n, e) { if (n <= 1) return [w/2]; var r = []; for (var i = 0; i < n; i++) r.push(e + (w - 2*e)*i/(n - 1)); return r; }
   function camDowels(pos, w) {
     var off = cm.dowel.offset, d = pos.length >= 2 ? [pos[0] + off, pos[pos.length - 1] - off] : [pos[0] - off, pos[0] + off];
@@ -277,6 +281,7 @@ function buildCabinet(c, idx, projName) {
   }
   function defSpots(w, kind, type) {
     var e, n, pos;
+    if (kind === 'long') { pos = [cf.railAlong, w/2, w - cf.railAlong]; return { pos:pos, n:3, e:pos[0], dowels:[] }; }   // along a rail: the verified 3-cam pattern
     if (kind === 'rail') { if (type === 'cam') { pos = [w/2]; return { pos:pos, n:1, e:w/2, dowels:camDowels(pos, w) }; }
       pos = w === 100 ? cf.railFromEdge.slice() : [30, w - 30]; return { pos:pos, n:2, e:pos[0] }; }
     if (kind === 'carc') { e = type === 'cam' ? cm.cam.fromFront : cf.fromFront; pos = [e, w/2, w - e];
@@ -297,12 +302,14 @@ function buildCabinet(c, idx, projName) {
     dflt = dflt || o.joinery;
     ['L', 'R'].forEach(function (sd) { res[sd] = resolve(split ? (J0[sd] || {}) : J0, w, kind, split ? label + ' (' + (sd === 'L' ? 'kairė' : 'dešinė') + ')' : label, dflt); });
     var same = res.L.type === res.R.type && res.L.pos.join() === res.R.pos.join() && res.L.dowels.join() === res.R.dowels.join();
+    lastJ[key + '|' + w] = res;
     if (!seenJ[key]) {
       seenJ[key] = 1;
       var side = function (r) { return { type:r.type, pos:r.pos.slice(), dowels:r.dowels.slice(), n:r.n, e:r.e, manual:r.cust, custom:r.type !== dflt || !!r.n || !!r.e || r.cust,
                                         defPos:r.base.pos.slice(), defN:r.base.n, defE:Math.round(r.base.e*10)/10, minGap:r.minGap, minEdge:r.minEdge }; };
       var a = side(res.L), b = side(res.R);
-      jointsInfo.push(Object.assign({ key:key, label:label, dflt:dflt, w:w }, a, { custom:a.custom || b.custom || split, split:split && !same, sides:{ L:a, R:b } }));
+      var single = /^(part[BTFR]\d|backP\d|railVH|railBotB)$/.test(key);   // one joint line, no left / right side
+      jointsInfo.push(Object.assign({ key:key, label:label, dflt:dflt, w:w }, a, { custom:a.custom || b.custom || split, split:split && !same && !single, single:single, sides:{ L:a, R:single ? a : b } }));
       [res.L, res.R].forEach(function (r) {
         if ((VERIFIED[key] || []).indexOf(r.type) < 0) U(label + ' (' + TYPE_LT[r.type] + ')');
         else if (r.n || r.e || r.cust) U(label + ': pakeistos vietos');
@@ -338,7 +345,10 @@ function buildCabinet(c, idx, projName) {
     return { type:type, pos:pos, dowels:dws, n:n, e:e, cust:!!cust, base:base, minGap:minGap, minEdge:minEdge };
   }
   /* a part between the sides, its ends x0 (left) / x1 (right); along(a) maps a position across the end (panel y) to side coords */
+  var endShift = { L:0, R:0 };   // how far the last endJoint moved each end's set on a partition (the seam drawn in 3D moves with it)
+  function seamS(key, sd, o3, d3, w) { seam1(key, sd, o3.map(function (v, i) { return v + endShift[sd]*d3[i]; }), d3, w); }
   function endJoint(p, L, J2, camFace, along, tl, tr) {   // tl/tr: what the left/right end meets when it is not the cabinet side (a partition)
+    endShift = { L:0, R:0 };
     if (!J2.same || tl || tr) { endSide(p, L, J2.L, 'L', camFace, along, tl || 'L'); endSide(p, L, J2.R, 'R', camFace, along, tr || 'R'); return; }
     var jt = J2.L;
     if (jt.type === 'cam') {
@@ -374,7 +384,7 @@ function buildCabinet(c, idx, projName) {
       var dl = cand.filter(function (d) { return !clash(d); })[0];
       if (dl == null) warnOnce('pertvara ' + (tg.p + 1) + ': jungtys iš abiejų pusių susitinka ir jų nepavyko pastumti — pakeiskite jungtis (Atskirai) arba lentynų aukščius');
       else if (dl) { warnOnce('pertvara ' + (tg.p + 1) + ': jungtys iš dešinės kolonos pastumtos ' + dl + ' mm, kad nesusitiktų su kairės kolonos jungtimis');
-        s = { type:s.type, pos:s.pos.map(function (a) { return a + dl; }), dowels:(s.dowels || []).map(function (a) { return a + dl; }) }; }
+        s = { type:s.type, pos:s.pos.map(function (a) { return a + dl; }), dowels:(s.dowels || []).map(function (a) { return a + dl; }) }; endShift[sd] = dl; }
     }
     if (s.type === 'cam') {
       s.pos.forEach(function (a) { hole(p, camFace, cx, a, cm.cam.d, cm.cam.depth); edge(p, ed, a, cm.bolt.d, cm.cam.fromEdge); var q = along(a); sideHole(q.x, q.yf, cm.bolt.d, cm.bolt.depthFace, false, tg); });
@@ -393,9 +403,19 @@ function buildCabinet(c, idx, projName) {
     var ra = cf.railAlong;
     /* a standing rail is held to the flat rail above it / the bottom below it with cams: the Ø8 bolt bore in its long edge is
        drilled in place (F=4/F=5), while a Ø5 confirmat pilot there would need the 100 mm rail turned — below the machine minimum */
+    /* a rail's long edge (ed) on another part's face: cam in the rail's face A at camY, the other part's hole through put(x, d, depth, through) */
+    var longJoint = function (below, ed, camY, s, put) {
+      if (s.type === 'cam') {
+        s.pos.forEach(function (x) { hole(below, 'A', x, camY, cm.cam.d, cm.cam.depth); edge(below, ed, x, cm.bolt.d, cm.cam.fromEdge); put(x, cm.bolt.d, cm.bolt.depthFace, false); });
+        s.dowels.forEach(function (x) { edge(below, ed, x, cm.dowel.d, cm.dowel.depthEdge); put(x, cm.dowel.d, cm.dowel.depthFace, false); });
+      } else if (s.type === 'dowel') s.pos.forEach(function (x) { edge(below, ed, x, cm.dowel.d, cm.dowel.depthEdge); put(x, cm.dowel.d, cm.dowel.depthFace, false); });
+      else s.pos.forEach(function (x) { edge(below, ed, x, cf.pilot.d, cf.pilot.depth); put(x, cf.d, 0, true); });
+      U('Ø8 skylės ilgame krašte (F=4/F=5)');
+    };
     var railRail = function (top, below, yHole) {
-      [ra, Lr/2, Lr - ra].forEach(function (x) { hole(below, 'A', x, rw - cm.cam.fromEdge, cm.cam.d, cm.cam.depth); edge(below, 'y1', x, cm.bolt.d, cm.cam.fromEdge); hole(top, 'B', x, yHole, cm.bolt.d, cm.bolt.depthFace); });
-      U('stati juosta prie gulsčios (ekscentrikai)'); U('Ø8 skylės ilgame krašte (F=4/F=5)');
+      var jv = joint('railVH', Lr, 'long', 'stati juosta ↔ gulsčia', 'cam'); seam1('railVH', 'L', [t, Dside - t/2, zv + rw], X, Lr);
+      longJoint(below, 'y1', rw - cm.cam.fromEdge, jv.L, function (x, d, depth, th) { hole(top, 'B', x, yHole, d, depth, th ? { through:true } : null); });
+      U('stati juosta prie gulsčios (ekscentrikai)');
     };
     var pF = null, pBH = null, pBV = null;
     if (rl.front === 'h') {
@@ -424,10 +444,10 @@ function buildCabinet(c, idx, projName) {
       var pA = panel(nm('JUOSTA_APACIA_V'), 'JUOSTA_APACIA_V', Lr, rw, t, 'stati, išorė viršuje, apatinis kraštas Y=0');
       endJoint(pA, Lr, joint('railBottom', rw, 'rail', 'apatinė juosta'), 'A', function (a) { return { x:a, yf:Dside - t/2 }; }); seam('railBottom', [t, Dside - t/2, t], Z, rw);
       place(pA, [t, Dside, t], X, Z, Y);
-      [t + ra, W/2, W - t - ra].forEach(function (x) { bottomRailHoles.push(x); hole(pA, 'A', x - t, cm.cam.fromEdge, cm.cam.d, cm.cam.depth); edge(pA, 'y0', x - t, cm.bolt.d, cm.cam.fromEdge); });
-      U('apatinė juosta prie dugno (ekscentrikai)'); U('Ø8 skylės ilgame krašte (F=4/F=5)');
+      var jbb = joint('railBotB', Lr, 'long', 'apatinė juosta ↔ dugnas', 'cam'); seam1('railBotB', 'L', [t, Dside - t/2, t], X, Lr);
+      longJoint(pA, 'y0', cm.cam.fromEdge, jbb.L, function (x, d, depth, th) { bottomRailHoles.push({ x:x + t, d:d, depth:depth, through:th }); });
+      U('apatinė juosta prie dugno (ekscentrikai)');
     }
-    if (cols > 1) for (var kr = 0; kr < cols - 1; kr++) { if (pF && rl.front === 'h') hole(pF, 'A', bnd[kr + 1] - t, rw/2, cf.d, 0, { through:true }); if (pBH) hole(pBH, 'A', bnd[kr + 1] - t, rw/2, cf.d, 0, { through:true }); }
     [pF, pBH, pBV, pA].forEach(function (p) { if (p) { p.mat = mCarc; railPanels.push(p); } });
   }
 
@@ -453,7 +473,8 @@ function buildCabinet(c, idx, projName) {
     };
     if (jb.same) backSide(jb.L, [t/2, W - t/2]); else { backSide(jb.L, [t/2], 'L'); backSide(jb.R, [W - t/2], 'R'); }
     for (var kb = 0; kb < cols - 1; kb++) {   // the back is fixed to the partitions' back edges too
-      if (y1p === Dside) backSide(jb.L, [bnd[kb + 1]], { p:kb, f:'R' });
+      if (y1p === Dside) { var jbp = joint('backP' + (kb + 1), Lp, 'back', 'nugara ↔ pertvara ' + (kb + 1), o.backFix === 'cam' ? 'cam' : 'confirmat'); seam1('backP' + (kb + 1), 'L', [bnd[kb + 1], Dside, t], Z, Lp);
+        backSide(jbp.L, [bnd[kb + 1]], { p:kb, f:'R' }); }
       else warnOnce('nugara ant galo: pertvara nesiekia nugaros (stati galinė juosta) — prie pertvaros nepritvirtinta');
     }
     place(pk, [0, D, 0], X, Z, Y); pk.mat = mBack; backPanels.push(pk);
@@ -469,7 +490,7 @@ function buildCabinet(c, idx, projName) {
       if (!inBack(kc)) continue;
       var Lk = ix1(kc) - ix0(kc), pc = panel(nm('NUGARA' + (kc + 1)), 'NUGARA', Lk, Hi, t, 'kolona ' + (kc + 1) + ', tarp šono/pertvaros, išorė viršuje, apatinis kraštas Y=0');
       endJoint(pc, Lk, jbi, 'A', function (a) { return { x:a, yf:Dside - t/2 }; }, tgL(kc), tgR(kc));
-      seam1('back', 'L', [ix0(kc), Dside - t/2, t], Z, Hi); seam1('back', 'R', [ix1(kc), Dside - t/2, t], Z, Hi);
+      seamS('back', 'L', [ix0(kc), Dside - t/2, t], Z, Hi); seamS('back', 'R', [ix1(kc), Dside - t/2, t], Z, Hi);
       place(pc, [ix0(kc), Dside, t], X, Z, Y); pc.mat = mBack; backPanels.push(pc);
     }
   }
@@ -496,7 +517,7 @@ function buildCabinet(c, idx, projName) {
       var zc = s.z + t/2 - t;   // side x of the shelf's mid-thickness
       endJoint(p, Lc, s.oven ? joint('oven', dF, 'shelf', 'orkaitės atramos') : joint('shelf', dF, 'shelf', 'fiksuotos lentynos'), 'B', function (a) { return { x:zc, yf:sb + a }; }, cols > 1 ? tgL(k) : null, cols > 1 ? tgR(k) : null);
       if (cols === 1) seam(s.oven ? 'oven' : 'shelf', [t, sb, s.z + t/2], Y, dF);
-      else { seam1(s.oven ? 'oven' : 'shelf', 'L', [ix0(k), sb, s.z + t/2], Y, dF); seam1(s.oven ? 'oven' : 'shelf', 'R', [ix1(k), sb, s.z + t/2], Y, dF); }
+      else { seamS(s.oven ? 'oven' : 'shelf', 'L', [ix0(k), sb, s.z + t/2], Y, dF); seamS(s.oven ? 'oven' : 'shelf', 'R', [ix1(k), sb, s.z + t/2], Y, dF); }
       place(p, [ix0(k), sb, s.z + t], X, Y, Z);
     } else {
       p = panel(nm('LENTYNA' + (i + 1)), 'LENTYNA', Lc - R.shelf.clearW, s.depth, t, 'lentyna' + (cols > 1 ? ', kolona ' + (k + 1) : ''));
@@ -578,22 +599,36 @@ function buildCabinet(c, idx, projName) {
   out.push(mkSide('KAIRE', false)); out.push(mkSide('DESINE', true));
 
   /* ---- partitions: stand on the bottom, under the top or the flat rails; face B looks into column k, face A into column k+1 */
-  var jPart = cols > 1 ? joint('part', Dp, 'carc', 'pertvara') : null;
+  /* partition joints, each its own (and editable in 3D): bottom, full top or each flat rail */
+  var jPB = [], jPT = [];
+  var endBores = function (p, ed, cx, s, yOf, n) {   // the partition's end ed: bores (and cams in face A at cx); positions outside the partition are left out
+    var ok = function (y) { if (y > 8 && y < n - 8) return true; warnOnce('pertvaros jungtis už pertvaros ribų — praleista, patikrinkite vietas'); return false; };
+    if (s.type === 'cam') {
+      s.pos.forEach(function (a) { var y = yOf(a); if (ok(y)) { hole(p, 'A', cx, y, cm.cam.d, cm.cam.depth); edge(p, ed, y, cm.bolt.d, cm.cam.fromEdge); } });
+      s.dowels.forEach(function (a) { var y = yOf(a); if (ok(y)) edge(p, ed, y, cm.dowel.d, cm.dowel.depthEdge); });
+    } else if (s.type === 'dowel') s.pos.forEach(function (a) { var y = yOf(a); if (ok(y)) edge(p, ed, y, cm.dowel.d, cm.dowel.depthEdge); });
+    else s.pos.forEach(function (a) { var y = yOf(a); if (ok(y)) edge(p, ed, y, cf.pilot.d, cf.pilot.depth); });
+  };
+  var railFace = function (rp, x, s, keep) {   // the rail's lower face B gets the partition's holes (positions = rail y)
+    var put = function (a, d, depth, th) { if (keep(a)) hole(rp, 'B', x, a, d, depth, th ? { through:true } : null); };
+    if (s.type === 'cam') { s.pos.forEach(function (a) { put(a, cm.bolt.d, cm.bolt.depthFace); }); s.dowels.forEach(function (a) { put(a, cm.dowel.d, cm.dowel.depthFace); }); }
+    else if (s.type === 'dowel') s.pos.forEach(function (a) { put(a, cm.dowel.d, cm.dowel.depthFace); });
+    else s.pos.forEach(function (a) { put(a, cf.d, 0, true); });
+  };
   var mkPart = function (k) {
-    var xc = bnd[k + 1], p = panel(nm('PERTVARA' + (k + 1)), 'PERTVARA', Lp, Dp, t, 'pertvara ' + (k + 1) + ', dešinė pusė viršuje, apatinis kraštas X=0, priekis Y=0');
-    var jt = jPart.L, ends = [['x0', cm.cam.fromEdge]]; if (topFull) ends.push(['x1', Lp - cm.cam.fromEdge]);
-    ends.forEach(function (e) {   // bottom (and full top): the same joint as a side
-      var ed = e[0], cx = e[1];
-      if (jt.type === 'cam') {
-        jt.pos.forEach(function (y) { hole(p, 'A', cx, y, cm.cam.d, cm.cam.depth); edge(p, ed, y, cm.bolt.d, cm.cam.fromEdge); });
-        jt.dowels.forEach(function (y) { edge(p, ed, y, cm.dowel.d, cm.dowel.depthEdge); });
-      } else if (jt.type === 'dowel') jt.pos.forEach(function (y) { edge(p, ed, y, cm.dowel.d, cm.dowel.depthEdge); });
-      else jt.pos.forEach(function (y) { edge(p, ed, y, cf.pilot.d, cf.pilot.depth); });
-    });
-    if (!topFull) {   // confirmats down through the flat rails into the top end
-      var rp = []; if (rl.front === 'h') rp.push(rw/2); if (backH) rp.push(Dside - rw/2);
-      rp.forEach(function (yf) { var y = yf - y0p; if (y > 9 && y < Dp - 9) edge(p, 'x1', y, cf.pilot.d, cf.pilot.depth); });
-      if (!rp.length) warnOnce('pertvara viršuje nepritvirtinta — reikia gulsčios juostos arba pilno viršaus');
+    var xc = bnd[k + 1], p = panel(nm('PERTVARA' + (k + 1)), 'PERTVARA', Lp, Dp, t, 'pertvara ' + (k + 1) + ', dešinė pusė viršuje, apatinis kraštas X=0, priekis Y=0'), n1 = k + 1;
+    jPB[k] = joint('partB' + n1, Dp, 'carc', 'pertvara ' + n1 + ' ↔ dugnas'); seam1('partB' + n1, 'L', [xc, y0p, t], Y, Dp);
+    endBores(p, 'x0', cm.cam.fromEdge, jPB[k].L, function (a) { return a; }, Dp);
+    if (topFull) {
+      jPT[k] = joint('partT' + n1, Dp, 'carc', 'pertvara ' + n1 + ' ↔ viršus'); seam1('partT' + n1, 'L', [xc, y0p, H - t], Y, Dp);
+      endBores(p, 'x1', Lp - cm.cam.fromEdge, jPT[k].L, function (a) { return a; }, Dp);
+    } else {   // under the flat rails: each rail is its own joint, positions across the rail
+      var inP = function (y) { return y > 8 && y < Dp - 8; };
+      if (rl.front === 'h' && pF) { var jf = joint('partF' + n1, rw, 'rail', 'priekinė juosta ↔ pertvara ' + n1); seam1('partF' + n1, 'L', [xc, 0, H - t], Y, rw);
+        endBores(p, 'x1', Lp - cm.cam.fromEdge, jf.L, function (a) { return a - y0p; }, Dp); railFace(pF, xc - t, jf.L, function (a) { return inP(a - y0p); }); }
+      if (backH && pBH) { var jr = joint('partR' + n1, rw, 'rail', 'galinė juosta ↔ pertvara ' + n1); seam1('partR' + n1, 'L', [xc, Dside, H - t], neg(Y), rw);
+        endBores(p, 'x1', Lp - cm.cam.fromEdge, jr.L, function (a) { return Dside - a - y0p; }, Dp); railFace(pBH, xc - t, jr.L, function (a) { return inP(Dside - a - y0p); }); }
+      if (!(rl.front === 'h' && pF) && !(backH && pBH)) warnOnce('pertvara viršuje nepritvirtinta — reikia gulsčios juostos arba pilno viršaus');
     }
     var forMe = function (j) { return j.side && typeof j.side === 'object' && j.side.p === k; };
     SJ.forEach(function (j) { if (forMe(j)) hole(p, j.side.f === 'R' ? 'A' : 'B', j.x, j.yf - y0p, j.d, j.depth, j.through ? { through:true } : null); });
@@ -640,8 +675,8 @@ function buildCabinet(c, idx, projName) {
   (function () {
     var p = panel(nm('DUGNAS'), 'DUGNAS', W, Dside, t, 'viršus viršuje, priekis Y=0');
     faceJoint(p, jBot, 'A', [t/2, W - t/2], 0);
-    for (var kq = 0; kq < cols - 1; kq++) faceJoint(p, { L:jPart.L, R:jPart.L }, 'A', [bnd[kq + 1]], y0p);
-    bottomRailHoles.forEach(function (x) { hole(p, 'A', x, Dside - t/2, cm.bolt.d, cm.bolt.depthFace); });   // cam bolts of the standing bottom back rail
+    for (var kq = 0; kq < cols - 1; kq++) faceJoint(p, { L:jPB[kq].L, R:jPB[kq].L }, 'A', [bnd[kq + 1]], y0p);
+    bottomRailHoles.forEach(function (h) { hole(p, 'A', h.x, Dside - t/2, h.d, h.depth, h.through ? { through:true } : null); });   // the standing bottom back rail
     if (o.legs) [R.legs.fromSide, W - R.legs.fromSide].forEach(function (x) { [R.legs.fromFront, Dside - R.legs.fromBack].forEach(function (y) { legMarks(p, 'B', x, y); }); });
     place(p, [0, 0, t], X, Y, Z); p.mat = mCarc; p.eb.y0 = eCarc;
     out.push(p);
@@ -652,7 +687,7 @@ function buildCabinet(c, idx, projName) {
     var off = o.topOverFacade ? fT : 0, Dtop = Dside + off + (backTop ? tb : 0);   // top covers a solid back on the back too (not the plaušas)
     var pt = panel(nm('VIRSUS'), 'VIRSUS', W, Dtop, t, 'apačia viršuje (gręžiama iš apačios), priekis Y=0');
     faceJoint(pt, jTop, 'B', [t/2, W - t/2], off);
-    for (var kt = 0; kt < cols - 1; kt++) faceJoint(pt, { L:jPart.L, R:jPart.L }, 'B', [bnd[kt + 1]], off + y0p);
+    for (var kt = 0; kt < cols - 1; kt++) faceJoint(pt, { L:jPT[kt].L, R:jPT[kt].L }, 'B', [bnd[kt + 1]], off + y0p);
     place(pt, [0, -off, H], X, Y, Z); pt.mat = mCarc; pt.eb.y0 = eCarc;
     out.push(pt);
   } else railPanels.forEach(function (p) { out.push(p); });

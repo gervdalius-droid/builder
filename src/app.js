@@ -32,7 +32,7 @@ lt:{
  back:'Nugara (18 mm)', bNone:'Nėra', bTop:'Ant galo (prisukama)', bIn:'Viduje',
  jTitle:'Jungtys pagal detales', jLead:'Kiekvienai jungčiai galima parinkti savo tvirtinimą. Kiekis — jungčių vienoje pusėje; nuo krašto — kraštinių jungčių atstumas nuo detalės krašto. Tuščia — standartas.',
  jtConf:'Konfirmatai', jtCam:'Ekscentrikai', jtDowel:'Kaiščiai', jN:'Kiekis', jE:'Nuo krašto', jAuto:'standartas', jMain:'Pagrindinis jungimas', jMainL:'Taikomas visoms jungtims, kurių nekeitėte.',
- jk_bottom:'Dugnas ↔ šonai', jk_top:'Viršus ↔ šonai', jk_railF:'Priekinė juosta', jk_railB:'Galinė juosta', jk_railV:'Stati galinė juosta', jk_railBottom:'Apatinė juosta', jk_back:'Nugara', jk_shelf:'Fiksuotos lentynos', jk_oven:'Orkaitės atramos',
+ jk_bottom:'Dugnas ↔ šonai', jk_top:'Viršus ↔ šonai', jk_railF:'Priekinė juosta', jk_railB:'Galinė juosta', jk_railV:'Stati galinė juosta', jk_railBottom:'Apatinė juosta', jk_railVH:'Stati juosta ↔ gulsčia', jk_railBotB:'Apatinė juosta ↔ dugnas', jk_back:'Nugara', jk_shelf:'Fiksuotos lentynos', jk_oven:'Orkaitės atramos',
  lgConf:'konfirmatas', lgCam:'ekscentrikas', lgDowel:'kaištis', xSideL:'kairysis šonas, žiūrint iš kairės', xSideR:'dešinysis šonas, žiūrint iš dešinės', sideL:'Kairys šonas', sideR:'Dešinys šonas',
  rails:'Surišimo juostos', rFront:'Priekyje', rBack:'Gale', rBottom:'Apačioje gale', rBottomD:'stati juosta ant dugno', rFlat:'Gulsčia', rStand:'Stati', rBoth:'Gulsčia + stati', rNone:'Nėra', rW:'Juostos plotis', rCount:'Juostų',
  bFix:'Nugaros tvirtinimas', bFixIn:'Nugara viduje tvirtinama tuo pačiu būdu kaip karkasas.', xsec:'Šoninis pjūvis', xFront:'priekis', xBack:'galas',
@@ -84,7 +84,7 @@ lt:{
  isoRotL:'Pasukti 90° į kairę', isoRotR:'Pasukti 90° į dešinę', isoHome:'Grąžinti vaizdą iš priekio-kairės', isoHomeS:'Vaizdas', isoUndo:'Atšaukti', isoUndone:'Atšaukta',
  isoFront:'▼ PRIEKIS', isoJoints:'Karkaso jungtys', isoManual:'rankinės vietos', isoManualS:'rankinės', isoEdit:'Keisti 3D',
  isoHint:'Tempkite jungtį iš viršaus ant linijos — pridėsite. „Atskirai“ — keičiasi tik tas šonas, ant kurio tempiate. Tempkite esamą jungtį išilgai — perkelsite, nutempkite toliau nuo linijos — pašalinsite. Tuščią vietą tempiant vaizdas sukasi. Pažymėtą jungtį galima stumdyti rodyklėmis (Shift — po 10 mm), Delete — pašalinti.',
- isoRefFront:'nuo priekio', isoRefBack:'nuo galo', isoRefRail:'nuo juostos apačios', isoRefBottom:'nuo dugno viršaus', isoRefShelf:'nuo lentynos priekio',
+ isoRefFront:'nuo priekio', isoRefBack:'nuo galo', isoRefRail:'nuo juostos apačios', isoRefBottom:'nuo dugno viršaus', isoRefShelf:'nuo lentynos priekio', isoRefLeft:'nuo kairės pusės', isoOneLine:'viena jungtis', isoRefPartF:'nuo juostos priekio', isoRefPartR:'nuo juostos galo',
  isoSnapMid:'vidurys', isoSnapSym:'simetriškai', isoSnapStd:'standartas',
  isoDropRemove:'Paleiskite — jungtis bus pašalinta', isoTooClose:'Per arti kitos jungties (min. {n} mm)', isoTurn:'Pasukite vaizdą — linija matoma galu',
  isoSame:'Šis tipas jau yra — tempkite ant tuščios linijos vietos', isoConvert:'Paleiskite — visa jungtis taps: {t}', isoAdd:'Paleiskite — pridėti jungtį', isoAddConv:'Pridėti; visa jungtis taps: {t}',
@@ -147,7 +147,7 @@ en:{
  back:'Back (18 mm)', bNone:'None', bTop:'On the back (screwed)', bIn:'Inside',
  jTitle:'Joints by part', jLead:'Each joint can have its own connector. Count — connectors along one end; from edge — distance of the outer ones from the part edge. Empty — standard.',
  jtConf:'Confirmats', jtCam:'Cams', jtDowel:'Dowels', jN:'Count', jE:'From edge', jAuto:'standard', jMain:'Main joinery', jMainL:'Used for every joint you have not changed.',
- jk_bottom:'Bottom ↔ sides', jk_top:'Top ↔ sides', jk_railF:'Front rail', jk_railB:'Back rail', jk_railV:'Standing back rail', jk_railBottom:'Bottom rail', jk_back:'Back', jk_shelf:'Fixed shelves', jk_oven:'Oven supports',
+ jk_bottom:'Bottom ↔ sides', jk_top:'Top ↔ sides', jk_railF:'Front rail', jk_railB:'Back rail', jk_railV:'Standing back rail', jk_railBottom:'Bottom rail', jk_railVH:'Standing rail ↔ flat rail', jk_railBotB:'Bottom rail ↔ bottom', jk_back:'Back', jk_shelf:'Fixed shelves', jk_oven:'Oven supports',
  lgConf:'confirmat', lgCam:'cam', lgDowel:'dowel', xSideL:'left side, seen from the left', xSideR:'right side, seen from the right', sideL:'Left side', sideR:'Right side',
  rails:'Top rails', rFront:'Front', rBack:'Back', rBottom:'Bottom back', rBottomD:'standing rail on the bottom', rFlat:'Flat', rStand:'Standing', rBoth:'Flat + standing', rNone:'None', rW:'Rail width', rCount:'Rails',
  bFix:'Back fixing', bFixIn:'An inside back is fixed the same way as the carcass.', xsec:'Side section', xFront:'front', xBack:'back',
@@ -199,7 +199,7 @@ en:{
  isoRotL:'Turn 90° left', isoRotR:'Turn 90° right', isoHome:'Back to the front-left view', isoHomeS:'View', isoUndo:'Undo', isoUndone:'Undone',
  isoFront:'▼ FRONT', isoJoints:'Carcass joints', isoManual:'placed by hand', isoManualS:'by hand', isoEdit:'Edit in 3D',
  isoHint:'Drag a connector from the bar onto a line to add it. “Separately” — only the side you drag on changes. Drag a connector along its line to move it, far off the line to remove it. Dragging empty space turns the view. A selected connector moves with the arrow keys (Shift — 10 mm), Delete removes it.',
- isoRefFront:'from the front', isoRefBack:'from the back', isoRefRail:'from the rail bottom', isoRefBottom:'from the bottom top face', isoRefShelf:'from the shelf front',
+ isoRefFront:'from the front', isoRefBack:'from the back', isoRefRail:'from the rail bottom', isoRefBottom:'from the bottom top face', isoRefShelf:'from the shelf front', isoRefLeft:'from the left end', isoOneLine:'one joint', isoRefPartF:'from the rail front', isoRefPartR:'from the rail back',
  isoSnapMid:'centre', isoSnapSym:'symmetric', isoSnapStd:'standard',
  isoDropRemove:'Release to remove this connector', isoTooClose:'Too close to another connector (min. {n} mm)', isoTurn:'Turn the view — this line is seen end-on',
  isoSame:'Already this type — drop on an empty part of the line', isoConvert:'Release — the whole joint becomes: {t}', isoAdd:'Release to add a connector', isoAddConv:'Add; the whole joint becomes: {t}',
@@ -241,6 +241,12 @@ en:{
  isoBoth:'both sides', isoBothNote:'Left and right sides change together. To change only one side, pick “Separately” above.', isoDiffer:'sides differ',
  isoCopyToR:'Same on the right', isoCopyToL:'Same on the left', isoCopied:'Both sides now match', isoL1:'L:', isoR1:'R:', isoResetT:'Standard on both sides', isoArmed:'Tap a joint line to add it there. Tap the button again to stop.', isoMissTap:'Tap closer to a dashed joint line',
 }};
+/* joints that come one per partition: labels for partitions 1–3 */
+(function () {
+  var L = { lt:{ partB:'Pertvara {n} ↔ dugnas', partT:'Pertvara {n} ↔ viršus', partF:'Pertvara {n} ↔ priekinė juosta', partR:'Pertvara {n} ↔ galinė juosta', backP:'Nugara ↔ pertvara {n}' },
+            en:{ partB:'Partition {n} ↔ bottom', partT:'Partition {n} ↔ top', partF:'Partition {n} ↔ front rail', partR:'Partition {n} ↔ back rail', backP:'Back ↔ partition {n}' } };
+  ['lt', 'en'].forEach(function (lg) { if (!T[lg]) return; for (var n = 1; n <= 3; n++) Object.keys(L[lg]).forEach(function (b) { T[lg]['jk_' + b + n] = L[lg][b].replace('{n}', n); }); });
+})();
 function t(k) { return (T[S.lang] && T[S.lang][k] !== undefined) ? T[S.lang][k] : (T.lt[k] !== undefined ? T.lt[k] : k); }
 
 /* ----------------------------------------------------------------- helpers */
@@ -638,8 +644,9 @@ function viewEditor(c) {
   return h;
 }
 function jointsBlock(c, r) {
-  var ORDER = ['bottom', 'top', 'part', 'railF', 'railB', 'railV', 'railBottom', 'back', 'shelf', 'oven'];
-  var js = ((r && r.joints) || []).slice().sort(function (a, b) { return ORDER.indexOf(a.key) - ORDER.indexOf(b.key); }); if (!js.length) return '';
+  var ORDER = ['bottom', 'top', 'railF', 'railB', 'railV', 'railVH', 'railBottom', 'railBotB', 'back', 'partB', 'partT', 'partF', 'partR', 'backP', 'shelf', 'oven'];
+  var oi = function (k) { var m = /^(\D+)(\d)$/.exec(k); return m ? ORDER.indexOf(m[1]) * 10 + +m[2] : ORDER.indexOf(k) * 10; };   // partitions in order: 1, 2, …
+  var js = ((r && r.joints) || []).slice().sort(function (a, b) { return oi(a.key) - oi(b.key); }); if (!js.length) return '';
   var rows = js.map(function (j) {
     var b = 'c.cnc.joints.' + j.key + '.', own = (c.cnc.joints || {})[j.key] || {}, id = 'f-j-' + j.key;
     var sideTxt = function (x) { return '<b>' + esc(t('isoT_' + x.type)) + '</b> ' + (x.pos.length ? x.pos.map(function (a) { return E.num(Math.round(a * 10) / 10); }).join(' · ') : '—') + ' <span class="unit">mm</span>'; };

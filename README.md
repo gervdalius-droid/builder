@@ -5,6 +5,7 @@ Dėdės Baldai workshop tool: enter a cabinet the way the offer app does (size, 
 **Open it:** `index.html` — one self-contained page, runs in any browser (GitHub Pages serves it from the repo root).
 
 ## What it does
+- Every joint between parts has its own connectors: partition ↔ bottom / top / front rail / back rail, back ↔ partition, standing rail ↔ flat rail, bottom rail ↔ bottom — all editable in the 3D editor.
 - Start screen: **＋ Naujas projektas** (name → first cabinet), import from the offer app, an example, and every project saved automatically (open, copy, .json backup, delete).
 - **Virtuvė**: the whole kitchen in one view — walls (straight, L, U), every cabinet in place; front of all walls, plan and 3D; drag cabinets along / between walls with snapping to wall ends, corners and neighbours; drag new cabinets in from a palette; width, fill gap, copy, remove right there; overlap and past-the-wall checks.
 - Cabinet editor with a step bar (Matmenys → Papildomos) that marks what still needs filling in; a „Paruošta CNC“ check before downloading with Fix links.
