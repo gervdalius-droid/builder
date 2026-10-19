@@ -1,6 +1,6 @@
 // Programs follow Dalius's SolidWorks → XXL post (step2xxl, same as SWOOD CAM):
 //  every marking (drawer runners, hinge plates, legs, front-fixing marks) is  XBO … Z=-2 D=5 N="L" F=1,
-//  a cam bolt bore in a part's edge stops at Z=-31.906 (never -34), no Ø8 edge bore goes deeper,
+//  a cam bolt bore in a part's edge stops at Z=-31.906 (never -34), and no horizontal bore goes deeper (konfirmat pilots too),
 //  holes are listed left end (F=3) first, then the top face by X, then the right end (F=2).
 const E=require('../src/engine.js');
 let bad=0,progs=0,marks=0,cams=0; const B=m=>{bad++; if(bad<12) console.log(m);};
@@ -18,7 +18,7 @@ for(const joinery of ['cam','confirmat']) for(const top of ['rails','full']) for
     pr.files.forEach(f=>{ progs++; const L=f.text.split('\r\n').map(xbo).filter(Boolean);
       L.forEach(b=>{
         if(b.F===1&&b.Z===-2){ if(b.D!==5||b.N!=='L') B('MARK NOT AS POST '+p.name+' '+JSON.stringify(b)); else gotMarks++; }
-        if(b.F>1&&b.D===8&&b.Z<-31.906-1e-6) B('Ø8 EDGE BORE TOO DEEP '+p.name+' '+JSON.stringify(b));
+        if(b.F>1&&b.Z<-31.906-1e-6) B('EDGE BORE DEEPER THAN 31.906 '+p.name+' '+JSON.stringify(b));
         if(b.F>1&&b.D===8&&Math.abs(b.Z+31.906)<1e-6) gotCams++;
         if(b.Z===-34) B('Z=-34 '+p.name);
       });

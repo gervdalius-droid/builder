@@ -908,7 +908,7 @@ var R = {
   /* post-processor rules (Dalius's SolidWorks → XXL post, step2xxl, matching SWOOD CAM): every marking — drawer runners,
      hinge plates, legs, front fixing marks — is a Ø5 hole 2 mm deep with N="L"; holes are listed left end (F=3) first,
      then the top face by X, then the right end (F=2) */
-  post: { markD:5, markDepth:2 },
+  post: { markD:5, markDepth:2, edgeMaxZ:31.906 },   // edgeMaxZ: no horizontal bore goes deeper (SWOOD CAM / step2xxl)
   /* boring head as equipped (Maestro StartechCNPlus .atrx/.cfgx): top 5/8/15/35, through 5/8, X ends 5/8, long edges 8.
      5 mm long-edge bores go to a separate program with the panel turned 90° (as step2xxl), panels up to machine.maxY. */
   drills: { top:[5,8,15,35], through:[5,8], xEnds:[5,8], yEdges:[8], edgeMax:35 },
@@ -1726,8 +1726,7 @@ function programs(p) {
       else { F = ((e.edge === 'y0') === (up === 'A')) ? 4 : 5; Xp = e.pos; Yp = DZ/2; sx = e.pos; }
       var ok = (F === 2 || F === 3) ? R.drills.xEnds.indexOf(e.d) >= 0 : R.drills.yEdges.indexOf(e.d) >= 0;
       if (!ok) { w.push(p.name + ': ø' + e.d + ' krašto skylė (' + e.edge + ', ' + num(e.pos) + ') — šiam kraštui grąžto nėra, NEPROGRAMUOTA'); return; }
-      if (e.depth > R.drills.edgeMax) w.push(p.name + ': krašto skylė ' + num(e.depth) + ' mm gylio — grąžtas siekia ' + R.drills.edgeMax);
-      out.push({ F:F, X:Xp, Y:Yp, Z:-e.depth, D:e.d, N:'P', sx:sx });
+      out.push({ F:F, X:Xp, Y:Yp, Z:-Math.min(e.depth, R.post.edgeMaxZ), D:e.d, N:'P', sx:sx });   // horizontal bores stop at the post's maximum
     });
     var g = function (b) { return b.F === 3 ? -1 : b.F === 2 ? DX + 1 : b.X; };   // post order: left end, top face by X, right end
     out.sort(function (a, b) { return (g(a) - g(b)) || (a.Y - b.Y) || (a.X - b.X); });
@@ -1740,8 +1739,7 @@ function programs(p) {
     rotE.forEach(function (e) {
       var front = (e.edge === 'y0') === (up1 === 'A');
       if (R.drills.xEnds.indexOf(e.d) < 0) { w.push(p.name + ': ø' + e.d + ' krašto skylė — grąžto nėra, NEPROGRAMUOTA'); return; }
-      if (e.depth > R.drills.edgeMax) w.push(p.name + ': krašto skylė ' + num(e.depth) + ' mm gylio — grąžtas siekia ' + R.drills.edgeMax);
-      out.push({ F:front ? 3 : 2, X:DZ/2, Y:DX - e.pos, Z:-e.depth, D:e.d, N:'P', sx:front ? e.depth : DY - e.depth });
+      out.push({ F:front ? 3 : 2, X:DZ/2, Y:DX - e.pos, Z:-Math.min(e.depth, R.post.edgeMaxZ), D:e.d, N:'P', sx:front ? e.depth : DY - e.depth });
     });
     out.sort(function (a, b) { return (a.sx - b.sx) || (a.Y - b.Y); });
     return out;
