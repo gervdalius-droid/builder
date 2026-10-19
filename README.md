@@ -6,8 +6,10 @@ Dėdės Baldai workshop tool: enter a cabinet the way the offer app does (size, 
 
 ## What it does
 - Start screen: **＋ Naujas projektas** (name → first cabinet), import from the offer app, an example, and every project saved automatically (open, copy, .json backup, delete).
+- **Virtuvė**: the whole kitchen in one view — walls (straight, L, U), every cabinet in place; front of all walls, plan and 3D; drag cabinets along / between walls with snapping to wall ends, corners and neighbours; drag new cabinets in from a palette; width, fill gap, copy, remove right there; overlap and past-the-wall checks.
 - Cabinet editor with a step bar (Matmenys → Papildomos) that marks what still needs filling in; a „Paruošta CNC“ check before downloading with Fix links.
 - Cabinet settings as in the offer app (gervdalius-droid.github.io/offer), with the same sketch; offer-app JSON exports can be imported.
+- Partitions (pertvaros): up to 3 columns with own widths and sections; a back per column — none, plaušas (HDF, nailed on) or solid 18 mm (on the back of the whole cabinet or inside the column). Connectors and hinges meeting from both sides of a partition are moved apart automatically.
 - Construction: confirmats / cams + dowels / dowels per joint, top rails (surišimo juostos), back on or inside, fixed shelves, oven supports.
 - **Jungtys 3D**: pick up a connector card (with a cutaway picture of the konfirmatas / ekscentrikas / kaištis) and drop it on a joint, move connectors along a joint, drag them off to remove; left and right sides together or separately; full-screen mode for easier dragging.
 - Extra operations: leg marks, Blum TANDEM / TANDEMBOX runner marks, TANDEMBOX front fixing, hinge cups and plates, shelf-support holes.
@@ -21,6 +23,7 @@ Dėdės Baldai workshop tool: enter a cabinet the way the offer app does (size, 
 | `src/export.js` | project part list, hardware, report input |
 | `src/report.js`, `src/report_tpl.js` | ReportLists `.xlsm` on the DB_PartList v18 template (`tpl/`) |
 | `src/iso.js` | 3D connector editor |
+| `src/room.js` | whole-kitchen editor (plan, front, 3D) |
 | `src/art.js`, `src/photos.js` | connector pictures and product photos |
 | `src/app.js`, `src/style.css` | the app (LT / EN) |
 | `src/sketch.js` | the offer app's cabinet sketch |
@@ -28,6 +31,6 @@ Dėdės Baldai workshop tool: enter a cabinet the way the offer app does (size, 
 Build: `python3 build.py` → `index.html` (and `dist/`). The ReportLists export loads JSZip from cdnjs, so it needs internet; offline a plain list is made.
 
 ## Checks (`test/`)
-`npm install`, then e.g. `node test/compare_ref.js` (programs vs the verified SWOOD reference), `node test/align_check.js`, `node test/align_mixed.js`, `node test/align_manual.js` (every edge bore meets its face hole, hand-placed and per-side joints), `node test/ops_check2.js`. The `*.py` UI tests use Playwright.
+`npm install`, then e.g. `node test/compare_ref.js` (programs vs the verified SWOOD reference), `node test/align_check.js`, `node test/align_mixed.js`, `node test/align_manual.js` (every edge bore meets its face hole, hand-placed and per-side joints), `node test/ops_check2.js`, `node test/align_cols.js` (partitions and backs per column). The `*.py` UI tests use Playwright.
 
 Hand-placed connectors, hinge and shelf-support holes are marked „nepatikrinta" in the app until checked on a real part.

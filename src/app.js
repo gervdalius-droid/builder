@@ -5,8 +5,8 @@
    ===================================================================== */
 (function () {
 "use strict";
-var E = window.DBEngine, X = window.DBExport, Z = window.DBZip, SK = window.OfferSketch, ISO = window.DBIso;
-var VERSION = '1.9';
+var E = window.DBEngine, X = window.DBExport, Z = window.DBZip, SK = window.OfferSketch, ISO = window.DBIso, RM = window.DBRoom;
+var VERSION = '2.1';
 var IN_ARTIFACT = !!(window.claude && typeof window.claude.use === 'function');
 
 /* ----------------------------------------------------------------- texts */
@@ -96,7 +96,23 @@ lt:{
  isoGrab:'⠿ Tempkite ant jungties', isoTapLine:'Bakstelėkite jungties liniją', isoFullOn:'Atidaryti 3D per visą ekraną', isoFullOff:'Uždaryti visą ekraną (Esc)', isoFullOnS:'Visas ekranas', isoFullOffS:'Uždaryti',
  xxlTitle:'CNC programos (.XXL)', xxlLead:'Kiekvieną programą galima atsisiųsti atskirai, be ZIP. ↻ — pasukta programa (5 mm skylės ilgame krašte). Naršyklė gali paklausti, ar leisti atsisiųsti kelis failus — leiskite.',
  xxlAll:'⤓ Visos .XXL atskirai ({n})', xxlAllT:'Kiekviena programa atskiru failu, be ZIP', xxlCab:'⤓ Šios spintelės ({n})', xxlPart:'⤓ Visos šios detalės ({n})', xxlOne:'Atsisiųsti', xxlRot:'pasukta', xxlSaving:'Atsisiunčiama failų: {n}…',
- reqNote:'privaloma — be to detalių sąraše nebus medžiagos', n1:'Matmenys', n2:'Sekcijos', n3:'Konstrukcija', n4:'Operacijos', n5:'Medžiagos', n6:'Papildomos',
+ reqNote:'privaloma — be to detalių sąraše nebus medžiagos', tRoom:'Virtuvė', rmTitle:'Visa virtuvė', rmWall:'Siena', rmWalls:'Sienos', rmVFront:'Iš priekio', rmVPlan:'Planas', rmAllWalls:'Visos sienos',
+ rm3Hint:'Tempkite — sukasi. Spustelėkite spintelę — pažymite.', rmAdd:'Pridėti spintelę', rmAddT:'Nutempkite ant sienos (vaizdas „Iš priekio“ arba „Planas“) arba spustelėkite — atsiras po paskutine',
+ rmUnplaced:'Nepastatytos', rmPlace:'Pastatyti', rmX:'Nuo sienos pradžios', rmZ:'Apačia nuo grindų', rmHitShort:'Kliūna už kitos spintelės arba išeina už sienos — patraukite arba pakeiskite plotį.',
+ rmFill:'Užpildyti tarpą: {w} mm', rmEdit:'Redaguoti spintelę', rmDup:'Kopija šalia', rmUnplace:'Nuimti nuo sienos', rmKeys:'← → stumia po 10 mm (Shift — 100 mm), Delete — nuima nuo sienos.',
+ rmUsed:'užstatyta {u} mm', rmWallDel:'Pašalinti paskutinę sieną', rmWallDelDone:'Siena pašalinta — jos spintelės perkeltos į „Nepastatytos“', rmRoom:'Patalpa',
+ rmRoomL:'Sienos eina pagal laikrodžio rodyklę, žiūrint iš viršaus: A — į dešinę, B — žemyn, C — į kairę, D — aukštyn. Viena siena — tiesi virtuvė, dvi — L, trys — U.',
+ rmWallAdd:'Pridėti sieną', rmWallZ:'Pakabinamų apačia nuo grindų', rmRoomH:'Patalpos aukštis', rmWorktop:'Rodyti stalviršį', rmProbs:'Patikrinkite',
+ rmProbOut:'Spintelė {a} išeina už sienos galo', rmProbHit:'Spintelės {a} ir {b} kliūna viena už kitos', rmNoProbs:'Spintelės telpa ir nekliūna viena už kitos',
+ rmHint:'Spintelę tempkite išilgai sienos ar į kitą sieną — ji prisitraukia prie sienos galo, kampo ar kaimynės. Spustelėkite spintelę — dešinėje pakeisite plotį, užpildysite tarpą, atidarysite redagavimą.',
+ rmFromStart:'{x} mm nuo sienos pradžios', rmLeftRight:'kairėje {l} · dešinėje {r}', rmSnap_wall:'prie sienos galo', rmSnap_corner:'prie kampo', rmSnap_nb:'prie kaimynės',
+ rmHit:'Kliūna už kitos spintelės', rmHitDrop:'Pastatyta, bet kliūna — patraukite arba pakeiskite plotį', rmDropAdd:'Paleiskite — pridėti čia', rmFitTo:'Tarpe telpa {w} mm — plotis bus {w} mm',
+ rmMiss:'Paleiskite ant sienos', rmNo3dDrop:'Įtempti galima vaizduose „Iš priekio“ arba „Planas“', rmPlanLeg:'Planas iš viršaus · stora linija — spintelės priekis · punktyras — pakabinamos',
+ rm3Leg:'3D · fasadai tamsesni · tempkite tuščią vietą — sukasi', rmUnplaced1:'Nuimta nuo sienos', rmAdded:'Pridėta spintelė {n}', rmDeleted:'Spintelė ištrinta',
+ parts2:'Pertvaros', part0:'Nėra', part1:'1 pertvara', part2:'2 pertvaros', colWl:'plotis', colWnote:'Plotis — iki pertvaros vidurio. Paskutinė kolona gauna, kas lieka iki spintelės pločio.',
+ colOne:'Spintelė', colL:'Kairė', colM:'Vidurinė', colR:'Dešinė', backOf:'Nugara', bHdf:'Plaušas', bSolid:'Kieta 18 mm', backMountL:'Kieta nugara montuojama',
+ bTopOnlyAll:'„Ant galo“ — kai visose kolonose kieta nugara; kitaip kieta nugara montuojama kolonos viduje.', bPerCol:'Nugara pasirenkama kiekvienai kolonai (2 žingsnis „Sekcijos“).', jk_part:'Pertvara ↔ dugnas/viršus',
+ n1:'Matmenys', n2:'Sekcijos', n3:'Konstrukcija', n4:'Operacijos', n5:'Medžiagos', n6:'Papildomos',
  toHome:'Visi projektai', prNew2:'Naujas projektas', autosaved:'išsaugota', autosaveT:'Viskas išsaugoma automatiškai šioje naršyklėje',
  npLead:'Įrašykite pavadinimą — jis bus CNC programų ir sąrašo failų pavadinimuose. Toliau pasirinksite pirmą spintelę.', npName:'Projekto pavadinimas', npPh:'pvz. VIRTUVE_JONAITIS', npCreate:'Sukurti projektą',
  npOr:'arba', npImport:'Įkelti iš pasiūlymo programos (.json)', npSample:'Atidaryti pavyzdį', npNeed:'Įrašykite projekto pavadinimą', npDone:'Sukurtas projektas {n}',
@@ -195,7 +211,23 @@ en:{
  isoGrab:'⠿ Drag onto a joint', isoTapLine:'Tap a joint line', isoFullOn:'Open the 3D view full screen', isoFullOff:'Close full screen (Esc)', isoFullOnS:'Full screen', isoFullOffS:'Close',
  xxlTitle:'CNC programs (.XXL)', xxlLead:'Every program can be downloaded on its own, without a ZIP. ↻ — turned program (5 mm holes in a long edge). The browser may ask whether to allow several downloads — allow it.',
  xxlAll:'⤓ All .XXL separately ({n})', xxlAllT:'Each program as its own file, no ZIP', xxlCab:'⤓ This cabinet ({n})', xxlPart:'⤓ All of this part ({n})', xxlOne:'Download', xxlRot:'turned', xxlSaving:'Downloading {n} files…',
- reqNote:'required — otherwise the part list has no material', n1:'Size', n2:'Sections', n3:'Construction', n4:'Operations', n5:'Materials', n6:'Extras',
+ reqNote:'required — otherwise the part list has no material', tRoom:'Kitchen', rmTitle:'Whole kitchen', rmWall:'Wall', rmWalls:'Walls', rmVFront:'Front', rmVPlan:'Plan', rmAllWalls:'All walls',
+ rm3Hint:'Drag to turn. Click a cabinet to select it.', rmAdd:'Add a cabinet', rmAddT:'Drag onto a wall (Front or Plan view) or click — it goes after the last one',
+ rmUnplaced:'Not placed', rmPlace:'Place', rmX:'From the wall start', rmZ:'Bottom from the floor', rmHitShort:'Hits another cabinet or runs past the wall — move it or change the width.',
+ rmFill:'Fill the gap: {w} mm', rmEdit:'Edit cabinet', rmDup:'Copy next to it', rmUnplace:'Take off the wall', rmKeys:'← → move 10 mm (Shift — 100 mm), Delete takes it off the wall.',
+ rmUsed:'{u} mm used', rmWallDel:'Remove the last wall', rmWallDelDone:'Wall removed — its cabinets moved to “Not placed”', rmRoom:'Room',
+ rmRoomL:'Walls run clockwise seen from above: A to the right, B down, C to the left, D up. One wall — a straight kitchen, two — L, three — U.',
+ rmWallAdd:'Add a wall', rmWallZ:'Wall cabinets bottom from the floor', rmRoomH:'Room height', rmWorktop:'Show the worktop', rmProbs:'Check',
+ rmProbOut:'Cabinet {a} runs past the wall end', rmProbHit:'Cabinets {a} and {b} hit each other', rmNoProbs:'Cabinets fit and do not hit each other',
+ rmHint:'Drag a cabinet along a wall or to another wall — it snaps to the wall end, corner or neighbour. Click a cabinet to change its width, fill a gap or open it for editing on the right.',
+ rmFromStart:'{x} mm from the wall start', rmLeftRight:'left {l} · right {r}', rmSnap_wall:'at the wall end', rmSnap_corner:'at the corner', rmSnap_nb:'at the neighbour',
+ rmHit:'Hits another cabinet', rmHitDrop:'Placed, but it hits — move it or change the width', rmDropAdd:'Release to add here', rmFitTo:'The gap is {w} mm — width will be {w} mm',
+ rmMiss:'Release on a wall', rmNo3dDrop:'Drop in the Front or Plan view', rmPlanLeg:'Plan from above · thick line — cabinet front · dashed — wall cabinets',
+ rm3Leg:'3D · fronts darker · drag empty space to turn', rmUnplaced1:'Taken off the wall', rmAdded:'Cabinet {n} added', rmDeleted:'Cabinet deleted',
+ parts2:'Partitions', part0:'None', part1:'1 partition', part2:'2 partitions', colWl:'width', colWnote:'Width — to the middle of the partition. The last column takes what is left of the cabinet width.',
+ colOne:'Cabinet', colL:'Left', colM:'Middle', colR:'Right', backOf:'Back', bHdf:'Fibreboard', bSolid:'Solid 18 mm', backMountL:'Solid back mounted',
+ bTopOnlyAll:'“On the back” — when every column has a solid back; otherwise a solid back goes inside its column.', bPerCol:'The back is chosen per column (step 2 “Sections”).', jk_part:'Partition ↔ bottom/top',
+ n1:'Size', n2:'Sections', n3:'Construction', n4:'Operations', n5:'Materials', n6:'Extras',
  toHome:'All projects', prNew2:'New project', autosaved:'saved', autosaveT:'Everything is saved automatically in this browser',
  npLead:'Type a name — it goes into the CNC program and list file names. Next you pick the first cabinet.', npName:'Project name', npPh:'e.g. KITCHEN_SMITH', npCreate:'Create project',
  npOr:'or', npImport:'Import from the offer app (.json)', npSample:'Open the example', npNeed:'Type a project name', npDone:'Project {n} created',
@@ -250,11 +282,30 @@ function newSection(kind) {
            nDrawers:3, hw:'BLUM TANDEMBOX', rail:500, nDoors:kind === 'doors' ? 2 : 1, hinge:'BLUM LANKSTAI', doorSplit:'v', hingeSide:'auto',
            shelves:kind === 'oven' ? 2 : kind === 'open' ? 2 : 1, shelfAdj:true, shelfMode:'even', shelfPos:[] };
 }
+/* ---- columns (pertvaros) and a back per column */
+function colsOf(c) { return c.dishwasher ? 1 : Math.max(1, Math.min(3, Math.floor(num(c.cols) || 1))); }
+function colOf(c, s) { return Math.min(colsOf(c) - 1, Math.max(0, Math.floor(num(s.col) || 0))); }
+function colWidths(c) {   // outer widths (to partition centres), last one takes the rest
+  var n = colsOf(c), W = num(c.W), w = Array.isArray(c.colW) && c.colW.length === n ? c.colW.map(num) : null;
+  if (!w || w.slice(0, n - 1).some(function (v) { return !(v > 0); })) { w = []; for (var k = 0; k < n; k++) w.push(Math.round(W / n)); }
+  var rest = W - w.slice(0, n - 1).reduce(function (a, b) { return a + b; }, 0); w[n - 1] = rest;
+  return w;
+}
+function legacyBack(cnc) { return !cnc.back || cnc.back === 'none' ? 'none' : 'solid'; }
+function fixCols(c) {   // keep colW / backs / section columns consistent with the column count
+  var n = colsOf(c); c.cols = n; c.colW = n > 1 ? colWidths(c) : [];
+  var b = Array.isArray(c.cnc.backs) ? c.cnc.backs.slice(0, n) : [];
+  while (b.length < n) b.push(b.length ? b[b.length - 1] : legacyBack(c.cnc));
+  c.cnc.backs = b; if (!c.cnc.backMount) c.cnc.backMount = c.cnc.back === 'inside' ? 'inside' : 'top';
+  c.sections.forEach(function (s) { s.col = colOf(c, s); });
+}
+function colName(n, k) { return n === 1 ? t('colOne') : k === 0 ? t('colL') : k === n - 1 ? t('colR') : t('colM'); }
 function cncFor(type) {
   var ty = S.settings.types[type] || S.settings.types.PASTATOMOS, op = S.settings.ops;
   return { joinery:ty.joinery, top:ty.top, back:ty.back, backFix:ty.backFix || 'confirmat', topOverFacade:!!ty.topOverFacade, legs:!!ty.legs, facadeT:18,
            rails:{ front:ty.railFront || 'h', back:ty.railBack || 'h', bottom:!!ty.railBottom }, railW:num(S.settings.railW) || 100, joints:{},
-           runnerMarks:op.runnerMarks, tbFront:op.tbFront, hinges:op.hinges, hingeFix:op.hingeFix, pins:op.pins };
+           runnerMarks:op.runnerMarks, tbFront:op.tbFront, hinges:op.hinges, hingeFix:op.hingeFix, pins:op.pins,
+           backs:[!ty.back || ty.back === 'none' ? 'none' : 'solid'], backMount:ty.back === 'inside' ? 'inside' : 'top' };
 }
 function newCabinet(type) {
   var last = S.proj.cabinets[S.proj.cabinets.length - 1];
@@ -308,6 +359,7 @@ function normCab(c) {
   c.extras = Array.isArray(c.extras) ? c.extras : [];
   c.cnc.joints = (c.cnc.joints && typeof c.cnc.joints === 'object') ? c.cnc.joints : {};
   c.sections = (c.sections || []).map(function (s) { return Object.assign(newSection(s.kind || 'doors'), s); });
+  fixCols(c);
   return c;
 }
 function sample() {   // first run: a realistic small project so the tool opens working
@@ -342,7 +394,7 @@ function save() {
 }
 function openProject(p) {
   S.proj = clone(p); S.proj.id = S.proj.id || uid(); S.proj.cabinets = (S.proj.cabinets || []).map(normCab);
-  S.home = false; S.tab = 'cab'; S.sel = 0; S.part = null; S.iso = null; S.undo = []; S.picking = !S.proj.cabinets.length; S.confirm = null;
+  S.home = false; S.tab = 'cab'; S.sel = 0; S.part = null; S.iso = null; S.undo = []; S.roomUndo = []; S.roomSel = null; S.picking = !S.proj.cabinets.length; S.confirm = null;
   store('dbKurejas.current', S.proj); window.scrollTo(0, 0);
 }
 function newProject(name) { openProject({ app:'db-kurejas', v:1, id:uid(), name:name, cabinets:[], updated:new Date().toISOString() }); libSave(); }
@@ -374,6 +426,7 @@ function engineDef(c) {
   if (d.dishwasher) d.W = d.dishWidth || d.W;
   d.cnc.facadeT = num(d.cnc.facadeT) || 18;
   d.sections.forEach(function (s) { ['height', 'nDrawers', 'rail', 'nDoors', 'shelves'].forEach(function (k) { s[k] = num(s[k]); }); s.shelfPos = (s.shelfPos || []).map(num); });
+  d.cols = colsOf(c); d.colW = d.cols > 1 ? colWidths(c) : [];
   return d;
 }
 function buildOne(i) {
@@ -388,7 +441,7 @@ function dedupe(list) {   // the same note on several panels → one line with t
   return order.map(function (k) { return (m[k].length ? m[k].join(', ') + ': ' : '') + k; });
 }
 function level(w) {
-  if (/NEPROGRAMUOTA|didesnė už|netinkami|praleista|nepalaikom|nepridėtos|ne prie šono|negali būti gręžiamos|netelpa|nesurištas/i.test(w)) return 'bad';
+  if (/NEPROGRAMUOTA|didesnė už|netinkami|praleista|nepalaikom|nepridėtos|ne prie šono|negali būti gręžiamos|netelpa|nesurištas|persidengia|susitinka|nepritvirtinta/i.test(w)) return 'bad';
   if (/NEPATIKRINTA|nepatikrintos|patikrinti|perkeltas|patikrinkite|šablono nėra|patenka į|prispaudimą/i.test(w)) return 'warn';
   return 'info';
 }
@@ -441,16 +494,17 @@ function render() {
     '<button class="btn projbtn" data-act="home" title="' + t('toHome') + '">☰ ' + t('projects') + '</button>' +
     '<label class="projname"><span class="unit">' + t('project') + '</span><input id="projname" type="text" data-bind="p.name" value="' + esc(S.proj.name) + '" placeholder="' + t('projPh') + '" autocomplete="off"' + (S.proj.name ? '' : ' aria-invalid="true"') + '><span class="saved" id="saved" title="' + t('autosaveT') + '">✓ ' + t('autosaved') + '</span></label>' +
     '<nav class="tabs" aria-label="tabs">' +
-      tabBtn('cab', t('tCab'), S.proj.cabinets.length) + tabBtn('res', t('tRes'), nParts) + tabBtn('set', t('tSet')) + '</nav>' +
+      tabBtn('cab', t('tCab'), S.proj.cabinets.length) + tabBtn('room', t('tRoom')) + tabBtn('res', t('tRes'), nParts) + tabBtn('set', t('tSet')) + '</nav>' +
     '<div class="hbtns"><button class="btn newbtn" data-act="pnew">＋ ' + t('prNew2') + '</button>' + langBtns() + '</div>' +
     '</div></header><main class="wrap">';
   if (S.tab === 'cab') h += viewCab(cabInfo);
   else if (S.tab === 'res') h += viewRes(buildProjectAll());
+  else if (S.tab === 'room') h += '<div class="room" id="room"></div>';
   else h += viewSet();
   h += '</main><datalist id="dl-mat">' + listOpts('mat') + '</datalist><datalist id="dl-edge">' + listOpts('edge') + '</datalist>';
   var fx = document.activeElement && document.activeElement.id, ss = fx && document.activeElement.selectionStart;
   app.innerHTML = h;
-  mountIso();
+  mountIso(); mountRoom();
   if (fx) { var el = document.getElementById(fx); if (el) { el.focus(); try { if (ss != null) el.setSelectionRange(ss, ss); } catch (e) {} } }
 }
 function tabBtn(k, label, cnt) { return '<button data-act="tab" data-v="' + k + '" class="' + (S.tab === k ? 'on' : '') + '">' + label + (cnt != null ? '<span class="cnt">' + cnt + '</span>' : '') + '</button>'; }
@@ -512,12 +566,13 @@ function seg(bind, val, opts) { return '<div class="seg" role="group">' + opts.m
 function chk(bind, val, label) { var id = 'f-' + bind.replace(/\./g, '-'); return '<label class="chk" for="' + id + '"><input id="' + id + '" type="checkbox" data-bind="' + bind + '"' + (val ? ' checked' : '') + '>' + label + '</label>'; }
 function step(no, title, lead, body, key) { return '<div class="card step"' + (key ? ' id="st-' + key + '"' : '') + '><div class="no">' + no + '</div><div><h3>' + title + '</h3>' + (lead ? '<p class="lead">' + lead + '</p>' : '') + body + '</div></div>'; }
 
-function zoneInfo(c) {
+function zoneInfo(c, col) {
   var o = c.cnc, H = num(c.H), t_ = num(c.thick) || 18, topFull = o.top === 'full';
   var Hz = H - (topFull && o.topOverFacade ? t_ : (topFull ? 0 : E.R.facade.zoneGapRails));
-  var exp = 0, nFill = 0; c.sections.forEach(function (s) { if (s.fill) nFill++; else exp += Math.max(0, num(s.height)); });
+  var exp = 0, nFill = 0; c.sections.forEach(function (s) { if (col != null && colOf(c, s) !== col) return; if (s.fill) nFill++; else exp += Math.max(0, num(s.height)); });
   return { Hz:Hz, exp:exp, nFill:nFill, fillH:nFill ? Math.max(0, Hz - exp) / nFill : 0, over:exp > Hz + 0.5 };
 }
+function zoneHtml(z) { return t('zone') + ' <b>' + fmt(z.Hz) + '</b> mm · ' + t('used') + ' <b>' + fmt(z.exp + z.fillH * z.nFill) + '</b>' + (z.over ? ' · <b>' + t('over') + ' ' + fmt(z.exp - z.Hz) + '</b>' : ''); }
 function viewEditor(c) {
   var b = 'c.', o = c.cnc, h = '';
   /* 1 — dimensions */
@@ -528,12 +583,22 @@ function viewEditor(c) {
     '<span class="row" style="margin-left:auto;gap:6px"><button class="btn ghost" data-act="dup">' + t('dup') + '</button><button class="btn ghost danger" data-act="del">' + (S.confirm === 'del' ? t('delSure') : t('del')) + '</button></span></div>';
   h += step(1, t('s1'), t('s1l'), dims, 'dims');
   if (c.dishwasher) { h += step(2, t('s5'), t('s5l'), matsBlock(c), 'mats'); return h; }
-  /* 2 — sections */
-  var z = zoneInfo(c);
-  var secs = '<div class="zone' + (z.over ? ' over' : '') + '">' + t('zone') + ' <b>' + fmt(z.Hz) + '</b> mm · ' + t('used') + ' <b>' + fmt(z.exp + z.fillH * z.nFill) + '</b>' + (z.over ? ' · <b>' + t('over') + ' ' + fmt(z.exp - z.Hz) + '</b>' : '') + '</div><div class="secs">';
-  for (var i = c.sections.length - 1; i >= 0; i--) secs += viewSection(c, c.sections[i], i, z);
-  secs += '</div><div class="addsec"><span class="unit" style="align-self:center">' + t('add') + ':</span>' +
-    ['drawers', 'doors', 'open', 'oven'].map(function (k) { return '<button class="btn" data-act="addsec" data-v="' + k + '">＋ ' + t({ drawers:'kDrawers', doors:'kDoors', open:'kOpen', oven:'kOven' }[k]) + '</button>'; }).join('') + '</div>';
+  /* 2 — sections, by column (pertvaros), each column with its own back */
+  var nC = colsOf(c), cw = colWidths(c);
+  var secs = '<div class="colbar"><div class="f"><span>' + t('parts2') + '</span>' + seg(b + 'cols', nC, [[1, t('part0')], [2, t('part1')], [3, t('part2')]]) + '</div>' +
+    (nC > 1 ? '<div class="colw">' + cw.slice(0, nC - 1).map(function (w, k) { return fN(colName(nC, k) + ' ' + t('colWl'), b + 'colW.' + k, fmt(w), 's'); }).join('') +
+      '<div class="f s"><span>' + colName(nC, nC - 1) + ' ' + t('colWl') + '</span><b class="colrest" id="colw-last">' + fmt(cw[nC - 1]) + ' mm</b></div></div><p class="note" style="margin:0">' + t('colWnote') + '</p>' : '') + '</div>' +
+    '<div class="colgrid cols' + nC + '">';
+  for (var k = 0; k < nC; k++) {
+    var z = zoneInfo(c, k), bk = (c.cnc.backs || [])[k] || 'none';
+    secs += '<div class="colblk">' + (nC > 1 ? '<div class="colh"><b>' + colName(nC, k) + '</b><span class="unit">' + fmt(cw[k]) + ' mm</span></div>' : '') +
+      '<div class="backsel"><span>' + t('backOf') + '</span>' + seg(b + 'cnc.backs.' + k, bk, [['none', t('bNone')], ['hdf', t('bHdf')], ['solid', t('bSolid')]]) + '</div>' +
+      '<div class="zone" data-col="' + k + '">' + zoneHtml(z) + '</div><div class="secs">';
+    for (var i = c.sections.length - 1; i >= 0; i--) if (colOf(c, c.sections[i]) === k) secs += viewSection(c, c.sections[i], i, z);
+    secs += '</div><div class="addsec"><span class="unit" style="align-self:center">' + t('add') + ':</span>' +
+      ['drawers', 'doors', 'open', 'oven'].map(function (kd) { return '<button class="btn" data-act="addsec" data-v="' + kd + '" data-i="' + k + '">＋ ' + t({ drawers:'kDrawers', doors:'kDoors', open:'kOpen', oven:'kOven' }[kd]) + '</button>'; }).join('') + '</div></div>';
+  }
+  secs += '</div>';
   h += step(2, t('s2'), t('s2l'), secs, 'secs');
   /* 3 — construction */
   var jo = '<div class="lbl">' + t('jMain') + ' <span class="unit">· ' + t('jMainL') + '</span></div><div class="choices">' +
@@ -542,7 +607,9 @@ function viewEditor(c) {
     '<div><div class="lbl">' + t('top') + '</div><div class="row">' + seg(b + 'cnc.top', o.top, [['rails', t('topRails')], ['full', t('topFull')]]) +
       (o.top === 'full' ? chk(b + 'cnc.topOverFacade', o.topOverFacade, t('topOver')) : '') + '</div></div>' +
     (o.top === 'rails' ? railsEditor(c) : '') +
-    '<div><div class="lbl">' + t('back') + '</div>' + seg(b + 'cnc.back', o.back, [['none', t('bNone')], ['top', t('bTop')], ['inside', t('bIn')]]) + '</div>' +
+    (function () { var bs = o.backs || [], anyS = bs.indexOf('solid') >= 0, allS = bs.length && bs.every(function (x) { return x === 'solid'; });
+      return '<div><div class="lbl">' + t('backMountL') + '</div>' + (anyS ? seg(b + 'cnc.backMount', o.backMount || 'top', [['top', t('bTop')], ['inside', t('bIn')]]) +
+        (o.backMount !== 'inside' && !allS ? '<p class="note" style="margin:4px 0 0">' + t('bTopOnlyAll') + '</p>' : '') : '<p class="note" style="margin:0">' + t('bPerCol') + '</p>') + '</div>'; })() +
     '</div>';
   var rInfo = S._info && S._info[S.sel] ? S._info[S.sel].r : null;
   var xs = S.xside === 'R' ? 'R' : 'L';
@@ -571,7 +638,7 @@ function viewEditor(c) {
   return h;
 }
 function jointsBlock(c, r) {
-  var ORDER = ['bottom', 'top', 'railF', 'railB', 'railV', 'railBottom', 'back', 'shelf', 'oven'];
+  var ORDER = ['bottom', 'top', 'part', 'railF', 'railB', 'railV', 'railBottom', 'back', 'shelf', 'oven'];
   var js = ((r && r.joints) || []).slice().sort(function (a, b) { return ORDER.indexOf(a.key) - ORDER.indexOf(b.key); }); if (!js.length) return '';
   var rows = js.map(function (j) {
     var b = 'c.cnc.joints.' + j.key + '.', own = (c.cnc.joints || {})[j.key] || {}, id = 'f-j-' + j.key;
@@ -601,9 +668,11 @@ function railsEditor(c) {
 function sectionSVG(c, res, side) {
   var o = c.cnc, t_ = num(c.thick) || 18, H = num(c.H), D = num(c.D);
   if (!(H > 0 && D > 0)) return '';
-  var full = o.top === 'full', tb = o.back === 'top' ? t_ : 0, Ds = D - tb, rw = num(o.railW) || 100, r = Object.assign({}, o.rails);
+  var bs = o.backs || [], allS = bs.length && bs.every(function (x) { return x === 'solid'; }), bk = bs[side === 'R' ? bs.length - 1 : 0] || 'none';
+  var eb = allS && o.backMount !== 'inside' ? 'top' : bk === 'solid' ? 'inside' : bk;   // what this side sees: top / inside / hdf / none
+  var full = o.top === 'full', tb = eb === 'top' ? t_ : bs.indexOf('hdf') >= 0 && eb !== 'top' ? E.R.hdf.t : 0, Ds = D - tb, rw = num(o.railW) || 100, r = Object.assign({}, o.rails);
   if (full) r = { front:'none', back:'none', bottom:false };
-  if (o.back === 'inside' && (r.back === 'v' || r.back === 'hv' || r.bottom)) { r.back = r.back === 'hv' ? 'h' : r.back === 'v' ? 'none' : r.back; r.bottom = false; }
+  if (bs.some(function (x) { return x === 'solid'; }) && !(allS && o.backMount !== 'inside') && (r.back === 'v' || r.back === 'hv' || r.bottom)) { r.back = r.back === 'hv' ? 'h' : r.back === 'v' ? 'none' : r.back; r.bottom = false; }
   var bH = r.back === 'h' || r.back === 'hv', bV = r.back === 'v' || r.back === 'hv';
   var off = full && o.topOverFacade ? (num(o.facadeT) || 18) : 0;
   var k = Math.min(230 / H, 240 / (D + off)), pad = 14, legs = o.legs ? 10 : 0;
@@ -619,8 +688,9 @@ function sectionSVG(c, res, side) {
   if (bH) sv += rect(Ds - rw, H - t_, Ds, H, 'xs-r');
   if (bV) { var zv = bH ? H - t_ - rw : H - rw; sv += rect(Ds - t_, zv, Ds, zv + rw, 'xs-r'); }
   if (r.bottom) sv += rect(Ds - t_, t_, Ds, t_ + rw, 'xs-r');
-  if (o.back === 'top') sv += rect(Ds, 0, D, full ? H - t_ : H, 'xs-b');
-  else if (o.back === 'inside') sv += rect(Ds - t_, t_, Ds, full || bH ? H - t_ : H, 'xs-b');
+  if (eb === 'top') sv += rect(Ds, 0, D, full ? H - t_ : H, 'xs-b');
+  else if (eb === 'inside') sv += rect(Ds - t_, t_, Ds, full || bH ? H - t_ : H, 'xs-b');
+  else if (eb === 'hdf') sv += rect(Ds, 0, D, H, 'xs-hdf');
   if (o.legs) [E.R.legs.fromFront, Ds - E.R.legs.fromBack].forEach(function (y) { sv += '<rect class="xs-leg" x="' + (X(y) - 3).toFixed(1) + '" y="' + Y(0).toFixed(1) + '" width="6" height="' + legs + '"/>'; });
   sv += connectorMarks(res, X, Y, flip ? 'DESINE' : 'KAIRE');
   sv += flip ? '<text class="xs-t" x="' + pad + '" y="' + (H_ - 3).toFixed(0) + '">' + t('xBack') + '</text><text class="xs-t" text-anchor="end" x="' + (W_ - pad).toFixed(0) + '" y="' + (H_ - 3).toFixed(0) + '">' + t('xFront') + ' ▸</text>'
@@ -674,6 +744,9 @@ function matsBlock(c) {
   return '<p class="note reqnote"><i class="req">*</i> ' + t('reqNote') + '</p><div class="row">' + (c.dishwasher ? fT(t('mCarc'), b + 'mat.carc', c.mat.carc, 'dl-mat') : req(fT(t('mCarc'), b + 'mat.carc', c.mat.carc, 'dl-mat'), c.mat.carc)) + (hasFront ? req(fT(t('mFac'), b + 'mat.facade', c.mat.facade, 'dl-mat'), c.mat.facade) : fT(t('mFac'), b + 'mat.facade', c.mat.facade, 'dl-mat')) + (c.dishwasher ? '' : fT(t('mBack'), b + 'mat.back', c.mat.back, 'dl-mat')) + '</div>' +
     '<div class="row" style="margin-top:10px">' + fT(t('eCarc'), b + 'edge.carc', c.edge.carc, 'dl-edge') + fT(t('eFac'), b + 'edge.facade', c.edge.facade, 'dl-edge') + '</div>';
 }
+function sameCol(c, i) { var cl = colOf(c, c.sections[i]); return c.sections.map(function (s, q) { return q; }).filter(function (q) { return colOf(c, c.sections[q]) === cl; }); }
+function firstInCol(c, i) { return sameCol(c, i)[0] === i; }
+function lastInCol(c, i) { var a = sameCol(c, i); return a[a.length - 1] === i; }
 function viewSection(c, s, i, z) {
   var b = 'c.sections.' + i + '.', kn = { drawers:'kDrawers', doors:'kDoors', open:'kOpen', oven:'kOven' }[s.kind];
   var secH = s.fill ? z.fillH : num(s.height);
@@ -696,8 +769,8 @@ function viewSection(c, s, i, z) {
   }
   body += '</div>';
   return '<div class="sec"><div>' + head + body + '</div><div class="tools">' +
-    '<button title="' + t('up') + '" aria-label="' + t('up') + '" data-act="mv" data-i="' + i + '" data-v="1"' + (i === c.sections.length - 1 ? ' disabled' : '') + '>▲</button>' +
-    '<button title="' + t('down') + '" aria-label="' + t('down') + '" data-act="mv" data-i="' + i + '" data-v="-1"' + (i === 0 ? ' disabled' : '') + '>▼</button>' +
+    '<button title="' + t('up') + '" aria-label="' + t('up') + '" data-act="mv" data-i="' + i + '" data-v="1"' + (lastInCol(c, i) ? ' disabled' : '') + '>▲</button>' +
+    '<button title="' + t('down') + '" aria-label="' + t('down') + '" data-act="mv" data-i="' + i + '" data-v="-1"' + (firstInCol(c, i) ? ' disabled' : '') + '>▼</button>' +
     '<button title="' + t('rm') + '" aria-label="' + t('rm') + '" data-act="rmsec" data-i="' + i + '">✕</button></div></div>';
 }
 function viewSheet(c, inf) {
@@ -709,7 +782,7 @@ function viewSheet(c, inf) {
     (w ? '<div class="warns" id="warns">' + w + '</div>' : '<div class="warns" id="warns"></div>') +
     '<button class="btn pri big go" data-act="tab" data-v="res">' + t('toRes') + '</button></aside>';
 }
-function sketchOf(c) { try { var d = engineDef(c); d.colW = []; return SK.svg(d, S.lang); } catch (e) { return '<div class="empty">' + esc(e.message) + '</div>'; } }
+function sketchOf(c) { try { var d = engineDef(c); d.colW = colsOf(c) > 1 ? colWidths(c) : []; var bs = c.cnc.backs || []; d.hasBack = bs.some(function (x) { return x !== 'none'; }); d.backType = bs.indexOf('hdf') >= 0 ? 'hdf' : 'carcass'; return SK.svg(d, S.lang); } catch (e) { return '<div class="empty">' + esc(e.message) + '</div>'; } }
 
 /* ----------------------------------------------------------------- render: results */
 function viewRes(pj) {
@@ -905,7 +978,8 @@ function refreshLive() {
   var wr = document.getElementById('warns'); if (wr) wr.innerHTML = inf.warnings.map(function (x) { var lv = level(x); return '<div class="w ' + lv + '"><span class="tag">' + t(lv === 'bad' ? 'errTag' : lv === 'warn' ? 'warnTag' : 'infoTag') + '</span><span>' + esc(x) + '</span></div>'; }).join('');
   var tb = document.querySelector('.paper .tb'); var c = cur();
   if (tb) tb.innerHTML = '<b>' + (S.sel + 1) + ' · ' + esc(c.name || typeName(c)) + '</b><span>' + fmt(c.dishwasher ? c.dishWidth : c.W) + '×' + fmt(c.H) + '×' + fmt(c.D) + '</span>';
-  var zone = document.querySelector('.zone'); if (zone && !c.dishwasher) { var z = zoneInfo(c); zone.className = 'zone' + (z.over ? ' over' : ''); zone.innerHTML = t('zone') + ' <b>' + fmt(z.Hz) + '</b> mm · ' + t('used') + ' <b>' + fmt(z.exp + z.fillH * z.nFill) + '</b>' + (z.over ? ' · <b>' + t('over') + ' ' + fmt(z.exp - z.Hz) + '</b>' : ''); }
+  if (!c.dishwasher) document.querySelectorAll('.zone[data-col]').forEach(function (zn) { var z2 = zoneInfo(c, +zn.getAttribute('data-col')); zn.className = 'zone' + (z2.over ? ' over' : ''); zn.innerHTML = zoneHtml(z2); });
+  var zone = null; if (zone && !c.dishwasher) { var z = zoneInfo(c); zone.className = 'zone' + (z.over ? ' over' : ''); zone.innerHTML = t('zone') + ' <b>' + fmt(z.Hz) + '</b> mm · ' + t('used') + ' <b>' + fmt(z.exp + z.fillH * z.nFill) + '</b>' + (z.over ? ' · <b>' + t('over') + ' ' + fmt(z.exp - z.Hz) + '</b>' : ''); }
 }
 
 /* ----------------------------------------------------------------- 3D connector editor (iso.js) */
@@ -951,6 +1025,42 @@ function mountIso(focus) {
     onUndo:function () { undoJoints(); } });
 }
 
+/* ----------------------------------------------------------------- whole kitchen (room.js) */
+S.roomSel = null; S.roomUndo = [];
+function roomPresets() {
+  return PRESETS.map(function (p, i) { var ty = S.settings.types[p.type] || {}; return { i:i, name:t(p.k), icon:ico(p.k), W:p.W, H:p.H, D:p.D, type:p.type, dish:!!p.dish, legs:!!ty.legs, legH:100 }; });
+}
+function roomUndoPush() { S.roomUndo.push(clone(S.proj)); if (S.roomUndo.length > 40) S.roomUndo.shift(); }
+function roomUndo() { var p = S.roomUndo.pop(); if (!p) return false; S.proj = p; S.proj.cabinets = S.proj.cabinets.map(normCab); if (S.roomSel != null && S.roomSel >= S.proj.cabinets.length) S.roomSel = null; save(); render(); toast(t('isoUndone')); return true; }
+function mountRoom(focus) {
+  var el = document.getElementById('room'); if (!el || !RM || !S.proj) return;
+  if (RM.ensure(S.proj)) save();
+  if (S.roomSel != null && !S.proj.cabinets[S.roomSel]) S.roomSel = null;
+  RM.attach(el, { proj:S.proj, infos:S._info || [], sel:S.roomSel, t:t, toast:toast, presets:roomPresets(), canUndo:S.roomUndo.length > 0, focusStage:!!focus, confirmDel:S.confirm === 'rmdel' + S.roomSel,
+    onSelect:function (i) { S.roomSel = i; S.confirm = null; if (i != null) S.sel = i; mountRoom(true); },
+    onLayout:function (fn, o) { o = o || {}; roomUndoPush(); fn(S.proj); if (o.sel !== undefined) S.roomSel = o.sel; save(); render(); if (o.focus) mountRoom(true); if (o.msg) toast(o.msg); },
+    onCab:function (i, patch, after) { roomUndoPush(); Object.assign(S.proj.cabinets[i], patch); if (patch.W && S.proj.cabinets[i].dishwasher) S.proj.cabinets[i].dishWidth = patch.W; if (after) after(S.proj); save(); render(); },
+    onAdd:function (k, wall, x, fitW) {
+      roomUndoPush(); var c = fromPreset(PRESETS[k]); if (fitW) { c.W = fitW; c.dishWidth = fitW; }
+      S.proj.cabinets.push(c); var i = S.proj.cabinets.length - 1;
+      if (wall != null) S.proj.layout.items[c.id] = { wall:wall, x:x };
+      S.roomSel = i; S.sel = i; save(); render(); toast(t('rmAdded').replace('{n}', i + 1));
+    },
+    onDup:function (i) {
+      roomUndoPush(); var src = S.proj.cabinets[i], cp = clone(src); cp.id = uid(); cp.name = src.name ? src.name + ' (2)' : '';
+      S.proj.cabinets.splice(i + 1, 0, cp); var it = S.proj.layout.items[src.id];
+      if (it && it.wall >= 0) S.proj.layout.items[cp.id] = { wall:it.wall, x:it.x + RM.cabW(src), z:it.z };
+      S.roomSel = i + 1; S.sel = i + 1; save(); render();
+    },
+    onDelete:function (i) {
+      if (S.confirm !== 'rmdel' + i) { S.confirm = 'rmdel' + i; mountRoom(); return; }
+      S.confirm = null; roomUndoPush(); var c = S.proj.cabinets[i]; S.proj.cabinets.splice(i, 1); delete S.proj.layout.items[c.id];
+      S.roomSel = null; S.sel = Math.max(0, Math.min(S.sel, S.proj.cabinets.length - 1)); save(); render(); toast(t('rmDeleted'));
+    },
+    onEdit:function (i) { S.sel = i; S.tab = 'cab'; S.picking = false; S.iso = null; render(); window.scrollTo(0, 0); },
+    onUndo:function () { roomUndo(); } });
+}
+
 /* ----------------------------------------------------------------- events */
 function target(bind) {
   if (bind.indexOf('c.') === 0) return { obj:cur(), path:bind.slice(2) };
@@ -970,9 +1080,12 @@ function assign(bind, raw) {
   if (bind === 'c.cnc.tbOn') { setPath(tg.obj, 'cnc.tbFront', raw ? (S.settings.ops.tbFront !== 'off' ? S.settings.ops.tbFront : 'mark') : 'off'); return; }
   if (bind === 'c.cnc.pinsOn') { setPath(tg.obj, 'cnc.pins', raw ? (S.settings.ops.pins !== 'off' ? S.settings.ops.pins : 'shelf') : 'off'); return; }
   if (bind === 'c.type') { setPath(tg.obj, 'type', v); var ty = S.settings.types[v]; ['joinery', 'top', 'back', 'backFix', 'topOverFacade', 'legs'].forEach(function (k) { tg.obj.cnc[k] = ty[k]; });
-    tg.obj.cnc.rails = { front:ty.railFront, back:ty.railBack, bottom:!!ty.railBottom }; return; }
+    tg.obj.cnc.rails = { front:ty.railFront, back:ty.railBack, bottom:!!ty.railBottom };
+    tg.obj.cnc.backs = tg.obj.cnc.backs.map(function () { return legacyBack(ty); }); tg.obj.cnc.backMount = ty.back === 'inside' ? 'inside' : 'top'; return; }
+  if (bind === 'c.cols') { tg.obj.cols = +v; tg.obj.colW = []; fixCols(tg.obj); return; }
   if (/^c\.sections\.\d+\.(shelves|rail)$/.test(bind) && typeof v === 'string' && /^\d+$/.test(v)) v = +v;
   setPath(tg.obj, tg.path, v);
+  if (/^c\.(colW\.\d+|W)$/.test(bind) && tg.obj.cols > 1) { tg.obj.colW = colWidths(tg.obj); var last = document.getElementById('colw-last'); if (last) last.textContent = fmt(tg.obj.colW[tg.obj.colW.length - 1]) + ' mm'; }
 }
 app.addEventListener('input', function (e) {
   if (e.target.id === 'np-name') { S.npName = e.target.value; e.target.removeAttribute('aria-invalid'); return; }
@@ -995,7 +1108,7 @@ app.addEventListener('change', function (e) {
   else if (el.getAttribute('data-num') && el.getAttribute('data-empty') && !String(el.value).trim()) assign(bind, '');
   else if (el.getAttribute('data-num')) { var n = num(el.value); assign(bind, n); el.value = E.num(n); }
   else assign(bind, el.value);
-  var full = el.type === 'checkbox' || el.tagName === 'SELECT' || /\.(nDrawers|nDoors|shelves|height)$/.test(bind) || /cnc\.joints\./.test(bind) || bind === 'p.name';
+  var full = el.type === 'checkbox' || el.tagName === 'SELECT' || /\.(nDrawers|nDoors|shelves|height)$/.test(bind) || /cnc\.joints\./.test(bind) || /^c\.(colW\.|W$)/.test(bind) || bind === 'p.name';
   if (full) { if (bind.indexOf('s.') === 0) { store('dbKurejas.settings', S.settings); applyRules(); } else save(); setTimeout(render, 0); }   // after focus has moved, so it is restored
   else after(bind, false);
 });
@@ -1008,6 +1121,7 @@ app.addEventListener('keydown', function (e) {
   if ((e.key === 'Enter' || e.key === ' ') && e.target.getAttribute && e.target.getAttribute('data-act') === 'part') { e.preventDefault(); e.target.click(); }
   if (e.key === 'Enter' && e.target.id === 'np-name') { e.preventDefault(); var b = document.querySelector('[data-act=pcreate]'); if (b) b.click(); return; }
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z') && S.tab === 'cab' && !/INPUT|SELECT|TEXTAREA/.test(e.target.tagName) && undoJoints()) e.preventDefault();
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z') && S.tab === 'room' && !/INPUT|SELECT|TEXTAREA/.test(e.target.tagName) && roomUndo()) e.preventDefault();
 });
 app.addEventListener('click', function (e) {
   var el = e.target.closest('[data-act]'); if (!el) return;
@@ -1024,8 +1138,9 @@ app.addEventListener('click', function (e) {
     case 'dup': { var cp = clone(cur()); cp.id = uid(); cp.name = cp.name ? cp.name + ' (2)' : ''; S.proj.cabinets.splice(S.sel + 1, 0, cp); S.sel++; save(); break; }
     case 'del': if (S.confirm !== 'del') { S.confirm = 'del'; break; } S.confirm = null; S.proj.cabinets.splice(S.sel, 1); S.sel = Math.max(0, S.sel - 1); save(); break;
     case 'set': assign(el.getAttribute('data-bind'), v); after(el.getAttribute('data-bind'), true); return;
-    case 'addsec': cur().sections.push(newSection(v)); save(); break;
-    case 'mv': { var a = cur().sections, j = i + (+v); if (j < 0 || j >= a.length) return; var tmp = a[i]; a[i] = a[j]; a[j] = tmp; save(); break; }
+    case 'addsec': { var ns = newSection(v); ns.col = isNaN(i) ? 0 : i; cur().sections.push(ns); save(); break; }
+    case 'mv': { var cc0 = cur(), a = cc0.sections, cl = colOf(cc0, a[i]), idx = a.map(function (s, q) { return q; }).filter(function (q) { return colOf(cc0, a[q]) === cl; }), p0 = idx.indexOf(i), j = idx[p0 + (+v)];
+      if (j == null) return; var tmp = a[i]; a[i] = a[j]; a[j] = tmp; save(); break; }
     case 'rmsec': cur().sections.splice(i, 1); save(); break;
     case 'addx': { var cc = cur(); cc.extras.push(v === 'plinth' ? { name:t('exPlinth'), L:num(cc.W), W:Math.max(40, num(cc.legH) - 2), T:num(cc.thick) || 18, qty:1, mat:cc.mat.facade || cc.mat.carc, e1:true }
                                                    : { name:t('exAdd'), L:num(cc.W), W:100, T:num(cc.thick) || 18, qty:1, mat:cc.mat.carc }); save(); break; }
@@ -1090,7 +1205,8 @@ function fromOffer(d) {
   return { app:'db-kurejas', v:1, id:uid(), name:E.safeName(d.projectName || '') || '', cabinets:d.cabinets.map(function (c) {
     var type = TYPES.indexOf(c.type) >= 0 ? c.type : 'PASTATOMOS';
     var cab = { name:c.name || '', type:type, W:num(c.W), H:num(c.H), D:num(c.D), thick:num(c.thick) || 18, cols:num(c.cols) || 1, colW:c.colW || [], dishwasher:!!c.dishwasher, dishWidth:num(c.dishWidth) || 600,
-      mat:{ carc:mname(c.carcMat), facade:mname(c.defFacadeMat), back:mname(c.carcMat) }, edge:{ carc:'', facade:'' }, cnc:cncFor(type),
+      mat:{ carc:mname(c.carcMat), facade:mname(c.defFacadeMat), back:mname(c.carcMat) }, edge:{ carc:'', facade:'' }, cnc:(function () { var o2 = cncFor(type);
+        if (c.hasBack === false) o2.backs = ['none']; else if (c.backType === 'hdf' || !c.backType) o2.backs = ['hdf']; else o2.backs = ['solid']; return o2; })(),
       sections:(c.sections || []).map(function (s) { var o = {}; ['kind', 'col', 'fill', 'height', 'nDrawers', 'hw', 'rail', 'nDoors', 'hinge', 'doorSplit', 'hingeSide', 'shelves', 'shelfAdj', 'shelfMode', 'shelfPos', 'innerDrawers'].forEach(function (k) { if (s[k] !== undefined) o[k] = s[k]; }); return o; }) };
     return cab;
   }) };
