@@ -24,7 +24,8 @@
 /* ----------------------------------------------------------------- rules */
 var R = {
   cam:   { cam:{d:15, depth:15, fromEdge:34, fromFront:50},   // cams in the side's inner face
-           bolt:{d:8, depthFace:15},                           // bolt hole in bottom/top face
+           bolt:{d:8, depthFace:15, depthEdge:31.906},         // bolt hole in bottom/top face; the Ø8 bore in the part's edge stops at 31.906
+                                                               // (cam centre at 34 — as SWOOD CAM / step2xxl drill it: the drill cannot go to 34)
            dowel:{d:8, depthEdge:27, depthFace:12, offset:32}, // dowels at cam ±32 (outer cams only)
            backFix:{d:8, fromEdge:50} },                       // confirmats back→side: 8 through in back
   confirmat: { d:8, pilot:{d:5, depth:32}, fromFront:70, railFromEdge:[30,70], railAlong:50 },
@@ -42,10 +43,14 @@ var R = {
   hinge:  { cupD:35, cupDepth:13, cupFromEdge:22.5,           // 35 mm cup, centre 22.5 from the door edge
             fromEnd:100,                                      // outer hinges 100 mm from the door ends
             dowelD:8, dowelDepth:11, dowelSpacing:45, dowelOffset:9.5,   // press-in (INSERTA) cups only
-            plateD:5, plateDepth:12, plateFromFront:37, plateSpacing:32 },   // mounting plate screws in the side
+            plateD:5, plateDepth:2, plateFromFront:37, plateSpacing:32 },   // mounting plate screw positions in the side: markings (post: Ø5 × 2)
   pins:   { d:5, depth:12, fromFront:37, fromBack:30, below:3, pitch:32, extra:2 },   // shelf supports in the sides
   backCam: { fromEnd:80 },                       // cams fixing a back: first/last 80 from the ends (clear of the corner cams)
   through_extra: 6.559,
+  /* post-processor rules (Dalius's SolidWorks → XXL post, step2xxl, matching SWOOD CAM): every marking — drawer runners,
+     hinge plates, legs, front fixing marks — is a Ø5 hole 2 mm deep with N="L"; holes are listed left end (F=3) first,
+     then the top face by X, then the right end (F=2) */
+  post: { markD:5, markDepth:2 },
   /* boring head as equipped (Maestro StartechCNPlus .atrx/.cfgx): top 5/8/15/35, through 5/8, X ends 5/8, long edges 8.
      5 mm long-edge bores go to a separate program with the panel turned 90° (as step2xxl), panels up to machine.maxY. */
   drills: { top:[5,8,15,35], through:[5,8], xEnds:[5,8], yEdges:[8], edgeMax:35 },
@@ -380,7 +385,7 @@ function buildCabinet(c, idx, projName) {
     if (jt.type === 'cam') {
       jt.pos.forEach(function (a) {
         hole(p, camFace, cm.cam.fromEdge, a, cm.cam.d, cm.cam.depth); hole(p, camFace, L - cm.cam.fromEdge, a, cm.cam.d, cm.cam.depth);
-        edge(p, 'x0', a, cm.bolt.d, cm.cam.fromEdge); edge(p, 'x1', a, cm.bolt.d, cm.cam.fromEdge);
+        edge(p, 'x0', a, cm.bolt.d, cm.bolt.depthEdge); edge(p, 'x1', a, cm.bolt.d, cm.bolt.depthEdge);
         var q = along(a); sideHole(q.x, q.yf, cm.bolt.d, cm.bolt.depthFace);
       });
       jt.dowels.forEach(function (a) {
@@ -413,7 +418,7 @@ function buildCabinet(c, idx, projName) {
         s = { type:s.type, pos:s.pos.map(function (a) { return a + dl; }), dowels:(s.dowels || []).map(function (a) { return a + dl; }) }; endShift[sd] = dl; }
     }
     if (s.type === 'cam') {
-      s.pos.forEach(function (a) { hole(p, camFace, cx, a, cm.cam.d, cm.cam.depth); edge(p, ed, a, cm.bolt.d, cm.cam.fromEdge); var q = along(a); sideHole(q.x, q.yf, cm.bolt.d, cm.bolt.depthFace, false, tg); });
+      s.pos.forEach(function (a) { hole(p, camFace, cx, a, cm.cam.d, cm.cam.depth); edge(p, ed, a, cm.bolt.d, cm.bolt.depthEdge); var q = along(a); sideHole(q.x, q.yf, cm.bolt.d, cm.bolt.depthFace, false, tg); });
       s.dowels.forEach(function (a) { edge(p, ed, a, cm.dowel.d, cm.dowel.depthEdge); var q = along(a); sideHole(q.x, q.yf, cm.dowel.d, cm.dowel.depthFace, false, tg); });
     } else if (s.type === 'dowel') {
       s.pos.forEach(function (a) { edge(p, ed, a, cm.dowel.d, cm.dowel.depthEdge); var q = along(a); sideHole(q.x, q.yf, cm.dowel.d, cm.dowel.depthFace, false, tg); });
@@ -432,7 +437,7 @@ function buildCabinet(c, idx, projName) {
     /* a rail's long edge (ed) on another part's face: cam in the rail's face A at camY, the other part's hole through put(x, d, depth, through) */
     var longJoint = function (below, ed, camY, s, put) {
       if (s.type === 'cam') {
-        s.pos.forEach(function (x) { hole(below, 'A', x, camY, cm.cam.d, cm.cam.depth); edge(below, ed, x, cm.bolt.d, cm.cam.fromEdge); put(x, cm.bolt.d, cm.bolt.depthFace, false); });
+        s.pos.forEach(function (x) { hole(below, 'A', x, camY, cm.cam.d, cm.cam.depth); edge(below, ed, x, cm.bolt.d, cm.bolt.depthEdge); put(x, cm.bolt.d, cm.bolt.depthFace, false); });
         s.dowels.forEach(function (x) { edge(below, ed, x, cm.dowel.d, cm.dowel.depthEdge); put(x, cm.dowel.d, cm.dowel.depthFace, false); });
       } else if (s.type === 'dowel') s.pos.forEach(function (x) { edge(below, ed, x, cm.dowel.d, cm.dowel.depthEdge); put(x, cm.dowel.d, cm.dowel.depthFace, false); });
       else s.pos.forEach(function (x) { edge(below, ed, x, cf.pilot.d, cf.pilot.depth); put(x, cf.d, 0, true); });
@@ -569,7 +574,7 @@ function buildCabinet(c, idx, projName) {
     [[jBot, 'x0', cm.cam.fromEdge], [jTop, 'x1', Lside - cm.cam.fromEdge]].forEach(function (k) {   // the side's ends sit on the bottom / under the top
       var jt = k[0] && k[0][right ? 'R' : 'L'], ed = k[1], cx = k[2]; if (!jt) return;
       if (jt.type === 'cam') {
-        jt.pos.forEach(function (y) { hole(p, 'A', cx, Yf(y), cm.cam.d, cm.cam.depth); edge(p, ed, Yf(y), cm.bolt.d, cm.cam.fromEdge); });
+        jt.pos.forEach(function (y) { hole(p, 'A', cx, Yf(y), cm.cam.d, cm.cam.depth); edge(p, ed, Yf(y), cm.bolt.d, cm.bolt.depthEdge); });
         jt.dowels.forEach(function (y) { edge(p, ed, Yf(y), cm.dowel.d, cm.dowel.depthEdge); });
       } else if (jt.type === 'dowel') jt.pos.forEach(function (y) { edge(p, ed, Yf(y), cm.dowel.d, cm.dowel.depthEdge); });
       else jt.pos.forEach(function (y) { edge(p, ed, Yf(y), cf.pilot.d, cf.pilot.depth); });
@@ -593,7 +598,7 @@ function buildCabinet(c, idx, projName) {
           [xc - hr.plateSpacing/2, xc + hr.plateSpacing/2].forEach(function (x) {
             var hitP = p.holes.some(function (g) { return (g.face === 'A' || g.through) && Math.hypot(g.x - x, g.y - Yf(hr.plateFromFront)) < (g.d + hr.plateD)/2 + 1.5; });
             if (hitP) warnOnce('lanksto plokštelės skylė (' + num(x + t) + ' mm aukštyje) kliūna už kitos skylės — praleista, patikrinkite');
-            else if (x > 5 && x < Lside - 5) { hole(p, 'A', x, Yf(hr.plateFromFront), hr.plateD, hr.plateDepth, { op:'hinge' }); nPl++; }
+            else if (x > 5 && x < Lside - 5) { hole(p, 'A', x, Yf(hr.plateFromFront), R.post.markD, R.post.markDepth, { op:'hinge', mark:true }); nPl++; }
             else p.warnings.push('lanksto plokštelės skylė už šono ribų (' + num(x) + ') — praleista');
           });
         });
@@ -630,7 +635,7 @@ function buildCabinet(c, idx, projName) {
   var endBores = function (p, ed, cx, s, yOf, n) {   // the partition's end ed: bores (and cams in face A at cx); positions outside the partition are left out
     var ok = function (y) { if (y > 8 && y < n - 8) return true; warnOnce('pertvaros jungtis už pertvaros ribų — praleista, patikrinkite vietas'); return false; };
     if (s.type === 'cam') {
-      s.pos.forEach(function (a) { var y = yOf(a); if (ok(y)) { hole(p, 'A', cx, y, cm.cam.d, cm.cam.depth); edge(p, ed, y, cm.bolt.d, cm.cam.fromEdge); } });
+      s.pos.forEach(function (a) { var y = yOf(a); if (ok(y)) { hole(p, 'A', cx, y, cm.cam.d, cm.cam.depth); edge(p, ed, y, cm.bolt.d, cm.bolt.depthEdge); } });
       s.dowels.forEach(function (a) { var y = yOf(a); if (ok(y)) edge(p, ed, y, cm.dowel.d, cm.dowel.depthEdge); });
     } else if (s.type === 'dowel') s.pos.forEach(function (a) { var y = yOf(a); if (ok(y)) edge(p, ed, y, cm.dowel.d, cm.dowel.depthEdge); });
     else s.pos.forEach(function (a) { var y = yOf(a); if (ok(y)) edge(p, ed, y, cf.pilot.d, cf.pilot.depth); });
@@ -677,7 +682,7 @@ function buildCabinet(c, idx, projName) {
           if (sh2 != null) { d.ys = d.ys.map(function (v) { return v + sh2; }); warnOnce('durys ' + num(d.w) + '×' + num(d.h) + ': lankstai pastumti ' + sh2 + ' mm, kad plokštelės nesusitiktų su kitos pertvaros pusės plokštelėmis — patikrinkite'); } }
         d.ys.forEach(function (yh) { var xc2 = d.z + yh - t; [xc2 - hr.plateSpacing/2, xc2 + hr.plateSpacing/2].forEach(function (x) {
           if (!free(x, y, hr.plateD, hr.plateDepth)) { warnOnce('lanksto plokštelės skylė pertvaroje (' + num(x + t) + ' mm aukštyje) kliūna už kitos skylės — praleista, patikrinkite'); return; }
-          if (x > 5 && x < Lp - 5) hole(p, face, x, y, hr.plateD, hr.plateDepth, { op:'hinge' }); }); });
+          if (x > 5 && x < Lp - 5) hole(p, face, x, y, R.post.markD, R.post.markDepth, { op:'hinge', mark:true }); }); });
       });
       if (o.pins && o.pins !== 'off') shelves.forEach(function (s) {
         if (s.fixed || s.col !== colk) return;
@@ -851,7 +856,8 @@ function programs(p) {
       var m = mach(h, up);
       if (R.drills.top.indexOf(h.d) < 0) { w.push(p.name + ': ø' + h.d + ' skylė (' + num(m.x) + ',' + num(m.y) + ') — tokio grąžto galvoje nėra, NEPROGRAMUOTA'); return; }
       if (h.through && R.drills.through.indexOf(h.d) < 0) w.push(p.name + ': kiaurai ø' + h.d + ' — kiauro grąžto nėra');
-      out.push({ F:1, X:m.x, Y:m.y, Z:h.through ? -(DZ + R.through_extra) : -h.depth, D:h.d, N:(h.through || h.mark) ? 'L' : 'P', sx:m.x });
+      if (h.mark) { out.push({ F:1, X:m.x, Y:m.y, Z:-R.post.markDepth, D:R.post.markD, N:'L', sx:m.x }); return; }   // a marking: always as the post makes it
+      out.push({ F:1, X:m.x, Y:m.y, Z:h.through ? -(DZ + R.through_extra) : -h.depth, D:h.d, N:h.through ? 'L' : 'P', sx:m.x });
     });
     if (up === up1) p.edges.forEach(function (e) {
       if (rotE.indexOf(e) >= 0) return;                     // → turned program
@@ -865,7 +871,8 @@ function programs(p) {
       if (e.depth > R.drills.edgeMax) w.push(p.name + ': krašto skylė ' + num(e.depth) + ' mm gylio — grąžtas siekia ' + R.drills.edgeMax);
       out.push({ F:F, X:Xp, Y:Yp, Z:-e.depth, D:e.d, N:'P', sx:sx });
     });
-    out.sort(function (a, b) { return (a.sx - b.sx) || (a.Y - b.Y) || (a.X - b.X); });
+    var g = function (b) { return b.F === 3 ? -1 : b.F === 2 ? DX + 1 : b.X; };   // post order: left end, top face by X, right end
+    out.sort(function (a, b) { return (g(a) - g(b)) || (a.Y - b.Y) || (a.X - b.X); });
     return out;
   };
   /* turned program (as step2xxl): same face up as 1OP, panel turned 90° counter-clockwise seen from above —

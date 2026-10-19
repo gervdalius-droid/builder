@@ -45,7 +45,7 @@ lt:{
  oLegs:'Kojelės ir jų žymės dugne', oLegsD:'4 žymės Ø5 × 2 mm kiekvienai kojelei. Plačiai ar sunkiai spintelei pridėkite daugiau kojelių.', legRow:'Kojelių eilėje', fhTitle:'Fasadų aukščiai, mm', fhNote:'iš viršaus · tuščias = dalijasi likusį aukštį', fhEqual:'Vienodi', legParts:'Po pertvaromis', legRows:'Eilės', legRows2:'2 — priekis, galas', legRows3:'3 — + vidurys', legTotal:'Iš viso kojelių', legFront:'priekis', legDense:'Per tankiai — tarp kojelių būtų mažiau nei 70 mm',
  oRun:'Bėgelių žymės šonuose', oRunD:'Blum TANDEM / TANDEMBOX šablonai pagal stalčių aukštį.',
  oTb:'TANDEMBOX fasadų tvirtinimas', oTbD:'Ø10 × 12 skylės fasado vidinėje pusėje.',
- oHinge:'Lankstų skylės', oHingeD:'Ø35 puodelis duryse + 2 × Ø5 plokštelės skylės šone. Blum katalogo matmenys.',
+ oHinge:'Lankstų skylės', oHingeD:'Ø35 puodelis duryse + 2 plokštelės žymės šone (Ø5 × 2, kaip post-procesoriuje). Blum katalogo matmenys.',
  hfScrew:'Puodelis prisukamas', hfPress:'Įspaudžiamas (+2 × Ø8)',
  oPins:'Lentynų laikiklių skylės', oPinsD:'Ø5 skylės abiejuose šonuose po kiekviena kilnojama lentyna.',
  pinShelf:'Tik po lentyna', pinRow:'Eilė ±2 kas 32',
@@ -160,7 +160,7 @@ en:{
  oLegs:'Legs and their marks in the bottom', oLegsD:'4 marks Ø5 × 2 mm per leg. Add more legs for a wide or heavy cabinet.', legRow:'Legs in a row', fhTitle:'Front heights, mm', fhNote:'from the top · empty = shares what is left', fhEqual:'Equal', legParts:'Under partitions', legRows:'Rows', legRows2:'2 — front, back', legRows3:'3 — + middle', legTotal:'Legs in total', legFront:'front', legDense:'Too dense — less than 70 mm between legs',
  oRun:'Runner marks in the sides', oRunD:'Blum TANDEM / TANDEMBOX patterns at each drawer height.',
  oTb:'TANDEMBOX front fixing', oTbD:'Ø10 × 12 holes on the inside of the front.',
- oHinge:'Hinge holes', oHingeD:'Ø35 cup in the door + 2 × Ø5 plate holes in the side. Blum catalogue values.',
+ oHinge:'Hinge holes', oHingeD:'Ø35 cup in the door + 2 plate marks in the side (Ø5 × 2, as the post-processor makes them). Blum catalogue values.',
  hfScrew:'Screw-on cup', hfPress:'Press-in (+2 × Ø8)',
  oPins:'Shelf support holes', oPinsD:'Ø5 holes in both sides under every adjustable shelf.',
  pinShelf:'Under the shelf only', pinRow:'Row ±2 at 32',
@@ -347,6 +347,7 @@ var S = {
   var sr = s.rules || {};
   s.rules = { hinge:Object.assign(clone(RULE_DEF.hinge), sr.hinge || {}), pins:Object.assign(clone(RULE_DEF.pins), sr.pins || {}),
               drillsTop:sr.drillsTop || RULE_DEF.drillsTop, tbHole:Object.assign(clone(RULE_DEF.tbHole), sr.tbHole || {}) };
+  delete s.rules.hinge.plateDepth; s.rules.hinge.plateDepth = RULE_DEF.hinge.plateDepth;   // plate holes are markings now (post: Ø5 × 2), not a setting
   if (!(num(s.railW) > 0)) s.railW = 100;
   s.materials = s.materials || []; s.edges = s.edges || []; })();
 function drillList(txt) { return String(txt || '').split(/[^\d.]+/).map(num).filter(function (v) { return v > 0; }); }
@@ -978,7 +979,7 @@ function viewSet() {
       return '<span>' + r[1] + '</span>' + TYPES.map(function (ty) { return tsel(ty, r[0], r[2]); }).join('');
     }).join('') + '</div>';
   var kv = function (grp, k, label) { var id = 'f-s-r-' + grp + '-' + k; return '<label for="' + id + '">' + label + '</label><input id="' + id + '" type="text" inputmode="decimal" data-bind="' + b + 'rules.' + grp + '.' + k + '" data-num="1" value="' + esc(st.rules[grp][k]) + '">'; };
-  var rules = '<div class="kv">' + kv('hinge', 'cupFromEdge', t('rCupE')) + kv('hinge', 'cupDepth', t('rCupD')) + kv('hinge', 'fromEnd', t('rEnd')) + kv('hinge', 'plateFromFront', t('rPlF')) + kv('hinge', 'plateSpacing', t('rPlS')) + kv('hinge', 'plateDepth', t('rPlD')) +
+  var rules = '<div class="kv">' + kv('hinge', 'cupFromEdge', t('rCupE')) + kv('hinge', 'cupDepth', t('rCupD')) + kv('hinge', 'fromEnd', t('rEnd')) + kv('hinge', 'plateFromFront', t('rPlF')) + kv('hinge', 'plateSpacing', t('rPlS')) +
     kv('pins', 'fromFront', t('rPinF')) + kv('pins', 'fromBack', t('rPinB')) + kv('pins', 'below', t('rPinBelow')) + kv('pins', 'depth', t('rPinD')) + kv('pins', 'pitch', t('rPitch')) + '</div>';
   var ops = '<div class="sub" style="margin-top:0">' + chk(b + 'ops.runnerMarks', st.ops.runnerMarks, t('oRun')) +
     '<div class="row"><span class="unit">' + t('tbDef') + ':</span>' + seg(b + 'ops.tbFront', st.ops.tbFront, [['off', '—'], ['mark', t('tbMark')], ['hole', t('tbHole')]]) + '</div>' +

@@ -29,7 +29,9 @@ for(const o of opts) for(const ss of secsets) for(const [W,H,D] of dims){
   a.panels.forEach(p=>{ const q=nb[p.name]; if(!q) return;
     const refFiles=REF.programs(p).files, newMain=q.progs.filter(f=>f.kind!=='rot');
     refFiles.forEach((rf,i)=>{ files++;
-      const nf=newMain[i]; const rl=rf.xbo, nl=nf?xbo(nf.text):[];
+      const nf=newMain[i]; const nl=nf?xbo(nf.text):[];
+      // post-processor rule (step2xxl = SWOOD CAM): a cam bolt bore in a part's edge stops at 31.906, not at the cam centre 34
+      const rl=rf.xbo.map(l=>l.replace(/Z=-34 D=8 N="P" F=([2-5])/,'Z=-31.906 D=8 N="P" F=$1'));
       const missing=rl.filter(l=>nl.indexOf(l)<0);
       if(missing.length){ allSame=false;
         const isSide=/KAIRE|DESINE/.test(p.name);
