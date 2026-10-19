@@ -133,6 +133,28 @@ function newCabinet() {
 function safeName(s) { return ascii(String(s || '')).replace(/[^\w\-]+/g, '_'); }   // Aukšta → Auksta (program/label names stay plain ASCII)
 
 /* ----------------------------------------------------------------- cabinet → panels */
+/* split a section among n stacked fronts. hs = front heights from the TOP down (what the worker sees and measures);
+   an empty / 0 entry shares what is left. Returns module heights (front + gap) from the BOTTOM up, and a note when
+   the given heights do not fit (then the bottom-most given front takes the difference, or all share equally). */
+function splitFronts(secH, n, hs, gap) {
+  n = Math.max(1, Math.round(+n || 1)); gap = gap == null ? R.facade.gap : gap;
+  var top = []; for (var i = 0; i < n; i++) { var v = hs && +hs[i] > 0 ? +hs[i] : 0; top.push(v); }
+  var fixed = top.filter(function (v) { return v > 0; }), nAuto = n - fixed.length, sumFix = fixed.reduce(function (a, v) { return a + v + gap; }, 0), note = '';
+  var mods;
+  if (!fixed.length) mods = top.map(function () { return secH / n; });
+  else if (nAuto > 0) {
+    var rest = (secH - sumFix) / nAuto;
+    if (rest < 80 + gap) { note = 'nurodyti fasadų aukščiai (' + fixed.join(' + ') + ') netelpa į sekciją ' + num(secH) + ' mm — fasadai padalinti po lygiai'; mods = top.map(function () { return secH / n; }); }
+    else mods = top.map(function (v) { return v > 0 ? v + gap : rest; });
+  } else if (Math.abs(sumFix - secH) > 0.5) {
+    var last = -1; top.forEach(function (v, q) { if (v > 0) last = q; });
+    var adj = top[last] + gap + (secH - sumFix);
+    if (adj < 80 + gap) { note = 'fasadų aukščių suma (' + num(sumFix - n*gap) + ' + tarpai) neatitinka sekcijos ' + num(secH) + ' mm — fasadai padalinti po lygiai'; mods = top.map(function () { return secH / n; }); }
+    else { note = 'fasadų aukščių suma neatitinka sekcijos ' + num(secH) + ' mm — apatinis fasadas ' + num(adj - gap) + ' mm'; mods = top.map(function (v, q) { return q === last ? adj : v + gap; }); }
+  } else mods = top.map(function (v) { return v + gap; });
+  return { mods:mods.slice().reverse(), note:note };
+}
+
 function buildCabinet(c, idx, projName) {
   var o = cncDefaults(c); var t = +c.thick || 18, W = +c.W, H = +c.H, D = +c.D;
   var base = safeName(projName || 'PROJ') + '_' + (idx + 1) + (c.name ? '_' + safeName(c.name) : '');
@@ -202,10 +224,12 @@ function buildCabinet(c, idx, projName) {
     secs.forEach(function (s, si) {
       var secH = s.fill ? fillH : Math.max(0, +s.height || 0);
       if (s.kind === 'drawers') {
-        var n = Math.max(1, Math.round(+s.nDrawers || 1)); var fh = secH / n;
+        var n = Math.max(1, Math.round(+s.nDrawers || 1)), sp = splitFronts(secH, n, s.frontH, gap), fbs = [0];
+        sp.mods.forEach(function (m) { fbs.push(fbs[fbs.length - 1] + m); });
+        if (sp.note) warn.push(lbl(si) + ': ' + sp.note);
         var rt = R.runner[s.hw]; if (!rt) warn.push(lbl(si) + ': bėgeliams „' + s.hw + '" skylių šablono nėra — bėgelių žymės nepridėtos');
         for (var j = 0; j < n; j++) {
-          var fb = yCur + j*fh;
+          var fb = yCur + fbs[j], fh = sp.mods[j];
           facades.push({ w:FW, h:fh - gap, bottom:fb, x:F0, hw:s.hw, sec:si, idx:j, col:col });
           if (rt) runners.push({ fb:fb, type:s.hw, col:col });
           hw.push({ item:(s.hw || 'Stalčiaus bėgeliai') + ' L=' + (+s.rail || 500), qty:1, unit:'kompl.' });
@@ -216,11 +240,13 @@ function buildCabinet(c, idx, projName) {
         var hingedSec = s.hinge !== 'BE FURNITŪROS';
         if (hingedSec && !o.hinges) warn.push(lbl(si) + ': durys — lankstų skylės išjungtos (gręžiama rankomis)');
         var nd = Math.max(1, Math.round(+s.nDoors || 1)), horiz = s.doorSplit === 'h', hs = s.hingeSide || 'auto';
+        var dsp = horiz ? splitFronts(secH, nd, s.frontH, gap) : null, dzs = [0];
+        if (dsp) { dsp.mods.forEach(function (m) { dzs.push(dzs[dzs.length - 1] + m); }); if (dsp.note) warn.push(lbl(si) + ': ' + dsp.note); }
         for (var k = 0; k < nd; k++) {
           var dw = horiz ? FW : (FW - (nd - 1)*gap) / nd;
-          var dh = horiz ? secH/nd - gap : secH - gap;
+          var dh = horiz ? dsp.mods[k] - gap : secH - gap;
           var dx = horiz ? F0 : F0 + k*(dw + gap);
-          var dz = horiz ? yCur + k*secH/nd : yCur;
+          var dz = horiz ? yCur + dzs[k] : yCur;
           var hl = horiz ? hs !== 'right' : (hs === 'left' ? true : hs === 'right' ? false : k < nd - 1);   // same rule as the offer app's sketch
           /* hinge heights on the door: catalogue spacing, kept clear of the bottom panel and the top / top rail so the
              mounting plate screws (±plateSpacing/2) land in the free part of the side; cups and plates share these */
@@ -885,6 +911,6 @@ function programs(p) {
 
 var api = { R:R, DRAWER_HW:DRAWER_HW, DOOR_HW:DOOR_HW, newCabinet:newCabinet, newSection:newSection, cncDefaults:cncDefaults,
             buildCabinet:buildCabinet, programs:programs, num:num, ascii:ascii, safeName:safeName, hingesPerDoor:hingesPerDoor,
-            hingeYs:hingeYs, hingesFit:hingesFit, setRules:setRules };
+            hingeYs:hingeYs, hingesFit:hingesFit, setRules:setRules, splitFronts:splitFronts };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.DBEngine = api;
 })(typeof window !== 'undefined' ? window : this);

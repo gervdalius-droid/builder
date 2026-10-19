@@ -42,7 +42,7 @@ lt:{
  rotHint:'↻ — antra programa su ta pačia puse viršuje, plokštė pasukta 90° prieš laikrodžio rodyklę (priekinis kraštas tampa kairiuoju galu).',
  setRails:'Juostos ir nugara', drillsTop:'Grąžtai galvoje (viršus), mm', drillsTopL:'Iš Maestro konfigūracijos. Skylės, kurių skersmens čia nėra, neprogramuojamos.', tbHoleSet:'TANDEMBOX fasado skylė (jei Ø)', tbDef:'TANDEMBOX fasadai',
  s4:'Papildomos operacijos', s4l:'Pažymėkite, ką gręžti CNC. „Patikrinta“ — sutampa su jūsų SWOOD modeliais.',
- oLegs:'Kojelės ir jų žymės dugne', oLegsD:'4 žymės Ø5 × 2 mm kiekvienai kojelei. Plačiai ar sunkiai spintelei pridėkite daugiau kojelių.', legRow:'Kojelių eilėje', legParts:'Po pertvaromis', legRows:'Eilės', legRows2:'2 — priekis, galas', legRows3:'3 — + vidurys', legTotal:'Iš viso kojelių', legFront:'priekis', legDense:'Per tankiai — tarp kojelių būtų mažiau nei 70 mm',
+ oLegs:'Kojelės ir jų žymės dugne', oLegsD:'4 žymės Ø5 × 2 mm kiekvienai kojelei. Plačiai ar sunkiai spintelei pridėkite daugiau kojelių.', legRow:'Kojelių eilėje', fhTitle:'Fasadų aukščiai, mm', fhNote:'iš viršaus · tuščias = dalijasi likusį aukštį', fhEqual:'Vienodi', legParts:'Po pertvaromis', legRows:'Eilės', legRows2:'2 — priekis, galas', legRows3:'3 — + vidurys', legTotal:'Iš viso kojelių', legFront:'priekis', legDense:'Per tankiai — tarp kojelių būtų mažiau nei 70 mm',
  oRun:'Bėgelių žymės šonuose', oRunD:'Blum TANDEM / TANDEMBOX šablonai pagal stalčių aukštį.',
  oTb:'TANDEMBOX fasadų tvirtinimas', oTbD:'Ø10 × 12 skylės fasado vidinėje pusėje.',
  oHinge:'Lankstų skylės', oHingeD:'Ø35 puodelis duryse + 2 × Ø5 plokštelės skylės šone. Blum katalogo matmenys.',
@@ -157,7 +157,7 @@ en:{
  rotHint:'↻ — second program with the same face up, panel turned 90° counter-clockwise (the front edge becomes the left end).',
  setRails:'Rails and back', drillsTop:'Drills on the head (top), mm', drillsTopL:'From the Maestro configuration. Holes of a size not listed are not programmed.', tbHoleSet:'TANDEMBOX front hole (if Ø)', tbDef:'TANDEMBOX fronts',
  s4:'Extra operations', s4l:'Tick what the CNC should drill. “Verified” means it matches your SWOOD models.',
- oLegs:'Legs and their marks in the bottom', oLegsD:'4 marks Ø5 × 2 mm per leg. Add more legs for a wide or heavy cabinet.', legRow:'Legs in a row', legParts:'Under partitions', legRows:'Rows', legRows2:'2 — front, back', legRows3:'3 — + middle', legTotal:'Legs in total', legFront:'front', legDense:'Too dense — less than 70 mm between legs',
+ oLegs:'Legs and their marks in the bottom', oLegsD:'4 marks Ø5 × 2 mm per leg. Add more legs for a wide or heavy cabinet.', legRow:'Legs in a row', fhTitle:'Front heights, mm', fhNote:'from the top · empty = shares what is left', fhEqual:'Equal', legParts:'Under partitions', legRows:'Rows', legRows2:'2 — front, back', legRows3:'3 — + middle', legTotal:'Legs in total', legFront:'front', legDense:'Too dense — less than 70 mm between legs',
  oRun:'Runner marks in the sides', oRunD:'Blum TANDEM / TANDEMBOX patterns at each drawer height.',
  oTb:'TANDEMBOX front fixing', oTbD:'Ø10 × 12 holes on the inside of the front.',
  oHinge:'Hinge holes', oHingeD:'Ø35 cup in the door + 2 × Ø5 plate holes in the side. Blum catalogue values.',
@@ -812,7 +812,7 @@ function viewSection(c, s, i, z) {
   if (s.kind === 'drawers') {
     body += fN(t('nDr'), b + 'nDrawers', s.nDrawers, 's') + fS(t('runner'), b + 'hw', s.hw, [['BLUM TANDEMBOX', 'Blum TANDEMBOX'], ['BLUM TANDEM', 'Blum TANDEM']].concat(E.R.runner[s.hw] ? [] : [[s.hw, s.hw]])) +
       fS(t('rail'), b + 'rail', s.rail, [270, 300, 350, 400, 450, 500, 550, 600, 650].map(function (v) { return [v, v + ' mm']; })) +
-      '<span class="h">' + fmt(secH / Math.max(1, num(s.nDrawers))) + ' mm / ' + (S.lang === 'lt' ? 'vnt.' : 'each') + '</span>';
+      (num(s.nDrawers) > 1 ? '' : '<span class="h">' + fmt(secH - E.R.facade.gap) + ' mm</span>');
   } else if (s.kind === 'doors') {
     body += fN(t('nDoors'), b + 'nDoors', s.nDoors, 's') + '<div class="f"><span>' + t('split') + '</span>' + seg(b + 'doorSplit', s.doorSplit, [['v', t('sSide')], ['h', t('sStack')]]) + '</div>' +
       fS(t('hinge'), b + 'hinge', s.hinge, E.DOOR_HW.map(function (v) { return [v, v]; }).concat(E.DOOR_HW.indexOf(s.hinge) < 0 ? [[s.hinge, s.hinge]] : [])) +
@@ -824,10 +824,26 @@ function viewSection(c, s, i, z) {
     body += fS(t('sup'), b + 'shelves', Math.min(2, num(s.shelves)), [[0, '0'], [1, '1 — ' + (S.lang === 'lt' ? 'apačioje' : 'below')], [2, '2 — ' + (S.lang === 'lt' ? 'apačioje ir viršuje' : 'below and above')]]);
   }
   body += '</div>';
+  var nStack = s.kind === 'drawers' ? num(s.nDrawers) : s.kind === 'doors' && s.doorSplit === 'h' ? num(s.nDoors) : 0;
+  if (nStack > 1) body += frontsEditor(s, i, secH, Math.round(nStack));
   return '<div class="sec k-' + s.kind + '"><div>' + head + body + '</div><div class="tools">' +
     '<button title="' + t('up') + '" aria-label="' + t('up') + '" data-act="mv" data-i="' + i + '" data-v="1"' + (lastInCol(c, i) ? ' disabled' : '') + '>▲</button>' +
     '<button title="' + t('down') + '" aria-label="' + t('down') + '" data-act="mv" data-i="' + i + '" data-v="-1"' + (firstInCol(c, i) ? ' disabled' : '') + '>▼</button>' +
     '<button class="xbtn" title="' + t('rm') + '" aria-label="' + t('rm') + '" data-act="rmsec" data-i="' + i + '">✕</button></div></div>';
+}
+/* stacked fronts, top first: type a height for any of them, the empty ones share what is left */
+function frontsEditor(s, i, secH, n) {
+  var g = E.R.facade.gap, sp = E.splitFronts(secH, n, s.frontH, g), top = sp.mods.slice().reverse(), fh = s.frontH || {}, any = false;
+  var rows = top.map(function (m, q) {
+    var own = fh[q] != null && String(fh[q]).trim() !== '' && +fh[q] > 0; if (own) any = true;
+    var id = 'f-c-sections-' + i + '-frontH-' + q;
+    return '<label class="fh' + (own ? ' own' : '') + '" for="' + id + '"><span class="fh-no">' + (q === 0 ? '↑ ' : q === n - 1 ? '↓ ' : '') + (q + 1) + '</span>' +
+      '<input id="' + id + '" type="text" inputmode="decimal" data-bind="c.sections.' + i + '.frontH.' + q + '" data-num="1" data-empty="1" value="' + (own ? esc(fmt(fh[q])) : '') + '" placeholder="' + fmt(m - g) + '">' +
+      '<span class="fh-bar" style="--h:' + Math.max(6, Math.min(40, (m / Math.max(1, secH)) * 64)).toFixed(0) + 'px"></span></label>';
+  }).join('');
+  return '<div class="fronts"><div class="fh-head"><b>' + t('fhTitle') + '</b><span class="unit">' + t('fhNote') + '</span>' +
+    (any ? '<button type="button" class="btn ghost fh-reset" data-act="fhreset" data-i="' + i + '">↺ ' + t('fhEqual') + '</button>' : '') + '</div>' +
+    '<div class="fh-list">' + rows + '</div>' + (sp.note ? '<p class="fh-warn">' + esc(sp.note) + '</p>' : '') + '</div>';
 }
 function viewSheet(c, inf) {
   var nParts = inf.r.panels.length;
@@ -1165,7 +1181,7 @@ app.addEventListener('change', function (e) {
   else if (el.getAttribute('data-num') && el.getAttribute('data-empty') && !String(el.value).trim()) assign(bind, '');
   else if (el.getAttribute('data-num')) { var n = num(el.value); assign(bind, n); el.value = E.num(n); }
   else assign(bind, el.value);
-  var full = el.type === 'checkbox' || el.tagName === 'SELECT' || /\.(nDrawers|nDoors|shelves|height)$/.test(bind) || /cnc\.joints\./.test(bind) || /^c\.(colW\.|W$)/.test(bind) || bind === 'p.name';
+  var full = el.type === 'checkbox' || el.tagName === 'SELECT' || /\.(nDrawers|nDoors|shelves|height|frontH\.\d+|doorSplit)$/.test(bind) || /cnc\.joints\./.test(bind) || /^c\.(colW\.|W$)/.test(bind) || bind === 'p.name';
   if (full) { if (bind.indexOf('s.') === 0) { store('dbKurejas.settings', S.settings); applyRules(); } else save(); setTimeout(render, 0); }   // after focus has moved, so it is restored
   else after(bind, false);
 });
@@ -1199,6 +1215,7 @@ app.addEventListener('click', function (e) {
     case 'colsel': S.colSel = +v; break;
     case 'mv': { var cc0 = cur(), a = cc0.sections, cl = colOf(cc0, a[i]), idx = a.map(function (s, q) { return q; }).filter(function (q) { return colOf(cc0, a[q]) === cl; }), p0 = idx.indexOf(i), j = idx[p0 + (+v)];
       if (j == null) return; var tmp = a[i]; a[i] = a[j]; a[j] = tmp; save(); break; }
+    case 'fhreset': delete cur().sections[i].frontH; save(); break;
     case 'rmsec': { var rc = cur(), gone = rc.sections.splice(i, 1)[0]; save(); render();
       toast(t('secRemoved'), false, t('undoBtn'), function () { var c2 = S.proj && S.proj.cabinets.filter(function (x) { return x.id === rc.id; })[0]; if (!c2) return; c2.sections.splice(Math.min(i, c2.sections.length), 0, gone); save(); render(); });
       return; }

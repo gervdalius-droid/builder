@@ -834,6 +834,20 @@ button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(
 .lp-plate{fill:var(--accent-soft);stroke:none}
 .lp-leg{fill:var(--ink)}
 .lp-t{font:11px var(--f-body);fill:var(--muted)}
+/* ---- stacked front heights */
+.fronts{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.fh-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.fh-head b{font-size:12.5px;color:var(--muted)}
+.fh-reset{margin-left:auto;padding:3px 9px;font-size:12.5px}
+.fh-list{display:flex;flex-direction:column;gap:5px}
+.fh{display:grid;grid-template-columns:44px 96px 1fr;align-items:center;gap:8px}
+.fh-no{font:600 12px var(--f-mono);color:var(--muted);text-align:right}
+.fh input{width:96px;text-align:right;font:600 14px var(--f-mono);border:1px solid var(--line2);background:var(--panel);border-radius:6px;padding:6px 9px}
+.fh input::placeholder{color:var(--muted);opacity:.85}
+.fh.own input{border-color:var(--k,var(--accent));box-shadow:0 0 0 1px var(--k,var(--accent)) inset}
+.fh-bar{height:var(--h);max-width:120px;border-radius:3px;border:1px solid var(--k,var(--line2));background:color-mix(in srgb,var(--k,var(--accent)) 14%,var(--panel))}
+.fh.own .fh-bar{background:color-mix(in srgb,var(--k,var(--accent)) 30%,var(--panel))}
+.fh-warn{margin:6px 0 0;font-size:12.5px;color:var(--warn)}
 
 </style>
 </head>
@@ -977,6 +991,28 @@ function newCabinet() {
 function safeName(s) { return ascii(String(s || '')).replace(/[^\w\-]+/g, '_'); }   // Aukšta → Auksta (program/label names stay plain ASCII)
 
 /* ----------------------------------------------------------------- cabinet → panels */
+/* split a section among n stacked fronts. hs = front heights from the TOP down (what the worker sees and measures);
+   an empty / 0 entry shares what is left. Returns module heights (front + gap) from the BOTTOM up, and a note when
+   the given heights do not fit (then the bottom-most given front takes the difference, or all share equally). */
+function splitFronts(secH, n, hs, gap) {
+  n = Math.max(1, Math.round(+n || 1)); gap = gap == null ? R.facade.gap : gap;
+  var top = []; for (var i = 0; i < n; i++) { var v = hs && +hs[i] > 0 ? +hs[i] : 0; top.push(v); }
+  var fixed = top.filter(function (v) { return v > 0; }), nAuto = n - fixed.length, sumFix = fixed.reduce(function (a, v) { return a + v + gap; }, 0), note = '';
+  var mods;
+  if (!fixed.length) mods = top.map(function () { return secH / n; });
+  else if (nAuto > 0) {
+    var rest = (secH - sumFix) / nAuto;
+    if (rest < 80 + gap) { note = 'nurodyti fasadų aukščiai (' + fixed.join(' + ') + ') netelpa į sekciją ' + num(secH) + ' mm — fasadai padalinti po lygiai'; mods = top.map(function () { return secH / n; }); }
+    else mods = top.map(function (v) { return v > 0 ? v + gap : rest; });
+  } else if (Math.abs(sumFix - secH) > 0.5) {
+    var last = -1; top.forEach(function (v, q) { if (v > 0) last = q; });
+    var adj = top[last] + gap + (secH - sumFix);
+    if (adj < 80 + gap) { note = 'fasadų aukščių suma (' + num(sumFix - n*gap) + ' + tarpai) neatitinka sekcijos ' + num(secH) + ' mm — fasadai padalinti po lygiai'; mods = top.map(function () { return secH / n; }); }
+    else { note = 'fasadų aukščių suma neatitinka sekcijos ' + num(secH) + ' mm — apatinis fasadas ' + num(adj - gap) + ' mm'; mods = top.map(function (v, q) { return q === last ? adj : v + gap; }); }
+  } else mods = top.map(function (v) { return v + gap; });
+  return { mods:mods.slice().reverse(), note:note };
+}
+
 function buildCabinet(c, idx, projName) {
   var o = cncDefaults(c); var t = +c.thick || 18, W = +c.W, H = +c.H, D = +c.D;
   var base = safeName(projName || 'PROJ') + '_' + (idx + 1) + (c.name ? '_' + safeName(c.name) : '');
@@ -1046,10 +1082,12 @@ function buildCabinet(c, idx, projName) {
     secs.forEach(function (s, si) {
       var secH = s.fill ? fillH : Math.max(0, +s.height || 0);
       if (s.kind === 'drawers') {
-        var n = Math.max(1, Math.round(+s.nDrawers || 1)); var fh = secH / n;
+        var n = Math.max(1, Math.round(+s.nDrawers || 1)), sp = splitFronts(secH, n, s.frontH, gap), fbs = [0];
+        sp.mods.forEach(function (m) { fbs.push(fbs[fbs.length - 1] + m); });
+        if (sp.note) warn.push(lbl(si) + ': ' + sp.note);
         var rt = R.runner[s.hw]; if (!rt) warn.push(lbl(si) + ': bėgeliams „' + s.hw + '" skylių šablono nėra — bėgelių žymės nepridėtos');
         for (var j = 0; j < n; j++) {
-          var fb = yCur + j*fh;
+          var fb = yCur + fbs[j], fh = sp.mods[j];
           facades.push({ w:FW, h:fh - gap, bottom:fb, x:F0, hw:s.hw, sec:si, idx:j, col:col });
           if (rt) runners.push({ fb:fb, type:s.hw, col:col });
           hw.push({ item:(s.hw || 'Stalčiaus bėgeliai') + ' L=' + (+s.rail || 500), qty:1, unit:'kompl.' });
@@ -1060,11 +1098,13 @@ function buildCabinet(c, idx, projName) {
         var hingedSec = s.hinge !== 'BE FURNITŪROS';
         if (hingedSec && !o.hinges) warn.push(lbl(si) + ': durys — lankstų skylės išjungtos (gręžiama rankomis)');
         var nd = Math.max(1, Math.round(+s.nDoors || 1)), horiz = s.doorSplit === 'h', hs = s.hingeSide || 'auto';
+        var dsp = horiz ? splitFronts(secH, nd, s.frontH, gap) : null, dzs = [0];
+        if (dsp) { dsp.mods.forEach(function (m) { dzs.push(dzs[dzs.length - 1] + m); }); if (dsp.note) warn.push(lbl(si) + ': ' + dsp.note); }
         for (var k = 0; k < nd; k++) {
           var dw = horiz ? FW : (FW - (nd - 1)*gap) / nd;
-          var dh = horiz ? secH/nd - gap : secH - gap;
+          var dh = horiz ? dsp.mods[k] - gap : secH - gap;
           var dx = horiz ? F0 : F0 + k*(dw + gap);
-          var dz = horiz ? yCur + k*secH/nd : yCur;
+          var dz = horiz ? yCur + dzs[k] : yCur;
           var hl = horiz ? hs !== 'right' : (hs === 'left' ? true : hs === 'right' ? false : k < nd - 1);   // same rule as the offer app's sketch
           /* hinge heights on the door: catalogue spacing, kept clear of the bottom panel and the top / top rail so the
              mounting plate screws (±plateSpacing/2) land in the free part of the side; cups and plates share these */
@@ -1729,7 +1769,7 @@ function programs(p) {
 
 var api = { R:R, DRAWER_HW:DRAWER_HW, DOOR_HW:DOOR_HW, newCabinet:newCabinet, newSection:newSection, cncDefaults:cncDefaults,
             buildCabinet:buildCabinet, programs:programs, num:num, ascii:ascii, safeName:safeName, hingesPerDoor:hingesPerDoor,
-            hingeYs:hingeYs, hingesFit:hingesFit, setRules:setRules };
+            hingeYs:hingeYs, hingesFit:hingesFit, setRules:setRules, splitFronts:splitFronts };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.DBEngine = api;
 })(typeof window !== 'undefined' ? window : this);
 
@@ -2075,6 +2115,8 @@ function cabinetSVG(c,r){
   // full 3D projector and a panel-slab drawer (3 visible faces => thickness is shown on every panel)
   const Q=(x,y,z)=>[ox+k*cs*(x+z), oy+k*(sn*x - sn*z - y)];
   // a panel = its three visible isometric faces, drawn as edges only (9 unique lines)
+  // stacked fronts: each its own height (section.frontH, from the top down; empty = share the rest) — same split as the engine
+  const ySplit=(sec,secH,n)=>{const EN=(typeof window!=='undefined')&&window.DBEngine;const m=(EN&&EN.splitFronts)?EN.splitFronts(secH,n,sec.frontH).mods:Array(n).fill(secH/n);const ys=[0];m.forEach(v=>ys.push(ys[ys.length-1]+v));return ys;};
   const slab=(x0,y0,z0,x1,y1,z1,stroke,sw,extra)=>
       poly([Q(x0,y0,z0),Q(x1,y0,z0),Q(x1,y1,z0),Q(x0,y1,z0)],"none",stroke,sw,extra)   // front (z0)
     + poly([Q(x0,y1,z0),Q(x1,y1,z0),Q(x1,y1,z1),Q(x0,y1,z1)],"none",stroke,sw,extra)   // top (y1)
@@ -2241,10 +2283,10 @@ function cabinetSVG(c,r){
           shelfYs(sec,secH).forEach(off=>{const hh=hB+Math.max(t_,Math.min(secH-t_,off));s+=slab(fx0,hh-t_/2,0,fx1,hh+t_/2,D,PK,W_SHELF);});
         } else if(so.kind==='oven'){
           s+=ovenIso(fx0,fx1,hB,hT,Math.max(0,Math.round(num(sec.shelves))));
-        } else if(so.kind==='drawers'){const n=Math.max(1,num(sec.nDrawers));
+        } else if(so.kind==='drawers'){const n=Math.max(1,num(sec.nDrawers)),YS=ySplit(sec,secH,n);
           const dep=Math.max(40,Math.min(D-t_,num(sec.rail)||D));
-          for(let d=0;d<n;d++){const y0=hB+secH*d/n,y1=hB+secH*(d+1)/n;s+=drawerBox3D(fx0,fx1,y0,y1,dep,sec.hw,false);}
-          for(let d=0;d<n;d++){const y0=hB+secH*d/n,y1=hB+secH*(d+1)/n,fh=y1-y0;
+          for(let d=0;d<n;d++){const y0=hB+YS[d],y1=hB+YS[d+1];s+=drawerBox3D(fx0,fx1,y0,y1,dep,sec.hw,false);}
+          for(let d=0;d<n;d++){const y0=hB+YS[d],y1=hB+YS[d+1],fh=y1-y0;
             s+=frontPanel(Xc0,y0,Xc1,y1);
             const L=Math.max(96,Math.min(320,(Xc1-Xc0)*0.36)), hy=fh>260?y1-70:(y0+y1)/2, xm=(Xc0+Xc1)/2;
             s+=handleBar(xm-L/2,hy,xm+L/2,hy);}
@@ -2272,8 +2314,8 @@ function cabinetSVG(c,r){
           const wall=eq(c.type,'PAKABINAMOS');
           const handleAt=(y0,y1,lowerLeaf,upperLeaf)=>wall?y0:(upperLeaf?y0:lowerLeaf?y1:Math.min(1050,y1));
           if(sec.doorSplit==='h'){
-            const hL=hsV!=='right';
-            for(let d=0;d<n;d++){const y0=hB+secH*d/n,y1=hB+secH*(d+1)/n;
+            const hL=hsV!=='right',YS=ySplit(sec,secH,n);
+            for(let d=0;d<n;d++){const y0=hB+YS[d],y1=hB+YS[d+1];
               s+=leaf(Xc0,y0,Xc1,y1,hL,handleAt(y0,y1,n>1&&d<n-1,n>1&&d===n-1));}
           } else {
             for(let d=0;d<n;d++){const x0=Xc0+(Xc1-Xc0)*d/n,x1=Xc0+(Xc1-Xc0)*(d+1)/n;
@@ -3918,7 +3960,7 @@ lt:{
  rotHint:'↻ — antra programa su ta pačia puse viršuje, plokštė pasukta 90° prieš laikrodžio rodyklę (priekinis kraštas tampa kairiuoju galu).',
  setRails:'Juostos ir nugara', drillsTop:'Grąžtai galvoje (viršus), mm', drillsTopL:'Iš Maestro konfigūracijos. Skylės, kurių skersmens čia nėra, neprogramuojamos.', tbHoleSet:'TANDEMBOX fasado skylė (jei Ø)', tbDef:'TANDEMBOX fasadai',
  s4:'Papildomos operacijos', s4l:'Pažymėkite, ką gręžti CNC. „Patikrinta“ — sutampa su jūsų SWOOD modeliais.',
- oLegs:'Kojelės ir jų žymės dugne', oLegsD:'4 žymės Ø5 × 2 mm kiekvienai kojelei. Plačiai ar sunkiai spintelei pridėkite daugiau kojelių.', legRow:'Kojelių eilėje', legParts:'Po pertvaromis', legRows:'Eilės', legRows2:'2 — priekis, galas', legRows3:'3 — + vidurys', legTotal:'Iš viso kojelių', legFront:'priekis', legDense:'Per tankiai — tarp kojelių būtų mažiau nei 70 mm',
+ oLegs:'Kojelės ir jų žymės dugne', oLegsD:'4 žymės Ø5 × 2 mm kiekvienai kojelei. Plačiai ar sunkiai spintelei pridėkite daugiau kojelių.', legRow:'Kojelių eilėje', fhTitle:'Fasadų aukščiai, mm', fhNote:'iš viršaus · tuščias = dalijasi likusį aukštį', fhEqual:'Vienodi', legParts:'Po pertvaromis', legRows:'Eilės', legRows2:'2 — priekis, galas', legRows3:'3 — + vidurys', legTotal:'Iš viso kojelių', legFront:'priekis', legDense:'Per tankiai — tarp kojelių būtų mažiau nei 70 mm',
  oRun:'Bėgelių žymės šonuose', oRunD:'Blum TANDEM / TANDEMBOX šablonai pagal stalčių aukštį.',
  oTb:'TANDEMBOX fasadų tvirtinimas', oTbD:'Ø10 × 12 skylės fasado vidinėje pusėje.',
  oHinge:'Lankstų skylės', oHingeD:'Ø35 puodelis duryse + 2 × Ø5 plokštelės skylės šone. Blum katalogo matmenys.',
@@ -4033,7 +4075,7 @@ en:{
  rotHint:'↻ — second program with the same face up, panel turned 90° counter-clockwise (the front edge becomes the left end).',
  setRails:'Rails and back', drillsTop:'Drills on the head (top), mm', drillsTopL:'From the Maestro configuration. Holes of a size not listed are not programmed.', tbHoleSet:'TANDEMBOX front hole (if Ø)', tbDef:'TANDEMBOX fronts',
  s4:'Extra operations', s4l:'Tick what the CNC should drill. “Verified” means it matches your SWOOD models.',
- oLegs:'Legs and their marks in the bottom', oLegsD:'4 marks Ø5 × 2 mm per leg. Add more legs for a wide or heavy cabinet.', legRow:'Legs in a row', legParts:'Under partitions', legRows:'Rows', legRows2:'2 — front, back', legRows3:'3 — + middle', legTotal:'Legs in total', legFront:'front', legDense:'Too dense — less than 70 mm between legs',
+ oLegs:'Legs and their marks in the bottom', oLegsD:'4 marks Ø5 × 2 mm per leg. Add more legs for a wide or heavy cabinet.', legRow:'Legs in a row', fhTitle:'Front heights, mm', fhNote:'from the top · empty = shares what is left', fhEqual:'Equal', legParts:'Under partitions', legRows:'Rows', legRows2:'2 — front, back', legRows3:'3 — + middle', legTotal:'Legs in total', legFront:'front', legDense:'Too dense — less than 70 mm between legs',
  oRun:'Runner marks in the sides', oRunD:'Blum TANDEM / TANDEMBOX patterns at each drawer height.',
  oTb:'TANDEMBOX front fixing', oTbD:'Ø10 × 12 holes on the inside of the front.',
  oHinge:'Hinge holes', oHingeD:'Ø35 cup in the door + 2 × Ø5 plate holes in the side. Blum catalogue values.',
@@ -4688,7 +4730,7 @@ function viewSection(c, s, i, z) {
   if (s.kind === 'drawers') {
     body += fN(t('nDr'), b + 'nDrawers', s.nDrawers, 's') + fS(t('runner'), b + 'hw', s.hw, [['BLUM TANDEMBOX', 'Blum TANDEMBOX'], ['BLUM TANDEM', 'Blum TANDEM']].concat(E.R.runner[s.hw] ? [] : [[s.hw, s.hw]])) +
       fS(t('rail'), b + 'rail', s.rail, [270, 300, 350, 400, 450, 500, 550, 600, 650].map(function (v) { return [v, v + ' mm']; })) +
-      '<span class="h">' + fmt(secH / Math.max(1, num(s.nDrawers))) + ' mm / ' + (S.lang === 'lt' ? 'vnt.' : 'each') + '</span>';
+      (num(s.nDrawers) > 1 ? '' : '<span class="h">' + fmt(secH - E.R.facade.gap) + ' mm</span>');
   } else if (s.kind === 'doors') {
     body += fN(t('nDoors'), b + 'nDoors', s.nDoors, 's') + '<div class="f"><span>' + t('split') + '</span>' + seg(b + 'doorSplit', s.doorSplit, [['v', t('sSide')], ['h', t('sStack')]]) + '</div>' +
       fS(t('hinge'), b + 'hinge', s.hinge, E.DOOR_HW.map(function (v) { return [v, v]; }).concat(E.DOOR_HW.indexOf(s.hinge) < 0 ? [[s.hinge, s.hinge]] : [])) +
@@ -4700,10 +4742,26 @@ function viewSection(c, s, i, z) {
     body += fS(t('sup'), b + 'shelves', Math.min(2, num(s.shelves)), [[0, '0'], [1, '1 — ' + (S.lang === 'lt' ? 'apačioje' : 'below')], [2, '2 — ' + (S.lang === 'lt' ? 'apačioje ir viršuje' : 'below and above')]]);
   }
   body += '</div>';
+  var nStack = s.kind === 'drawers' ? num(s.nDrawers) : s.kind === 'doors' && s.doorSplit === 'h' ? num(s.nDoors) : 0;
+  if (nStack > 1) body += frontsEditor(s, i, secH, Math.round(nStack));
   return '<div class="sec k-' + s.kind + '"><div>' + head + body + '</div><div class="tools">' +
     '<button title="' + t('up') + '" aria-label="' + t('up') + '" data-act="mv" data-i="' + i + '" data-v="1"' + (lastInCol(c, i) ? ' disabled' : '') + '>▲</button>' +
     '<button title="' + t('down') + '" aria-label="' + t('down') + '" data-act="mv" data-i="' + i + '" data-v="-1"' + (firstInCol(c, i) ? ' disabled' : '') + '>▼</button>' +
     '<button class="xbtn" title="' + t('rm') + '" aria-label="' + t('rm') + '" data-act="rmsec" data-i="' + i + '">✕</button></div></div>';
+}
+/* stacked fronts, top first: type a height for any of them, the empty ones share what is left */
+function frontsEditor(s, i, secH, n) {
+  var g = E.R.facade.gap, sp = E.splitFronts(secH, n, s.frontH, g), top = sp.mods.slice().reverse(), fh = s.frontH || {}, any = false;
+  var rows = top.map(function (m, q) {
+    var own = fh[q] != null && String(fh[q]).trim() !== '' && +fh[q] > 0; if (own) any = true;
+    var id = 'f-c-sections-' + i + '-frontH-' + q;
+    return '<label class="fh' + (own ? ' own' : '') + '" for="' + id + '"><span class="fh-no">' + (q === 0 ? '↑ ' : q === n - 1 ? '↓ ' : '') + (q + 1) + '</span>' +
+      '<input id="' + id + '" type="text" inputmode="decimal" data-bind="c.sections.' + i + '.frontH.' + q + '" data-num="1" data-empty="1" value="' + (own ? esc(fmt(fh[q])) : '') + '" placeholder="' + fmt(m - g) + '">' +
+      '<span class="fh-bar" style="--h:' + Math.max(6, Math.min(40, (m / Math.max(1, secH)) * 64)).toFixed(0) + 'px"></span></label>';
+  }).join('');
+  return '<div class="fronts"><div class="fh-head"><b>' + t('fhTitle') + '</b><span class="unit">' + t('fhNote') + '</span>' +
+    (any ? '<button type="button" class="btn ghost fh-reset" data-act="fhreset" data-i="' + i + '">↺ ' + t('fhEqual') + '</button>' : '') + '</div>' +
+    '<div class="fh-list">' + rows + '</div>' + (sp.note ? '<p class="fh-warn">' + esc(sp.note) + '</p>' : '') + '</div>';
 }
 function viewSheet(c, inf) {
   var nParts = inf.r.panels.length;
@@ -5041,7 +5099,7 @@ app.addEventListener('change', function (e) {
   else if (el.getAttribute('data-num') && el.getAttribute('data-empty') && !String(el.value).trim()) assign(bind, '');
   else if (el.getAttribute('data-num')) { var n = num(el.value); assign(bind, n); el.value = E.num(n); }
   else assign(bind, el.value);
-  var full = el.type === 'checkbox' || el.tagName === 'SELECT' || /\.(nDrawers|nDoors|shelves|height)$/.test(bind) || /cnc\.joints\./.test(bind) || /^c\.(colW\.|W$)/.test(bind) || bind === 'p.name';
+  var full = el.type === 'checkbox' || el.tagName === 'SELECT' || /\.(nDrawers|nDoors|shelves|height|frontH\.\d+|doorSplit)$/.test(bind) || /cnc\.joints\./.test(bind) || /^c\.(colW\.|W$)/.test(bind) || bind === 'p.name';
   if (full) { if (bind.indexOf('s.') === 0) { store('dbKurejas.settings', S.settings); applyRules(); } else save(); setTimeout(render, 0); }   // after focus has moved, so it is restored
   else after(bind, false);
 });
@@ -5075,6 +5133,7 @@ app.addEventListener('click', function (e) {
     case 'colsel': S.colSel = +v; break;
     case 'mv': { var cc0 = cur(), a = cc0.sections, cl = colOf(cc0, a[i]), idx = a.map(function (s, q) { return q; }).filter(function (q) { return colOf(cc0, a[q]) === cl; }), p0 = idx.indexOf(i), j = idx[p0 + (+v)];
       if (j == null) return; var tmp = a[i]; a[i] = a[j]; a[j] = tmp; save(); break; }
+    case 'fhreset': delete cur().sections[i].frontH; save(); break;
     case 'rmsec': { var rc = cur(), gone = rc.sections.splice(i, 1)[0]; save(); render();
       toast(t('secRemoved'), false, t('undoBtn'), function () { var c2 = S.proj && S.proj.cabinets.filter(function (x) { return x.id === rc.id; })[0]; if (!c2) return; c2.sections.splice(Math.min(i, c2.sections.length), 0, gone); save(); render(); });
       return; }

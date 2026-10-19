@@ -5,6 +5,7 @@ Dėdės Baldai workshop tool: enter a cabinet the way the offer app does (size, 
 **Open it:** `index.html` — one self-contained page, runs in any browser (GitHub Pages serves it from the repo root).
 
 ## What it does
+- Each stacked front its own height: type the height of any drawer (or stacked door) front, from the top; the empty ones share what is left.
 - More legs: 2–6 legs in a row or one under every partition, 2 or 3 rows; legs move aside so the plate never covers a connector head; plan view and count in the Operations step.
 - Front render in the Sections step: drawn from the real parts (sizes, gaps, materials, handles, legs, oven); click a column to edit it.
 - Sections step: a front-view column map (contents to scale, back per column) — click a column to edit it at full width; removing a section can be undone.

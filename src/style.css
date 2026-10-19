@@ -822,3 +822,17 @@ button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(
 .lp-plate{fill:var(--accent-soft);stroke:none}
 .lp-leg{fill:var(--ink)}
 .lp-t{font:11px var(--f-body);fill:var(--muted)}
+/* ---- stacked front heights */
+.fronts{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.fh-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.fh-head b{font-size:12.5px;color:var(--muted)}
+.fh-reset{margin-left:auto;padding:3px 9px;font-size:12.5px}
+.fh-list{display:flex;flex-direction:column;gap:5px}
+.fh{display:grid;grid-template-columns:44px 96px 1fr;align-items:center;gap:8px}
+.fh-no{font:600 12px var(--f-mono);color:var(--muted);text-align:right}
+.fh input{width:96px;text-align:right;font:600 14px var(--f-mono);border:1px solid var(--line2);background:var(--panel);border-radius:6px;padding:6px 9px}
+.fh input::placeholder{color:var(--muted);opacity:.85}
+.fh.own input{border-color:var(--k,var(--accent));box-shadow:0 0 0 1px var(--k,var(--accent)) inset}
+.fh-bar{height:var(--h);max-width:120px;border-radius:3px;border:1px solid var(--k,var(--line2));background:color-mix(in srgb,var(--k,var(--accent)) 14%,var(--panel))}
+.fh.own .fh-bar{background:color-mix(in srgb,var(--k,var(--accent)) 30%,var(--panel))}
+.fh-warn{margin:6px 0 0;font-size:12.5px;color:var(--warn)}

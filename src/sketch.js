@@ -65,6 +65,8 @@ function cabinetSVG(c,r){
   // full 3D projector and a panel-slab drawer (3 visible faces => thickness is shown on every panel)
   const Q=(x,y,z)=>[ox+k*cs*(x+z), oy+k*(sn*x - sn*z - y)];
   // a panel = its three visible isometric faces, drawn as edges only (9 unique lines)
+  // stacked fronts: each its own height (section.frontH, from the top down; empty = share the rest) — same split as the engine
+  const ySplit=(sec,secH,n)=>{const EN=(typeof window!=='undefined')&&window.DBEngine;const m=(EN&&EN.splitFronts)?EN.splitFronts(secH,n,sec.frontH).mods:Array(n).fill(secH/n);const ys=[0];m.forEach(v=>ys.push(ys[ys.length-1]+v));return ys;};
   const slab=(x0,y0,z0,x1,y1,z1,stroke,sw,extra)=>
       poly([Q(x0,y0,z0),Q(x1,y0,z0),Q(x1,y1,z0),Q(x0,y1,z0)],"none",stroke,sw,extra)   // front (z0)
     + poly([Q(x0,y1,z0),Q(x1,y1,z0),Q(x1,y1,z1),Q(x0,y1,z1)],"none",stroke,sw,extra)   // top (y1)
@@ -231,10 +233,10 @@ function cabinetSVG(c,r){
           shelfYs(sec,secH).forEach(off=>{const hh=hB+Math.max(t_,Math.min(secH-t_,off));s+=slab(fx0,hh-t_/2,0,fx1,hh+t_/2,D,PK,W_SHELF);});
         } else if(so.kind==='oven'){
           s+=ovenIso(fx0,fx1,hB,hT,Math.max(0,Math.round(num(sec.shelves))));
-        } else if(so.kind==='drawers'){const n=Math.max(1,num(sec.nDrawers));
+        } else if(so.kind==='drawers'){const n=Math.max(1,num(sec.nDrawers)),YS=ySplit(sec,secH,n);
           const dep=Math.max(40,Math.min(D-t_,num(sec.rail)||D));
-          for(let d=0;d<n;d++){const y0=hB+secH*d/n,y1=hB+secH*(d+1)/n;s+=drawerBox3D(fx0,fx1,y0,y1,dep,sec.hw,false);}
-          for(let d=0;d<n;d++){const y0=hB+secH*d/n,y1=hB+secH*(d+1)/n,fh=y1-y0;
+          for(let d=0;d<n;d++){const y0=hB+YS[d],y1=hB+YS[d+1];s+=drawerBox3D(fx0,fx1,y0,y1,dep,sec.hw,false);}
+          for(let d=0;d<n;d++){const y0=hB+YS[d],y1=hB+YS[d+1],fh=y1-y0;
             s+=frontPanel(Xc0,y0,Xc1,y1);
             const L=Math.max(96,Math.min(320,(Xc1-Xc0)*0.36)), hy=fh>260?y1-70:(y0+y1)/2, xm=(Xc0+Xc1)/2;
             s+=handleBar(xm-L/2,hy,xm+L/2,hy);}
@@ -262,8 +264,8 @@ function cabinetSVG(c,r){
           const wall=eq(c.type,'PAKABINAMOS');
           const handleAt=(y0,y1,lowerLeaf,upperLeaf)=>wall?y0:(upperLeaf?y0:lowerLeaf?y1:Math.min(1050,y1));
           if(sec.doorSplit==='h'){
-            const hL=hsV!=='right';
-            for(let d=0;d<n;d++){const y0=hB+secH*d/n,y1=hB+secH*(d+1)/n;
+            const hL=hsV!=='right',YS=ySplit(sec,secH,n);
+            for(let d=0;d<n;d++){const y0=hB+YS[d],y1=hB+YS[d+1];
               s+=leaf(Xc0,y0,Xc1,y1,hL,handleAt(y0,y1,n>1&&d<n-1,n>1&&d===n-1));}
           } else {
             for(let d=0;d<n;d++){const x0=Xc0+(Xc1-Xc0)*d/n,x1=Xc0+(Xc1-Xc0)*(d+1)/n;
