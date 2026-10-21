@@ -4232,10 +4232,10 @@ Shapes.prototype.oval = function (name, cx, cy, dia, dash) {
     '<a:prstGeom prst="ellipse"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill><a:ln w="6350"><a:solidFill><a:srgbClr val="000000"/></a:solidFill>' + (dash ? '<a:prstDash val="dash"/>' : '') + '</a:ln></xdr:spPr>' + STY_SP + '</xdr:sp>'));
 };
 /* one panel picture: box centre (cx, cy), box size bw × bh; part = { L, W, pic:{holes, edges}, eb:{F,B,L,R} } */
-var MIN_MARK = 2.4, W_OUT = 9525, W_EB = 28575, W_DASH = 6350;
+var MIN_MARK = 2.4, W_OUT = 9525, W_EB = 44450, W_DASH = 6350, EB_OFF = 3.2;   // edge band bar 3.5 pt, 3.2 pt outside the outline
 function drawPanel(sh, tag, part, cx, cy, bw, bh) {
   var L = +part.L, W = +part.W; if (!(L > 0 && W > 0)) return;
-  var s = Math.min(bw/L, bh/W), pw = L*s, ph = W*s, x0 = cx - pw/2, y0 = cy - ph/2, x1 = x0 + pw, y1 = y0 + ph, k = 0;
+  var pad = EB_OFF + 2, s = Math.min((bw - 2*pad)/L, (bh - 2*pad)/W), pw = L*s, ph = W*s, x0 = cx - pw/2, y0 = cy - ph/2, x1 = x0 + pw, y1 = y0 + ph, k = 0;
   var nm = function () { return tag + '_' + (k++); };
   var X = function (x) { return x0 + x*s; }, Y = function (y) { return y1 - y*s; };   // F edge (panel y = 0) at the bottom
   sh.box(nm(), x0, y0, pw, ph);
@@ -4253,10 +4253,12 @@ function drawPanel(sh, tag, part, cx, cy, bw, bh) {
     }
   });
   var eb = part.eb || {};
-  if (eb.L) sh.line(nm(), x0, y0, x0, y1, W_EB);
-  if (eb.R) sh.line(nm(), x1, y0, x1, y1, W_EB);
-  if (eb.B) sh.line(nm(), x0, y0, x1, y0, W_EB);
-  if (eb.F) sh.line(nm(), x0, y1, x1, y1, W_EB);
+  /* banded edges: a heavy bar just OUTSIDE the outline, clear of the holes near the edge (black only, thermal printer) */
+  var o = EB_OFF;
+  if (eb.L) sh.line(nm(), x0 - o, y0 - (eb.B ? o : 0), x0 - o, y1 + (eb.F ? o : 0), W_EB);
+  if (eb.R) sh.line(nm(), x1 + o, y0 - (eb.B ? o : 0), x1 + o, y1 + (eb.F ? o : 0), W_EB);
+  if (eb.B) sh.line(nm(), x0 - (eb.L ? o : 0), y0 - o, x1 + (eb.R ? o : 0), y0 - o, W_EB);
+  if (eb.F) sh.line(nm(), x0 - (eb.L ? o : 0), y1 + o, x1 + (eb.R ? o : 0), y1 + o, W_EB);
 }
 
 /* ----------------------------------------------------------------- order (as the macro: thickness ↓, material, length ↓, width ↓, part code) */
