@@ -1715,6 +1715,7 @@ function buildCabinet(c, idx, projName) {
       d.ys.forEach(function (y) {
         hole(p, 'A', xc, y, hr.cupD, hr.cupDepth, { op:'hinge' });
         if (o.hingeFix === 'press') [-1, 1].forEach(function (sg) { hole(p, 'A', xc + dir*hr.dowelOffset, y + sg*hr.dowelSpacing/2, hr.dowelD, hr.dowelDepth, { op:'hinge' }); });
+        else [-1, 1].forEach(function (sg) { hole(p, 'A', xc + dir*hr.dowelOffset, y + sg*hr.dowelSpacing/2, R.post.markD, R.post.markDepth, { op:'hinge', mark:true }); });   // screw-on cup: its 2 screw positions marked Ø5 × 2
       });
       p.warnings.push('lankstų puodelių skylės pagal Blum katalogą — NEPATIKRINTA su SWOOD modeliu');
     }
@@ -4512,8 +4513,8 @@ lt:{
  oLegs:'Kojelės ir jų žymės dugne', oLegsD:'4 žymės Ø5 × 2 mm kiekvienai kojelei. Plačiai ar sunkiai spintelei pridėkite daugiau kojelių.', legRow:'Kojelių eilėje', supL:'Atramos', feetRow:'Pėdučių eilėje', feetTotal:'Iš viso pėdučių', supLegs:'Kojelės', supFeet:'Pėdutės', supNone:'Nėra', supEdit:'Nustatymai', feetNote:'Pėdutė Ø50 × 10 mm · skylė Ø8 × 10 · 50 nuo priekio ir galo', oFeet:'Pėdutės ir jų skylės dugne', oFeetD:'Ø8 × 10 skylė kiekvienai pėdutei dugno apačioje, 50 mm nuo priekio ir galo. Galima pridėti vidurinę eilę.', botMount:'Dugnas', botUnder:'Po šonais', botInside:'Tarp šonų', botZ:'Dugno aukštis nuo apačios', fhTitle:'Fasadų aukščiai, mm', fhNote:'iš viršaus · tuščias = dalijasi likusį aukštį', fhEqual:'Vienodi', legParts:'Po pertvaromis', legRows:'Eilės', legRows2:'2 — priekis, galas', legRows3:'3 — + vidurys', legTotal:'Iš viso kojelių', legFront:'priekis', legDense:'Per tankiai — tarp kojelių būtų mažiau nei 70 mm',
  oRun:'Bėgelių žymės šonuose', oRunD:'Blum TANDEM / TANDEMBOX šablonai pagal stalčių aukštį.',
  oTb:'TANDEMBOX fasadų tvirtinimas', oTbD:'Ø10 × 12 skylės fasado vidinėje pusėje.',
- oHinge:'Lankstų skylės', oHingeD:'Ø35 puodelis duryse + 2 plokštelės žymės šone (Ø5 × 2, kaip post-procesoriuje). Blum katalogo matmenys.',
- hfScrew:'Puodelis prisukamas', hfPress:'Įspaudžiamas (+2 × Ø8)',
+ oHinge:'Lankstų skylės', oHingeD:'Ø35 puodelis duryse su 2 varžtų žymėmis (Ø5 × 2) + 2 plokštelės žymės šone (Ø5 × 2, kaip post-procesoriuje). Blum katalogo matmenys.',
+ hfScrew:'Prisukamas (+2 žymės Ø5 × 2)', hfPress:'Įspaudžiamas (+2 × Ø8)',
  oPins:'Lentynų laikiklių skylės', oPinsD:'Ø5 skylės abiejuose šonuose po kiekviena kilnojama lentyna.',
  pinShelf:'Tik po lentyna', pinRow:'Eilė ±2 kas 32',
  notNeeded:'šiai spintelei nereikia', verified:'patikrinta', unverified:'nepatikrinta',
@@ -4627,8 +4628,8 @@ en:{
  oLegs:'Legs and their marks in the bottom', oLegsD:'4 marks Ø5 × 2 mm per leg. Add more legs for a wide or heavy cabinet.', legRow:'Legs in a row', supL:'Supports', feetRow:'Feet in a row', feetTotal:'Feet in total', supLegs:'Legs', supFeet:'Feet', supNone:'None', supEdit:'Settings', feetNote:'Foot Ø50 × 10 mm · hole Ø8 × 10 · 50 from the front and back', oFeet:'Feet and their holes in the bottom', oFeetD:'Ø8 × 10 hole for each foot under the bottom, 50 mm from the front and the back. A middle row can be added.', botMount:'Bottom', botUnder:'Under the sides', botInside:'Between the sides', botZ:'Bottom height from below', fhTitle:'Front heights, mm', fhNote:'from the top · empty = shares what is left', fhEqual:'Equal', legParts:'Under partitions', legRows:'Rows', legRows2:'2 — front, back', legRows3:'3 — + middle', legTotal:'Legs in total', legFront:'front', legDense:'Too dense — less than 70 mm between legs',
  oRun:'Runner marks in the sides', oRunD:'Blum TANDEM / TANDEMBOX patterns at each drawer height.',
  oTb:'TANDEMBOX front fixing', oTbD:'Ø10 × 12 holes on the inside of the front.',
- oHinge:'Hinge holes', oHingeD:'Ø35 cup in the door + 2 plate marks in the side (Ø5 × 2, as the post-processor makes them). Blum catalogue values.',
- hfScrew:'Screw-on cup', hfPress:'Press-in (+2 × Ø8)',
+ oHinge:'Hinge holes', oHingeD:'Ø35 cup in the door with 2 screw marks (Ø5 × 2) + 2 plate marks in the side (Ø5 × 2, as the post-processor makes them). Blum catalogue values.',
+ hfScrew:'Screw-on (+2 marks Ø5 × 2)', hfPress:'Press-in (+2 × Ø8)',
  oPins:'Shelf support holes', oPinsD:'Ø5 holes in both sides under every adjustable shelf.',
  pinShelf:'Under the shelf only', pinRow:'Row ±2 at 32',
  notNeeded:'not needed for this cabinet', verified:'verified', unverified:'unverified',
