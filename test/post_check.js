@@ -1,7 +1,8 @@
 // Programs follow Dalius's SolidWorks → XXL post (step2xxl, same as SWOOD CAM):
 //  every marking (drawer runners, hinge plates, legs, front-fixing marks) is  XBO … Z=-2 D=5 N="L" F=1,
 //  a cam bolt bore in a part's edge stops at Z=-31.906 (never -34), and no horizontal bore goes deeper (konfirmat pilots too),
-//  holes are listed left end (F=3) first, then the top face by X, then the right end (F=2).
+//  holes are listed left end (F=3) first, then the top face by X, then the right end (F=2),
+//  and every part's machine frame is right-handed (X × Y = the face that is up), so nothing comes out mirrored.
 const E=require('../src/engine.js');
 let bad=0,progs=0,marks=0,cams=0; const B=m=>{bad++; if(bad<12) console.log(m);};
 const xbo=l=>{const m=/ XBO X=([-\d.]+) Y=([-\d.]+) Z=([-\d.]+) D=([\d.]+) N="(\w)" F=(\d)/.exec(l); return m&&{X:+m[1],Y:+m[2],Z:+m[3],D:+m[4],N:m[5],F:+m[6]};};
@@ -12,7 +13,9 @@ for(const joinery of ['cam','confirmat']) for(const top of ['rails','full']) for
   const c={W:cols>1?900:600,H:720,D:560,thick:18,cols,legH:100,cnc:{joinery,back,backs:Array(cols).fill(back==='none'?'none':'solid'),backMount:back==='inside'?'inside':'top',top,rails:{front:'h',back:'hv',bottom:true},legs:true,legsX:cols>1?'parts':3,hinges:true,hingeFix:hf,pins:'shelf',runnerMarks:true,tbFront:tb},
     sections:JSON.parse(JSON.stringify(ss)).map(s=>Object.assign(s,{col:0})).concat(cols>1?[{kind:'doors',col:1,fill:true,nDoors:1,hinge:'BLUM LANKSTAI',shelves:1}]:[])};
   const r=E.buildCabinet(c,0,'P');
-  r.panels.forEach(p=>{ const pr=E.programs(p);
+  r.panels.forEach(p=>{ const q=p.place, c3=[q.u[1]*q.v[2]-q.u[2]*q.v[1],q.u[2]*q.v[0]-q.u[0]*q.v[2],q.u[0]*q.v[1]-q.u[1]*q.v[0]];
+    if(c3[0]*q.n[0]+c3[1]*q.n[1]+c3[2]*q.n[2]<=0) B('MIRRORED MACHINE FRAME (X × Y ≠ up) '+p.name);   // the machine would drill it mirrored
+    const pr=E.programs(p);
     const nMarks=p.holes.filter(h=>h.mark).length, nCamEdges=p.edges.filter(e=>e.d===8&&Math.abs(e.depth-31.906)<1e-6).length;
     let gotMarks=0, gotCams=0;
     pr.files.forEach(f=>{ progs++; const L=f.text.split('\r\n').map(xbo).filter(Boolean);

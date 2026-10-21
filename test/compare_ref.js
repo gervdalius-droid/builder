@@ -33,6 +33,11 @@ for(const o of opts) for(const ss of secsets) for(const [W,H,D] of dims){
       // post-processor rule (step2xxl = SWOOD CAM): a cam bolt bore in a part's edge stops at 31.906, not at the cam centre 34
       // and no horizontal bore goes deeper than 31.906 (konfirmat pilots Ø5 × 32 → 31.906)
       const rl=rf.xbo.map(l=>l.replace(/Z=-34 D=8 N="P" F=([2-5])/,'Z=-31.906 D=8 N="P" F=$1').replace(/Z=-32 D=5 N="P" F=([2-5])/,'Z=-31.906 D=5 N="P" F=$1'));
+      // parts described mirrored (sides, doors, back rail) are now machined right-handed: y → DY − y, long edges F=4 ↔ F=5
+      if(q.p.mirrored){ const DY=q.p.W, n=v=>String(Math.round(v*1e6)/1e6);
+        for(let k=0;k<rl.length;k++){ const m=/^ XBO X=([-\d.]+) Y=([-\d.]+) (Z=[-\d.]+ D=[\d.]+ N="\w") F=(\d) R=1#$/.exec(rl[k]); if(!m) continue;
+          const F=+m[4], X=+m[1], Y=+m[2];
+          rl[k]= F===4||F===5 ? ' XBO X='+m[1]+' Y='+m[2]+' '+m[3]+' F='+(F===4?5:4)+' R=1#' : ' XBO X='+m[1]+' Y='+n(DY-Y)+' '+m[3]+' F='+F+' R=1#'; } }
       const missing=rl.filter(l=>nl.indexOf(l)<0);
       if(missing.length){ allSame=false;
         const isSide=/KAIRE|DESINE/.test(p.name);

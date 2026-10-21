@@ -99,6 +99,23 @@ function legMarks(p, face, cx, cy) {
 }
 
 /* make the long side run along X: rotate the whole part 90° if needed */
+/* The machine frame must be right-handed: X along the part, Y across it, Z out of the face that is up (X × Y = Z).
+   Some parts were described mirrored (e.g. the sides "inner face up, bottom X=0, front Y=0", the doors, the back rail),
+   which put cams and hinge cups on the wrong side when drilled — the shop had to mirror those programs on the machine.
+   Such a part is mirrored here across its width (y → W − y), so its programs come out right; the part itself does not move. */
+function rightHanded(p) {
+  var q = p.place; if (!q) return p;
+  var c = [q.u[1]*q.v[2] - q.u[2]*q.v[1], q.u[2]*q.v[0] - q.u[0]*q.v[2], q.u[0]*q.v[1] - q.u[1]*q.v[0]];
+  if (c[0]*q.n[0] + c[1]*q.n[1] + c[2]*q.n[2] > 0) return p;
+  var W = p.W;
+  p.holes.forEach(function (h) { h.y = W - h.y; });
+  p.edges.forEach(function (e) { if (e.edge === 'y0') e.edge = 'y1'; else if (e.edge === 'y1') e.edge = 'y0'; else e.pos = W - e.pos; });
+  var y0 = p.eb.y0; p.eb.y0 = p.eb.y1; p.eb.y1 = y0;
+  p.place = { o:[q.o[0] + W*q.v[0], q.o[1] + W*q.v[1], q.o[2] + W*q.v[2]], u:q.u, v:neg(q.v), n:q.n };
+  p.note = p.note.replace(/Y=(DY|0)\b/g, function (m, g) { return g === 'DY' ? 'Y=0' : 'Y=DY'; });
+  p.mirrored = true;
+  return p;
+}
 function orient(p) {
   if (p.L >= p.W) return p;
   var L = p.L;
@@ -790,6 +807,7 @@ function buildCabinet(c, idx, projName) {
   if (legs.length) hw.push({ item:'Kojelės', qty:legs.length, unit:'vnt.' });
 
   out.forEach(orient);
+  out.forEach(rightHanded);
   /* doors: say on which edge the hinge cups ended up, after the part was turned */
   out.forEach(function (p) {
     if (p.role !== 'DURYS') return;

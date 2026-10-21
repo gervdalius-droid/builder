@@ -1,5 +1,11 @@
 # Spintelių kūrėjas (cabinet builder)
 
+> **Current app: `index.html`** — the redesigned Cabinet Studio (single file, edited directly).
+> It includes: Baldai view (all furniture, realistic front and 3D render), right-handed CNC programs
+> (no mirroring on the SCM), live drawer front heights, connector editor without size tags + deselect.
+> `src/` + `build.py` hold the earlier modular sources; they no longer rebuild this exact file.
+
+
 Dėdės Baldai workshop tool: enter a cabinet the way the offer app does (size, sections), pick the joinery, and get the part list and CNC programs without the engineer.
 
 **Open it:** `index.html` — one self-contained page, runs in any browser (GitHub Pages serves it from the repo root).
