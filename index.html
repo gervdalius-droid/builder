@@ -899,6 +899,19 @@ button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(
 @media(max-width:1249px) and (min-width:901px){ .av-stage{height:clamp(280px,46vh,420px)} }
 @media(max-width:1249px) and (min-width:901px){ .rail{grid-column:1!important;min-width:0} .cablist{flex-direction:column!important;overflow:visible!important} .cablist .cab{min-width:0!important} }
 @media(max-width:1200px){ .projname .unit{display:none} .projname{flex-basis:110px} .saved{display:none} .brand h1{font-size:17px} .tabs button{padding-inline:10px} }
+
+/* banded edges editor in the part view */
+.ebedit{margin:10px 0 8px;padding:10px;border:1px solid var(--paper-line);border-radius:8px;background:#fff}
+.ebh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:8px;color:#1b211e}
+.ebh .unit{color:#5f6a64}
+.ebreset{margin-left:auto;padding:3px 9px;font-size:12.5px}
+.ebgrid{display:grid;grid-template-columns:auto minmax(80px,220px) auto;grid-template-areas:". top ." "left part right" ". bot .";gap:4px;align-items:center;justify-content:center}
+.ebgrid .top{grid-area:top}.ebgrid .bot{grid-area:bot}.ebgrid .left{grid-area:left}.ebgrid .right{grid-area:right}
+.ebpart{grid-area:part;display:block;border:1.5px solid #1b211e;background:#f6f6f3;border-radius:2px}
+.ebt{font:600 12px var(--f-mono);border:1px dashed #9aa59f;background:#fff;color:#5f6a64;border-radius:6px;padding:5px 8px;cursor:pointer;min-height:30px}
+.ebt.top,.ebt.bot{width:100%}
+.ebt.on{border:2px solid #1b211e;background:#1b211e;color:#fff}
+.ebt:hover{border-color:#1b211e}
 </style></head>
 <body>
 <div id="app"></div>
@@ -1747,6 +1760,15 @@ function buildCabinet(c, idx, projName) {
     var cups = p.holes.filter(function (h) { return h.op === 'hinge' && h.d === R.hinge.cupD; }); if (!cups.length) return;
     var c0 = cups[0], e = Math.abs(c0.x - R.hinge.cupFromEdge) < 0.01 ? 'X=0' : Math.abs(c0.x - (p.L - R.hinge.cupFromEdge)) < 0.01 ? 'X=DX' : Math.abs(c0.y - R.hinge.cupFromEdge) < 0.01 ? 'Y=0' : 'Y=DY';
     p.note = p.note.replace(/lankstai X=D?X?0? ?pusėje/, 'lankstai ' + e + ' krašte');
+  });
+  /* edge banding chosen by hand (c.ebEdit[part key] = { y0, y1, x0, x1 }: true / false), in the part's own frame as on the label */
+  var ebEdit = c.ebEdit || {};
+  out.forEach(function (p) {
+    p.key = p.name.slice(base.length + 1);
+    var ov = ebEdit[p.key]; if (!ov) return;
+    var front = p.role === 'FASADAS' || p.role === 'DURYS', em = (front ? (eFac || eCarc) : eCarc) || 'KRAŠTAS';
+    ['y0', 'y1', 'x0', 'x1'].forEach(function (e) { if (ov[e] === true) p.eb[e] = p.eb[e] || em; else if (ov[e] === false) p.eb[e] = ''; });
+    p.ebManual = true;
   });
   out.forEach(function (p) { p.cab = idx + 1; p.short = (idx + 1) + '-' + p.role.replace(/_/g, '-') + (/\d$/.test(p.name) ? p.name.match(/\d+$/)[0] : ''); });
   /* holes that run into each other (possible with custom joints): report, never silently drill */
@@ -4512,7 +4534,7 @@ lt:{
  rotHint:'↻ — antra programa su ta pačia puse viršuje, plokštė pasukta 90° prieš laikrodžio rodyklę (priekinis kraštas tampa kairiuoju galu).',
  setRails:'Juostos ir nugara', drillsTop:'Grąžtai galvoje (viršus), mm', drillsTopL:'Iš Maestro konfigūracijos. Skylės, kurių skersmens čia nėra, neprogramuojamos.', tbHoleSet:'TANDEMBOX fasado skylė (jei Ø)', tbDef:'TANDEMBOX fasadai',
  s4:'Papildomos operacijos', s4l:'Pažymėkite, ką gręžti CNC. „Patikrinta“ — sutampa su jūsų SWOOD modeliais.',
- oLegs:'Kojelės ir jų žymės dugne', oLegsD:'4 žymės Ø5 × 2 mm kiekvienai kojelei. Plačiai ar sunkiai spintelei pridėkite daugiau kojelių.', legRow:'Kojelių eilėje', supL:'Atramos', feetRow:'Pėdučių eilėje', feetTotal:'Iš viso pėdučių', supLegs:'Kojelės', supFeet:'Pėdutės', supNone:'Nėra', supEdit:'Nustatymai', feetNote:'Pėdutė Ø50 × 10 mm · skylė Ø8 × 10 · 50 nuo priekio ir galo', oFeet:'Pėdutės ir jų skylės dugne', oFeetD:'Ø8 × 10 skylė kiekvienai pėdutei dugno apačioje, 50 mm nuo priekio ir galo. Galima pridėti vidurinę eilę.', botMount:'Dugnas', botUnder:'Po šonais', botInside:'Tarp šonų', botZ:'Dugno aukštis nuo apačios', fhTitle:'Fasadų aukščiai, mm', fhNote:'iš viršaus · tuščias = dalijasi likusį aukštį', fhEqual:'Vienodi', legParts:'Po pertvaromis', legRows:'Eilės', legRows2:'2 — priekis, galas', legRows3:'3 — + vidurys', legTotal:'Iš viso kojelių', legFront:'priekis', legDense:'Per tankiai — tarp kojelių būtų mažiau nei 70 mm',
+ oLegs:'Kojelės ir jų žymės dugne', oLegsD:'4 žymės Ø5 × 2 mm kiekvienai kojelei. Plačiai ar sunkiai spintelei pridėkite daugiau kojelių.', legRow:'Kojelių eilėje', ebTitle:'Laminuojami kraštai', ebLead:'spustelėkite kraštą — įjungti / išjungti (kaip etiketėje)', ebStd:'Standartiniai', ebT:'Kraštas', ebNoMat:'Kraštas pažymėtas, bet kraštinės medžiaga nenurodyta (Medžiagos) — etiketėje bus „KRAŠTAS“', supL:'Atramos', feetRow:'Pėdučių eilėje', feetTotal:'Iš viso pėdučių', supLegs:'Kojelės', supFeet:'Pėdutės', supNone:'Nėra', supEdit:'Nustatymai', feetNote:'Pėdutė Ø50 × 10 mm · skylė Ø8 × 10 · 50 nuo priekio ir galo', oFeet:'Pėdutės ir jų skylės dugne', oFeetD:'Ø8 × 10 skylė kiekvienai pėdutei dugno apačioje, 50 mm nuo priekio ir galo. Galima pridėti vidurinę eilę.', botMount:'Dugnas', botUnder:'Po šonais', botInside:'Tarp šonų', botZ:'Dugno aukštis nuo apačios', fhTitle:'Fasadų aukščiai, mm', fhNote:'iš viršaus · tuščias = dalijasi likusį aukštį', fhEqual:'Vienodi', legParts:'Po pertvaromis', legRows:'Eilės', legRows2:'2 — priekis, galas', legRows3:'3 — + vidurys', legTotal:'Iš viso kojelių', legFront:'priekis', legDense:'Per tankiai — tarp kojelių būtų mažiau nei 70 mm',
  oRun:'Bėgelių žymės šonuose', oRunD:'Blum TANDEM / TANDEMBOX šablonai pagal stalčių aukštį.',
  oTb:'TANDEMBOX fasadų tvirtinimas', oTbD:'Ø10 × 12 skylės fasado vidinėje pusėje.',
  oHinge:'Lankstų skylės', oHingeD:'Ø35 puodelis duryse su 2 varžtų žymėmis (Ø5 × 2) + 2 plokštelės žymės šone (Ø5 × 2, kaip post-procesoriuje). Blum katalogo matmenys.',
@@ -4627,7 +4649,7 @@ en:{
  rotHint:'↻ — second program with the same face up, panel turned 90° counter-clockwise (the front edge becomes the left end).',
  setRails:'Rails and back', drillsTop:'Drills on the head (top), mm', drillsTopL:'From the Maestro configuration. Holes of a size not listed are not programmed.', tbHoleSet:'TANDEMBOX front hole (if Ø)', tbDef:'TANDEMBOX fronts',
  s4:'Extra operations', s4l:'Tick what the CNC should drill. “Verified” means it matches your SWOOD models.',
- oLegs:'Legs and their marks in the bottom', oLegsD:'4 marks Ø5 × 2 mm per leg. Add more legs for a wide or heavy cabinet.', legRow:'Legs in a row', supL:'Supports', feetRow:'Feet in a row', feetTotal:'Feet in total', supLegs:'Legs', supFeet:'Feet', supNone:'None', supEdit:'Settings', feetNote:'Foot Ø50 × 10 mm · hole Ø8 × 10 · 50 from the front and back', oFeet:'Feet and their holes in the bottom', oFeetD:'Ø8 × 10 hole for each foot under the bottom, 50 mm from the front and the back. A middle row can be added.', botMount:'Bottom', botUnder:'Under the sides', botInside:'Between the sides', botZ:'Bottom height from below', fhTitle:'Front heights, mm', fhNote:'from the top · empty = shares what is left', fhEqual:'Equal', legParts:'Under partitions', legRows:'Rows', legRows2:'2 — front, back', legRows3:'3 — + middle', legTotal:'Legs in total', legFront:'front', legDense:'Too dense — less than 70 mm between legs',
+ oLegs:'Legs and their marks in the bottom', oLegsD:'4 marks Ø5 × 2 mm per leg. Add more legs for a wide or heavy cabinet.', legRow:'Legs in a row', ebTitle:'Banded edges', ebLead:'click an edge to switch it on / off (as on the label)', ebStd:'Standard', ebT:'Edge', ebNoMat:'Edge marked, but no edge band material is set (Materials) — the label will say "KRAŠTAS"', supL:'Supports', feetRow:'Feet in a row', feetTotal:'Feet in total', supLegs:'Legs', supFeet:'Feet', supNone:'None', supEdit:'Settings', feetNote:'Foot Ø50 × 10 mm · hole Ø8 × 10 · 50 from the front and back', oFeet:'Feet and their holes in the bottom', oFeetD:'Ø8 × 10 hole for each foot under the bottom, 50 mm from the front and the back. A middle row can be added.', botMount:'Bottom', botUnder:'Under the sides', botInside:'Between the sides', botZ:'Bottom height from below', fhTitle:'Front heights, mm', fhNote:'from the top · empty = shares what is left', fhEqual:'Equal', legParts:'Under partitions', legRows:'Rows', legRows2:'2 — front, back', legRows3:'3 — + middle', legTotal:'Legs in total', legFront:'front', legDense:'Too dense — less than 70 mm between legs',
  oRun:'Runner marks in the sides', oRunD:'Blum TANDEM / TANDEMBOX patterns at each drawer height.',
  oTb:'TANDEMBOX front fixing', oTbD:'Ø10 × 12 holes on the inside of the front.',
  oHinge:'Hinge holes', oHingeD:'Ø35 cup in the door with 2 screw marks (Ø5 × 2) + 2 plate marks in the side (Ø5 × 2, as the post-processor makes them). Blum catalogue values.',
@@ -5438,12 +5460,20 @@ function findPanel(name) {
   }
   return null;
 }
+/* which edges are banded: four toggles placed like the edges on the label picture (bottom = Y0, top = Y=DY, left = X0, right = X=DX) */
+function ebEditor(p) {
+  var b = function (e, cls, len) { var on = !!(p.eb && p.eb[e]);
+    return '<button type="button" class="ebt ' + cls + (on ? ' on' : '') + '" data-act="ebtog" data-v="' + e + '" aria-pressed="' + on + '" title="' + esc(t('ebT') + ' ' + fmt(len) + ' mm') + '">' + (on ? '▬ ' : '＋ ') + fmt(len) + '</button>'; };
+  var r = Math.min(1, 2.2 * p.W / p.L), ph = Math.round(Math.max(26, Math.min(70, 120 * r)));
+  return '<div class="ebedit noprint"><div class="ebh"><b>' + t('ebTitle') + '</b><span class="unit">' + t('ebLead') + '</span>' + (p.ebManual ? '<button type="button" class="btn ghost ebreset" data-act="ebreset">↺ ' + t('ebStd') + '</button>' : '') + '</div>' +
+    '<div class="ebgrid">' + b('y1', 'top', p.L) + b('x0', 'left', p.W) + '<span class="ebpart" style="height:' + ph + 'px"></span>' + b('x1', 'right', p.W) + b('y0', 'bot', p.L) + '</div></div>';
+}
 function viewPart() {
   var p = S.part && findPanel(S.part);
   if (!p) return '<div class="card empty">' + t('pick') + '</div>';
   var pr = E.programs(p), f = pr.files[Math.min(S.ptab, pr.files.length - 1)];
   var tabs = pr.files.map(function (x, i) { return '<button class="btn' + (i === S.ptab ? ' pri' : '') + '" data-act="ptab" data-v="' + i + '">' + (x.kind === 'rot' ? '↻ ' : '') + (i + 1) + 'OP</button>'; }).join('');
-  return '<div class="paper"><div class="tb"><b>' + esc(p.short) + '</b><span>' + fmt(p.L) + ' × ' + fmt(p.W) + ' × ' + E.num(p.T) + '</span></div><div class="draw">' + panelSVG(p, pr.files[0] ? pr.files[0].up : 'A') + '</div>' +
+  return '<div class="paper"><div class="tb"><b>' + esc(p.short) + '</b><span>' + fmt(p.L) + ' × ' + fmt(p.W) + ' × ' + E.num(p.T) + '</span></div>' + ebEditor(p) + '<div class="draw">' + panelSVG(p, pr.files[0] ? pr.files[0].up : 'A') + '</div>' +
     '<div class="legend"><span><i style="border:1.5px solid #2448c9;background:#dfe6fb"></i>' + t('lgA') + '</span><span><i style="border:1.5px dashed #b4291f"></i>' + t('lgB') + '</span><span><i style="background:#1b211e"></i>' + t('lgT') + '</span><span><i style="background:#9a6a00;width:7px;height:7px"></i>' + t('lgM') + '</span><span><i style="border-radius:1px;background:#2f7d55;height:5px"></i>' + t('lgE') + '</span><span><i style="border-radius:0;background:#f2b705;height:4px"></i>' + t('lgEb') + '</span></div>' +
     '<div class="note" style="margin-top:6px;color:#5f6a64">' + esc(p.note) + '</div></div>' +
     (f && f.kind === 'rot' ? '<p class="note" style="margin:0">' + t('rotHint') + '</p>' : '') +
@@ -5755,6 +5785,12 @@ app.addEventListener('click', function (e) {
     case 'isosel': S.iso = { key:v, side:'L', idx:null }; render(); var ie = document.getElementById('iso3d'); if (ie && ie.scrollIntoView) ie.scrollIntoView({ block:'center', behavior:'smooth' }); return;
     case 'part': S.part = v; S.ptab = 0; break;
     case 'ptab': S.ptab = +v; break;
+    case 'ebtog': case 'ebreset': { var pp = S.part && findPanel(S.part), cb = pp && S.proj.cabinets[pp.cab - 1]; if (!cb) break;
+      cb.ebEdit = cb.ebEdit || {};
+      if (act === 'ebreset') delete cb.ebEdit[pp.key];
+      else { var ov = cb.ebEdit[pp.key] = cb.ebEdit[pp.key] || {}; ov[v] = !(pp.eb && pp.eb[v]); }
+      if (!cb.edge.carc && !cb.edge.facade && act === 'ebtog') toast(t('ebNoMat'));
+      save(); break; }
     case 'copy': { var txt = (document.getElementById('progtext') || {}).textContent || ''; var ok = function () { toast(t('copied')); }; var fb = function () { var r = document.createRange(); r.selectNodeContents(document.getElementById('progtext')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); };
       try { navigator.clipboard.writeText(txt).then(ok, fb); } catch (er) { fb(); } return; }
     case 'dl': download(v); return;
