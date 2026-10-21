@@ -950,7 +950,7 @@ var R = {
            backFix:{d:8, fromEdge:50} },                       // confirmats back→side: 8 through in back
   confirmat: { d:8, pilot:{d:5, depth:32}, fromFront:70, railFromEdge:[30,70], railAlong:50 },
   rail: 100,
-  feet: { d:50, h:10, fromFront:50, fromBack:50, holeD:8, holeDepth:10 },   // pėdutės Ø50 × 10 instead of legs: one Ø8 × 10 hole each, 50 from the front and the back
+  feet: { d:15, h:10, fromFront:50, fromBack:50, holeD:8, holeDepth:10 },   // pėdutės: Ø15 buttons under the sides (and partitions), one Ø8 × 10 hole each, 50 from the front and the back
   legs: { fromSide:55, fromFront:95, fromBack:55, markD:5, markDepth:2, markOff:14.85, drawD:40 },
   runner: {
     "BLUM TANDEM":    { marks:[37,165,229],          up:37, facade:null },
@@ -1132,6 +1132,7 @@ function buildCabinet(c, idx, projName) {
      and lifted by hb at the end; the sides reach down to the floor (a plinth can close the gap) */
   var bin = o.bottom === 'inside', hb = bin ? Math.max(0, Math.min(+o.bottomZ || 0, H - 200)) : 0, Htot = H;
   if (bin) H = H - hb;
+  var feetPos = [];   // pėdutės, as they are drilled (sides or bottom)
   /* ---- columns (pertvaros): outer widths as in the offer app; partition k stands centred on bnd[k+1] */
   var cols = Math.max(1, Math.min(4, Math.floor(+c.cols || 1)));
   var colW = Array.isArray(c.colW) && c.colW.length === cols && c.colW.every(function (w) { return +w > 0; }) ? c.colW.map(Number) : null;
@@ -1576,6 +1577,10 @@ function buildCabinet(c, idx, projName) {
     }
     var offS = bin ? t + hb : 0;   // bottom between the sides: the side starts t + hb lower (side x above stays cabinet z − t)
     if (offS) { p.holes.forEach(function (h) { h.x += offS; }); p.edges.forEach(function (e) { if (e.edge === 'y0' || e.edge === 'y1') e.pos += offS; }); p.L = Lside + offS; }
+    if (bin && o.legs && o.feet) feetRows().forEach(function (y) {   // pėdutės under this side: Ø8 × 10 into its bottom edge
+      var fr = R.feet, yy = footY(y, function (v) { var yv = Yf(v); return p.holes.some(function (h) { return !h.mark && h.x - h.d/2 < fr.holeDepth + 1 && Math.abs(h.y - yv) < h.d/2 + fr.holeD/2 + 1; }) || p.edges.some(function (e) { return e.edge === 'x0' && Math.abs(e.pos - yv) < e.d/2 + fr.holeD/2 + 1; }); });
+      edge(p, 'x0', Yf(yy), fr.holeD, fr.holeDepth); p.edges[p.edges.length - 1].foot = true; feetPos.push({ x:right ? W - t/2 : t/2, y:yy });
+    });
     if (right) place(p, [W - t, Dside, t - offS], Z, neg(Y), neg(X)); else place(p, [t, 0, t - offS], Z, Y, X);
     p.mat = mCarc; if (right) p.eb.y1 = eCarc; else p.eb.y0 = eCarc;   // front edge
     return p;
@@ -1658,6 +1663,11 @@ function buildCabinet(c, idx, projName) {
   /* ---- legs: o.legsX = legs in a row across the width (2–6, or 'parts' = at both sides and under every partition), o.legsY = rows (2 or 3).
      A leg's plate (Ø60) must not cover a connector head on the underside: such a leg moves sideways, and the worker is told. */
   var legPos = null;
+  function feetRows() { var yf = R.feet.fromFront, yb = Dside - R.feet.fromBack; return +o.legsY === 3 ? [yf, (yf + yb) / 2, yb] : [yf, yb]; }
+  function footY(y, clash) {   // keep a foot hole clear of the joint holes: move it along the side if it would meet one
+    for (var m = 0; m <= 10; m++) for (var sg = 0; sg < 2; sg++) { var d = sg ? -m * 8 : m * 8, v = y + d; if (v > 12 && v < Dside - 12 && !clash(v)) { if (d) warnOnce('pėdutė pastumta ' + d + ' mm, kad skylė nesusitiktų su jungties skyle — patikrinkite'); return v; } }
+    warnOnce('pėdutės skylė kliūna už jungties skylės — patikrinkite'); return y;
+  }
   function legSpots(bp, dxb) {
     if (legPos) return legPos; dxb = dxb || 0;
     var fs = R.legs.fromSide, nx = o.legsX === 'parts' ? 'parts' : Math.max(2, Math.min(6, Math.round(+o.legsX) || 2)), ny = +o.legsY === 3 ? 3 : 2, xs = [];
@@ -1682,12 +1692,21 @@ function buildCabinet(c, idx, projName) {
     return legPos;
   }
   /* ---- bottom (face A = top face, Y from front) */
+  function bottomFeet(p) {   // pėdutės under the bottom: below the sides (bottom under the sides) and below the partitions
+    var fr = R.feet, xs = [];
+    if (!bin) xs.push(t/2, W - t/2);
+    if (o.legsX === 'parts' && (!bin || hb === 0)) for (var q = 1; q < cols; q++) xs.push(bnd[q]);
+    xs.forEach(function (x) { feetRows().forEach(function (y) {
+      var yy = footY(y, function (v) { return p.holes.some(function (h) { return !h.mark && (h.through || h.face === 'B' || h.depth + fr.holeDepth > t - 1) && Math.hypot(h.x - (x - dxB), h.y - v) < h.d/2 + fr.holeD/2 + 1; }); });
+      hole(p, 'B', x - dxB, yy, fr.holeD, fr.holeDepth, { op:'feet' }); feetPos.push({ x:x, y:yy }); }); });
+  }
   (function () {
     var p = pBot;   // panel x = cabinet x − dxB
     if (!bin) faceJoint(p, jBot, 'A', [t/2, W - t/2], 0);
     for (var kq = 0; kq < cols - 1; kq++) faceJoint(p, { L:jPB[kq].L, R:jPB[kq].L }, 'A', [bnd[kq + 1] - dxB], y0p);
     bottomRailHoles.forEach(function (h) { hole(p, 'A', h.x - dxB, Dside - t/2, h.d, h.depth, h.through ? { through:true } : null); });   // the standing bottom back rail
-    if (o.legs) legSpots(p, dxB).forEach(function (l) { if (o.feet) hole(p, 'B', l.x - dxB, l.y, R.feet.holeD, R.feet.holeDepth, { op:'feet' }); else legMarks(p, 'B', l.x - dxB, l.y); });
+    if (o.legs && !o.feet) legSpots(p, dxB).forEach(function (l) { legMarks(p, 'B', l.x - dxB, l.y); });
+    if (o.legs && o.feet) bottomFeet(p);
     place(p, [dxB, 0, t], X, Y, Z); p.mat = mCarc; p.eb.y0 = eCarc;
     out.push(p);
   })();
@@ -1740,8 +1759,9 @@ function buildCabinet(c, idx, projName) {
 
   /* ---- legs (drawn under the bottom; only marks are drilled) */
   var legs = [];
-  if (o.legs) legSpots(null).forEach(function (l) { legs.push(o.feet ? { x:l.x, y:l.y, d:R.feet.d, h:R.feet.h, feet:true } : { x:l.x, y:l.y, d:R.legs.drawD, h:+c.legH || 100 }); });
-  if (legs.length) hw.push({ item:o.feet ? 'Pėdutės Ø50×10' : 'Kojelės', qty:legs.length, unit:'vnt.' });
+  if (o.legs && o.feet) feetPos.forEach(function (l) { legs.push({ x:l.x, y:l.y, d:R.feet.d, h:R.feet.h, feet:true }); });
+  else if (o.legs) legSpots(null).forEach(function (l) { legs.push({ x:l.x, y:l.y, d:R.legs.drawD, h:+c.legH || 100 }); });
+  if (legs.length) hw.push({ item:o.feet ? 'Pėdutės Ø15' : 'Kojelės', qty:legs.length, unit:'vnt.' });
   /* a plinth (cokolis) among the extra parts is drawn at the front, under the carcass (between the sides when they reach the floor) */
   var plx = (c.extras || []).filter(function (x) { return x && (x.kind === 'plinth' || /cokol|plint/i.test(x.name || '')); })[0], legEff = o.legs ? (o.feet ? R.feet.h : (+c.legH || 100)) : 0;
   var inS = hb > 0 && !legEff;   // the sides stand on the floor: the plinth goes between them
@@ -4534,7 +4554,7 @@ lt:{
  rotHint:'↻ — antra programa su ta pačia puse viršuje, plokštė pasukta 90° prieš laikrodžio rodyklę (priekinis kraštas tampa kairiuoju galu).',
  setRails:'Juostos ir nugara', drillsTop:'Grąžtai galvoje (viršus), mm', drillsTopL:'Iš Maestro konfigūracijos. Skylės, kurių skersmens čia nėra, neprogramuojamos.', tbHoleSet:'TANDEMBOX fasado skylė (jei Ø)', tbDef:'TANDEMBOX fasadai',
  s4:'Papildomos operacijos', s4l:'Pažymėkite, ką gręžti CNC. „Patikrinta“ — sutampa su jūsų SWOOD modeliais.',
- oLegs:'Kojelės ir jų žymės dugne', oLegsD:'4 žymės Ø5 × 2 mm kiekvienai kojelei. Plačiai ar sunkiai spintelei pridėkite daugiau kojelių.', legRow:'Kojelių eilėje', ebTitle:'Laminuojami kraštai', ebLead:'spustelėkite kraštą — įjungti / išjungti (kaip etiketėje)', ebStd:'Standartiniai', ebT:'Kraštas', ebNoMat:'Kraštas pažymėtas, bet kraštinės medžiaga nenurodyta (Medžiagos) — etiketėje bus „KRAŠTAS“', supL:'Atramos', feetRow:'Pėdučių eilėje', feetTotal:'Iš viso pėdučių', supLegs:'Kojelės', supFeet:'Pėdutės', supNone:'Nėra', supEdit:'Nustatymai', feetNote:'Pėdutė Ø50 × 10 mm · skylė Ø8 × 10 · 50 nuo priekio ir galo', oFeet:'Pėdutės ir jų skylės dugne', oFeetD:'Ø8 × 10 skylė kiekvienai pėdutei dugno apačioje, 50 mm nuo priekio ir galo. Galima pridėti vidurinę eilę.', botMount:'Dugnas', botUnder:'Po šonais', botInside:'Tarp šonų', botZ:'Dugno aukštis nuo apačios', fhTitle:'Fasadų aukščiai, mm', fhNote:'iš viršaus · tuščias = dalijasi likusį aukštį', fhEqual:'Vienodi', legParts:'Po pertvaromis', legRows:'Eilės', legRows2:'2 — priekis, galas', legRows3:'3 — + vidurys', legTotal:'Iš viso kojelių', legFront:'priekis', legDense:'Per tankiai — tarp kojelių būtų mažiau nei 70 mm',
+ oLegs:'Kojelės ir jų žymės dugne', oLegsD:'4 žymės Ø5 × 2 mm kiekvienai kojelei. Plačiai ar sunkiai spintelei pridėkite daugiau kojelių.', legRow:'Kojelių eilėje', ebTitle:'Laminuojami kraštai', ebLead:'spustelėkite kraštą — įjungti / išjungti (kaip etiketėje)', ebStd:'Standartiniai', ebT:'Kraštas', ebNoMat:'Kraštas pažymėtas, bet kraštinės medžiaga nenurodyta (Medžiagos) — etiketėje bus „KRAŠTAS“', supL:'Atramos', feetRow:'Pėdutės', feetTotal:'Iš viso pėdučių', supLegs:'Kojelės', supFeet:'Pėdutės', supNone:'Nėra', supEdit:'Nustatymai', feetNote:'Pėdutė Ø15 po šonu · skylė Ø8 × 10 · 50 nuo priekio ir galo', feetParts:'Po šonais ir pertvaromis', feetSides:'Tik po šonais', oFeet:'Pėdutės po šonais', oFeetD:'Ø15 pėdutės po šonais: Ø8 × 10 skylė šono apačioje (arba dugno apačioje po šonu), 50 mm nuo priekio ir galo. Galima pridėti vidurinę eilę.', botMount:'Dugnas', botUnder:'Po šonais', botInside:'Tarp šonų', botZ:'Dugno aukštis nuo apačios', fhTitle:'Fasadų aukščiai, mm', fhNote:'iš viršaus · tuščias = dalijasi likusį aukštį', fhEqual:'Vienodi', legParts:'Po pertvaromis', legRows:'Eilės', legRows2:'2 — priekis, galas', legRows3:'3 — + vidurys', legTotal:'Iš viso kojelių', legFront:'priekis', legDense:'Per tankiai — tarp kojelių būtų mažiau nei 70 mm',
  oRun:'Bėgelių žymės šonuose', oRunD:'Blum TANDEM / TANDEMBOX šablonai pagal stalčių aukštį.',
  oTb:'TANDEMBOX fasadų tvirtinimas', oTbD:'Ø10 × 12 skylės fasado vidinėje pusėje.',
  oHinge:'Lankstų skylės', oHingeD:'Ø35 puodelis duryse su 2 varžtų žymėmis (Ø5 × 2) + 2 plokštelės žymės šone (Ø5 × 2, kaip post-procesoriuje). Blum katalogo matmenys.',
@@ -4649,7 +4669,7 @@ en:{
  rotHint:'↻ — second program with the same face up, panel turned 90° counter-clockwise (the front edge becomes the left end).',
  setRails:'Rails and back', drillsTop:'Drills on the head (top), mm', drillsTopL:'From the Maestro configuration. Holes of a size not listed are not programmed.', tbHoleSet:'TANDEMBOX front hole (if Ø)', tbDef:'TANDEMBOX fronts',
  s4:'Extra operations', s4l:'Tick what the CNC should drill. “Verified” means it matches your SWOOD models.',
- oLegs:'Legs and their marks in the bottom', oLegsD:'4 marks Ø5 × 2 mm per leg. Add more legs for a wide or heavy cabinet.', legRow:'Legs in a row', ebTitle:'Banded edges', ebLead:'click an edge to switch it on / off (as on the label)', ebStd:'Standard', ebT:'Edge', ebNoMat:'Edge marked, but no edge band material is set (Materials) — the label will say "KRAŠTAS"', supL:'Supports', feetRow:'Feet in a row', feetTotal:'Feet in total', supLegs:'Legs', supFeet:'Feet', supNone:'None', supEdit:'Settings', feetNote:'Foot Ø50 × 10 mm · hole Ø8 × 10 · 50 from the front and back', oFeet:'Feet and their holes in the bottom', oFeetD:'Ø8 × 10 hole for each foot under the bottom, 50 mm from the front and the back. A middle row can be added.', botMount:'Bottom', botUnder:'Under the sides', botInside:'Between the sides', botZ:'Bottom height from below', fhTitle:'Front heights, mm', fhNote:'from the top · empty = shares what is left', fhEqual:'Equal', legParts:'Under partitions', legRows:'Rows', legRows2:'2 — front, back', legRows3:'3 — + middle', legTotal:'Legs in total', legFront:'front', legDense:'Too dense — less than 70 mm between legs',
+ oLegs:'Legs and their marks in the bottom', oLegsD:'4 marks Ø5 × 2 mm per leg. Add more legs for a wide or heavy cabinet.', legRow:'Legs in a row', ebTitle:'Banded edges', ebLead:'click an edge to switch it on / off (as on the label)', ebStd:'Standard', ebT:'Edge', ebNoMat:'Edge marked, but no edge band material is set (Materials) — the label will say "KRAŠTAS"', supL:'Supports', feetRow:'Feet', feetTotal:'Feet in total', supLegs:'Legs', supFeet:'Feet', supNone:'None', supEdit:'Settings', feetNote:'Foot Ø15 under a side · hole Ø8 × 10 · 50 from the front and back', feetParts:'Under the sides and partitions', feetSides:'Under the sides only', oFeet:'Feet under the sides', oFeetD:'Ø15 feet under the sides: a Ø8 × 10 hole in the side bottom edge (or in the bottom underside below the side), 50 mm from the front and back. A middle row can be added.', botMount:'Bottom', botUnder:'Under the sides', botInside:'Between the sides', botZ:'Bottom height from below', fhTitle:'Front heights, mm', fhNote:'from the top · empty = shares what is left', fhEqual:'Equal', legParts:'Under partitions', legRows:'Rows', legRows2:'2 — front, back', legRows3:'3 — + middle', legTotal:'Legs in total', legFront:'front', legDense:'Too dense — less than 70 mm between legs',
  oRun:'Runner marks in the sides', oRunD:'Blum TANDEM / TANDEMBOX patterns at each drawer height.',
  oTb:'TANDEMBOX front fixing', oTbD:'Ø10 × 12 holes on the inside of the front.',
  oHinge:'Hinge holes', oHingeD:'Ø35 cup in the door with 2 screw marks (Ø5 × 2) + 2 plate marks in the side (Ø5 × 2, as the post-processor makes them). Blum catalogue values.',
@@ -5281,7 +5301,8 @@ function legsEditor(c, r) {
       return '<button type="button" data-act="set" data-bind="' + b + 'legsX" data-v="' + q[0] + '" class="' + (on ? 'on' : '') + '" aria-pressed="' + on + '"' + (q[2] && !on ? ' disabled title="' + esc(t('legDense')) + '"' : '') + '>' + q[1] + '</button>'; }).join('') +
     (nC > 1 ? '<button type="button" data-act="set" data-bind="' + b + 'legsX" data-v="parts" class="' + (lx === 'parts' ? 'on' : '') + '" aria-pressed="' + (lx === 'parts') + '">' + t('legParts') + '</button>' : '') + '</div>';
   var n = r && r.legs ? r.legs.length : 0;
-  return '<div class="legs-ed"><div class="legs-f"><div class="f"><span>' + t(o.feet ? 'feetRow' : 'legRow') + '</span>' + segX + '</div>' +
+  if (o.feet) segX = nC > 1 ? seg(b + 'legsX', lx === 'parts' ? 'parts' : '2', [['2', t('feetSides')], ['parts', t('feetParts')]]) : '';
+  return '<div class="legs-ed"><div class="legs-f">' + (segX ? '<div class="f"><span>' + t(o.feet ? 'feetRow' : 'legRow') + '</span>' + segX + '</div>' : '') +
     '<div class="f"><span>' + t('legRows') + '</span>' + seg(b + 'legsY', ly, [[2, t('legRows2')], [3, t('legRows3')]]) + '</div>' +
     (o.feet ? '<div class="f"><span>&nbsp;</span><span class="unit feetnote">' + t('feetNote') + '</span></div>' : fN(t('legH'), 'c.legH', c.legH, 's')) + '</div>' +
     '<figure class="legplan">' + legPlanSVG(c, r) + '<figcaption>' + t(o.feet ? 'feetTotal' : 'legTotal') + ': <b>' + n + '</b> ' + (S.lang === 'lt' ? 'vnt.' : 'pcs') + '</figcaption></figure></div>';

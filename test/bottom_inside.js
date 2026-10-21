@@ -33,10 +33,10 @@ for(const rails of (top==='rails'?railsets:[railsets[0]])) for(const jt of [0,1,
   // edge bores ↔ face holes
   const faceHoles=[]; ps.forEach(p=>p.holes.forEach(h=>{ if(h.mark||h.op||h.d===15||/FASADAS|DURYS/.test(p.role)) return;
      const n=p.place.n; (h.through?['A','B']:[h.face]).forEach(f=>faceHoles.push({p,h,pt:f==='A'?P(p,h.x,h.y,0):P(p,h.x,h.y,p.T),n:f==='A'?n:n.map(v=>-v),used:false})); }));
-  ps.forEach(p=>p.edges.forEach(e=>{ nb++; let a,b,out; const u=p.place.u,v=p.place.v;
+  ps.forEach(p=>p.edges.forEach(e=>{ if(e.foot) return; nb++; let a,b,out; const u=p.place.u,v=p.place.v;
     if(e.edge==='x0'){a=0;b=e.pos;out=u.map(x=>-x);} else if(e.edge==='x1'){a=p.L;b=e.pos;out=u;} else if(e.edge==='y0'){a=e.pos;b=0;out=v.map(x=>-x);} else {a=e.pos;b=p.W;out=v;}
     const pt=P(p,a,b,p.T/2); const m=faceHoles.find(f=>f.p!==p&&dist(f.pt,pt)<0.6&&f.n.every((x,i)=>Math.abs(x+out[i])<1e-6));
-    if(!m) B('EDGE BORE MEETS NOTHING '+p.name+' '+JSON.stringify(e)+' cols'+cols+' '+JSON.stringify(backs)+' '+mount+' '+top+' '+JSON.stringify(rails)+' '+W+'x'+H+' jt'+jt);
+    if(e.foot) return; if(!m) B('EDGE BORE MEETS NOTHING '+p.name+' '+JSON.stringify(e)+' cols'+cols+' '+JSON.stringify(backs)+' '+mount+' '+top+' '+JSON.stringify(rails)+' '+W+'x'+H+' jt'+jt);
     else { m.used=true; if(m.h.d!==e.d && !(m.h.through && e.d===5)) B('SIZE MISMATCH '+p.name+' '+e.d+'/'+m.h.d); } }));
   faceHoles.filter(f=>!f.used && !(f.h.through && faceHoles.some(g=>g!==f&&g.h===f.h&&g.used))).forEach(f=>B('FACE HOLE WITHOUT EDGE BORE '+f.p.name+' '+JSON.stringify(f.h)+' cols'+cols+' '+top+' '+JSON.stringify(rails)+' jt'+jt));
   // every connector the 3D editor draws on a seam is drilled
