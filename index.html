@@ -912,7 +912,29 @@ button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(
 .ebt.top,.ebt.bot{width:100%}
 .ebt.on{border:2px solid #1b211e;background:#1b211e;color:#fff}
 .ebt:hover{border-color:#1b211e}
-</style></head>
+</style><style>/* 3D construction: board mode in the assembly view */
+.av-boards[hidden]{display:none}.av-bx-chips{display:flex;flex-wrap:wrap;gap:5px}.av-bx-chips button{min-height:32px}
+.av-bx-sel{border:1px solid var(--line);border-radius:9px;padding:10px;margin-top:10px;display:grid;gap:9px;background:var(--sunk)}
+.av-bx-sel b{font-size:13px}.av-bx-sel small{display:block;color:var(--muted);font:11px var(--f-mono);margin-top:3px}
+.av-bx-fields{display:flex;flex-wrap:wrap;gap:10px}.av-bx-fields label{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.av-bx-fields input,.av-bx-fields select{width:76px;padding:6px 8px;border:1px solid var(--line2);border-radius:6px;background:var(--panel);font:12px var(--f-mono);color:var(--ink)}
+.av-bx-fields select{width:auto}.av-bx-corners{display:grid;gap:6px}
+.av-bx-corner{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;flex-wrap:wrap}
+.av-bx-seg{display:inline-flex;justify-self:start;border:1px solid var(--line);border-radius:7px;overflow:hidden;flex-wrap:wrap}
+.av .av-bx-seg button{border:0;border-radius:0;min-height:30px}.av .av-bx-seg button+button{border-left:1px solid var(--line)}
+.av button.danger{color:#b3261e}
+.av-bx-ghost{fill:rgba(49,92,80,.05);stroke:#315c50;stroke-width:1.2;stroke-dasharray:5 4;pointer-events:none}
+.av-bx-selline{fill:none;stroke:#1f7a50;stroke-width:2.2;pointer-events:none}
+.av-bx-chip{cursor:pointer;pointer-events:all}.av-bx-chip rect{fill:#fff;stroke:#315c50;stroke-width:1.2}.av-bx-chip text{font:600 11px system-ui;fill:#244a3e;pointer-events:none}.av-bx-chip:hover rect,.av-bx-chip:focus rect{fill:#e3f1e8}.av-bx-chip:focus{outline:none}
+.av-bx-flip{cursor:pointer;pointer-events:all}.av-bx-flip circle{fill:#fff;stroke:#7b8f86;stroke-width:1.2}.av-bx-flip text{font:600 11px system-ui;fill:#2e4a3f;pointer-events:none}
+.av-bx-flip.mine circle{stroke:#1f7a50;stroke-width:2;fill:#e8f5ee}.av-bx-flip:hover circle,.av-bx-flip:focus circle{fill:#dcefe3}.av-bx-flip:focus{outline:none}.av-bx-flip.forced{cursor:default}.av-bx-flip.forced circle{fill:#f3f3f1;stroke:#c3c8c5}
+.bxrows{display:grid;gap:6px}.bxrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:var(--panel)}
+.bxrow.off{background:var(--sunk)}.bxrow .chk{min-width:120px}.bxrow .f{margin:0}.bxcorners{display:grid;gap:6px;margin-top:6px}
+.bxcorner{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13px}.bxcorner .note{margin:0}
+.bxinner{display:grid;gap:6px}.bxitem{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+.bxitem .kind{font-weight:600;min-width:96px;align-self:center}
+</style>
+</head>
 <body>
 <div id="app"></div>
 <div id="toast" class="toast" hidden></div>
@@ -1108,6 +1130,7 @@ function splitFronts(secH, n, hs, gap) {
 }
 
 function buildCabinet(c, idx, projName) {
+  if (c.kind === 'box') return buildBox(c, idx, projName);   // 3D construction: board by board
   var o = cncDefaults(c); var t = +c.thick || 18, W = +c.W, H = +c.H, D = +c.D;
   var base = safeName(projName || 'PROJ') + '_' + (idx + 1) + (c.name ? '_' + safeName(c.name) : '');
   var nm = function (role) { return base + '_' + role; };
@@ -1811,6 +1834,310 @@ function buildCabinet(c, idx, projName) {
   return { panels:out, warnings:warn, hardware:mergeHw(hw), legs:legs, joints:jointsInfo, seams:seams, visual:{ doors:doors, drawers:facades, plinth:plinth, hb:hb }, dims:{ W:W, H:Htot, D:D, t:t } };
 }
 
+/* ----------------------------------------------------------------- 3D construction (c.kind 'box')
+   Built board by board: six outer boards (bottom, top, left, right, back, front), each on or off, at the
+   outer face or set in by 'inset' mm. Where two boards meet, c.box.cover['a_b'] names the board that
+   covers the other's end (the other sits between); a set-in board always sits inside the outer ones.
+   Inside: partitions (vertical, from the board below to the board above) and shelves (in one compartment,
+   fixed with connectors or adjustable on pins). Every end that meets a face is joined with that joint's
+   connectors (confirmat | cam | dowel), drilled by the same rules as the cabinets; o.joints[key] = { type, n, e, pos }.
+   Axes as for the cabinets: X to the right, Y from the front (0) to the back, Z up from the underside. */
+var BOX_IDS = ['bottom', 'top', 'left', 'right', 'back', 'front'];
+var BOX_DEF = {
+  bottom:{ ax:2, hi:false, role:'DUGNAS',  rank:6, lt:'apačia' }, top:  { ax:2, hi:true,  role:'VIRSUS', rank:4, lt:'viršus' },
+  left:  { ax:0, hi:false, role:'KAIRE',   rank:5, lt:'kairė' },  right:{ ax:0, hi:true,  role:'DESINE', rank:5, lt:'dešinė' },
+  back:  { ax:1, hi:true,  role:'NUGARA',  rank:7, lt:'nugara' }, front:{ ax:1, hi:false, role:'PRIEKIS', rank:1, lt:'priekis' } };
+function boxDefaults(c) {
+  var b = c.box = c.box || {};
+  b.boards = b.boards || {};
+  BOX_IDS.forEach(function (id) { b.boards[id] = Object.assign({ on:id !== 'front', inset:0, T:'' }, b.boards[id] || {}); });
+  b.cover = b.cover || {}; b.inner = Array.isArray(b.inner) ? b.inner : [];
+  return b;
+}
+function boxPair(a, b) { return [a, b].sort().join('_'); }
+/* default: back over everything, bottom under the sides, top between the sides, a front board inside */
+function boxCoverDefault(a, b) { return BOX_DEF[a].rank >= BOX_DEF[b].rank ? a : b; }
+/* default connector spots along a joint of length w: 70 (confirmat) / 50 (cam) from the ends, about every 400 mm */
+function boxSpots(w, type) {
+  var e = type === 'cam' ? R.cam.cam.fromFront : R.confirmat.fromFront, pos, i;
+  if (w < 2*e + 16) { e = Math.max(type === 'cam' ? 12 : 9, Math.min(e, w/4)); pos = w >= 120 ? [e, w - e] : [w/2]; if (pos.length === 1) e = w/2; }
+  else { var n = Math.max(2, Math.ceil((w - 2*e)/400 - 1e-9) + 1); pos = []; for (i = 0; i < n; i++) pos.push(e + (w - 2*e)*i/(n - 1)); }
+  pos = pos.map(function (a) { return Math.round(a*10)/10; });
+  return { pos:pos, n:pos.length, e:pos[0], dowels:type === 'cam' ? pairedDowels(pos, w, R.cam.dowel.offset) : [] };
+}
+/* frame of a board: face A normal n along axis ax (sign sg), u × v = n so programs never need mirroring */
+function boxFrame(ax, sg) {
+  var E3 = [X, Y, Z], uv = [[1, 2], [2, 0], [0, 1]][ax], u = uv[0], v = uv[1];
+  if (sg < 0) { var tmp = u; u = v; v = tmp; }
+  var n = sg > 0 ? E3[ax] : neg(E3[ax]);
+  return { ax:ax, sg:sg, u:u, v:v, U:E3[u], V:E3[v], n:n };
+}
+var DIR_LT = { '0-':'kairys', '0+':'dešinys', '1-':'priekinis', '1+':'galinis', '2-':'apatinis', '2+':'viršutinis' };
+
+function buildBox(c, idx, projName) {
+  var o = cncDefaults(c), bx = boxDefaults(c);
+  var t = +c.thick || 18, W = +c.W, H = +c.H, D = +c.D, S3 = [W, D, H];
+  var base = safeName(projName || 'PROJ') + '_' + (idx + 1) + (c.name ? '_' + safeName(c.name) : '');
+  var nm = function (role) { return base + '_' + role; };
+  var out = [], warn = [], hw = [], jointsInfo = [], seams = [];
+  var warnOnce = function (w) { if (warn.indexOf(w) < 0) warn.push(w); };
+  var mat = c.mat || {}, ed = c.edge || {}, mCarc = mat.carc || '', mBack = mat.back || mCarc, eCarc = ed.carc || '';
+  var cf = R.confirmat, cm = R.cam;
+  var empty = function () { return { panels:out, warnings:warn, hardware:hw, legs:[], joints:[], seams:[], visual:{ doors:[], drawers:[], plinth:null, hb:0 }, dims:{ W:W, H:H, D:D, t:t }, box:{ boards:[], ghosts:[], covers:[] } }; };
+  if (!(W > 0 && H > 0 && D > 0)) { warn.push('netinkami matmenys'); return empty(); }
+
+  /* ---- outer boards */
+  var B = {}, boards = [];
+  BOX_IDS.forEach(function (id) {
+    var s = bx.boards[id], df = BOX_DEF[id]; if (!s.on) return;
+    var T = +s.T > 0 ? +s.T : t, ins = Math.max(0, +s.inset || 0);
+    if (ins + T > S3[df.ax] / 2) { warnOnce(df.lt + ': įleidimas ' + num(ins) + ' mm per didelis — netinkami matmenys'); ins = 0; }
+    B[id] = { id:id, ax:df.ax, hi:df.hi, T:T, ins:ins, role:df.role, outer:true, lt:df.lt, thin:T < 12 };
+    boards.push(B[id]);
+  });
+  if (!boards.length) { warn.push('nėra nė vienos plokštės — pridėkite plokštes'); return empty(); }
+  var slab = function (bd) { var L = S3[bd.ax]; return bd.hi ? [L - bd.ins - bd.T, L - bd.ins] : [bd.ins, bd.ins + bd.T]; };
+  var innerFace = function (bd) { var s = slab(bd); return bd.hi ? s[0] : s[1]; };
+  /* who covers whom: a set-in board sits inside the boards at the outer face; otherwise the user's choice or the default */
+  var coverOf = function (a, b) {
+    var A = B[a], Bb = B[b];
+    if (A.ins > 0 && !(Bb.ins > 0)) return { by:b, forced:true };
+    if (Bb.ins > 0 && !(A.ins > 0)) return { by:a, forced:true };
+    var v = bx.cover[boxPair(a, b)]; if (v !== a && v !== b) v = boxCoverDefault(a, b);
+    return { by:v, forced:false };
+  };
+  var covers = [];
+  boards.forEach(function (bd, i) { boards.forEach(function (q, k) {
+    if (k <= i || q.ax === bd.ax) return;
+    var cv = coverOf(bd.id, q.id); covers.push({ key:boxPair(bd.id, q.id), a:bd.id, b:q.id, by:cv.by, forced:cv.forced });
+  }); });
+  var coverBy = function (a, b) { var k = boxPair(a, b); for (var i = 0; i < covers.length; i++) if (covers[i].key === k) return covers[i].by; return null; };
+  boards.forEach(function (bd) {
+    var ext = [null, null, null]; ext[bd.ax] = slab(bd);
+    [0, 1, 2].forEach(function (a) {
+      if (a === bd.ax) return; var lo = 0, hi = S3[a];
+      boards.forEach(function (nb) { if (nb.ax !== a || coverBy(bd.id, nb.id) === bd.id) return;
+        if (nb.hi) hi = Math.min(hi, innerFace(nb)); else lo = Math.max(lo, innerFace(nb)); });
+      ext[a] = [lo, hi];
+    });
+    bd.ext = ext;
+  });
+  /* a corner where three boards meet must be filled by exactly one of them */
+  [false, true].forEach(function (hx) { [false, true].forEach(function (hy) { [false, true].forEach(function (hz) {
+    var ids = [hx ? 'right' : 'left', hy ? 'back' : 'front', hz ? 'top' : 'bottom'];
+    if (!ids.every(function (id) { return B[id] && !B[id].ins; })) return;
+    var pt = ids.map(function (id) { var s = slab(B[id]); return (s[0] + s[1]) / 2; });
+    var n = ids.filter(function (id) { return [0, 1, 2].every(function (a) { return pt[a] > B[id].ext[a][0] && pt[a] < B[id].ext[a][1]; }); }).length;
+    if (n !== 1) warnOnce('kampas ' + ids.map(function (id) { return B[id].lt; }).join(' – ') + ': ' + (n ? 'plokštės kertasi' : 'liks tarpas') + ' — pakeiskite, kuri plokštė dengia kurią');
+  }); }); });
+
+  /* ---- cavity, partitions, shelves */
+  var cav = [0, 1, 2].map(function (a) { var lo = 0, hi = S3[a];
+    boards.forEach(function (bd) { if (bd.ax !== a) return; if (bd.hi) hi = Math.min(hi, innerFace(bd)); else lo = Math.max(lo, innerFace(bd)); });
+    return [lo, hi]; });
+  var parts = bx.inner.filter(function (q) { return q && q.kind === 'part'; }).slice().sort(function (a, b) { return (+a.x || 0) - (+b.x || 0); });
+  var partB = [];
+  parts.forEach(function (q, k) {
+    var T = +q.T > 0 ? +q.T : t, x = +q.x || 0, x0 = x - T/2;
+    var lo = partB.length ? partB[partB.length - 1].ext[0][1] : cav[0][0];
+    if (x0 < lo + 50 || x0 + T > cav[0][1] - 50) { warnOnce('pertvara ' + (k + 1) + ' (' + num(x) + ' mm): ne vidinėje erdvėje arba per arti kitos plokštės — praleista'); return; }
+    var bd = { id:'i' + q.id, inner:q, ax:0, T:T, role:'PERTVARA', kind:'part', lt:'pertvara ' + (partB.length + 1), nr:partB.length + 1, ext:[[x0, x0 + T], cav[1].slice(), cav[2].slice()] };
+    partB.push(bd); boards.push(bd);
+  });
+  var comp = []; (function () { var lo = cav[0][0]; partB.forEach(function (p) { comp.push([lo, p.ext[0][0]]); lo = p.ext[0][1]; }); comp.push([lo, cav[0][1]]); })();
+  var nSh = 0, pinsN = 0;
+  bx.inner.filter(function (q) { return q && q.kind === 'shelf'; }).slice().sort(function (a, b) { return ((+a.col || 0) - (+b.col || 0)) || ((+a.z || 0) - (+b.z || 0)); }).forEach(function (q) {
+    var T = +q.T > 0 ? +q.T : t, col = Math.min(comp.length - 1, Math.max(0, Math.floor(+q.col || 0))), z = +q.z || 0, adj = !!q.adj, cx = comp[col];
+    if (z < cav[2][0] + 30 || z + T > cav[2][1] - 30) { warnOnce('lentyna ' + num(z) + ' mm aukštyje: ne vidinėje erdvėje — praleista'); return; }
+    if (boards.some(function (o2) { return o2.kind === 'shelf' && o2.col === col && z < o2.ext[2][1] + 30 && z + T > o2.ext[2][0] - 30; })) { warnOnce('lentyna ' + num(z) + ' mm aukštyje: per arti kitos lentynos — praleista'); return; }
+    var cl = adj ? R.shelf.clearW / 2 : 0, y0 = cav[1][0] + (adj ? R.shelf.setback : Math.max(0, +q.setback || 0));
+    nSh++;
+    boards.push({ id:'i' + q.id, inner:q, ax:2, T:T, role:'LENTYNA', kind:'shelf', adj:adj, col:col, lt:'lentyna ' + nSh, nr:nSh, ext:[[cx[0] + cl, cx[1] - cl], [y0, cav[1][1]], [z, z + T]] });
+  });
+  var byId = {}; boards.forEach(function (bd) { byId[bd.id] = bd; });
+
+  /* ---- panels: face A is the inner face of an outer board, the top of a shelf, the right-hand face of a partition */
+  boards.forEach(function (bd) {
+    var sg = bd.outer ? (bd.hi ? -1 : 1) : 1, fr = boxFrame(bd.ax, sg), e = bd.ext;
+    var L = e[fr.u][1] - e[fr.u][0], Wd = e[fr.v][1] - e[fr.v][0];
+    var oo = [0, 0, 0]; oo[fr.u] = e[fr.u][0]; oo[fr.v] = e[fr.v][0]; oo[bd.ax] = sg > 0 ? e[bd.ax][1] : e[bd.ax][0];
+    var name = bd.kind ? bd.role + bd.nr : bd.role;
+    var p = panel(nm(name), bd.role, L, Wd, bd.T, '');
+    place(p, oo, fr.U, fr.V, fr.n); p.mat = bd.id === 'back' ? mBack : mCarc;
+    bd.p = p; bd.fr = fr; bd.o = oo; bd.camFace = bd.kind === 'shelf' ? 'B' : 'A';
+    bd.occ = [];
+    if (L < 30 || Wd < 30) warnOnce(bd.lt + ': ' + num(L) + ' × ' + num(Wd) + ' mm — per maža detalė, patikrinkite matmenis');
+  });
+  var loc = function (bd, pt) { return { x:pt[bd.fr.u] - bd.o[bd.fr.u], y:pt[bd.fr.v] - bd.o[bd.fr.v] }; };
+  var faceAt = function (bd, coord) { return Math.abs(coord - bd.o[bd.ax]) < 0.01 ? 'A' : 'B'; };
+
+  /* ---- occupancy: every hole as a 2-D shape in the part plus the slice of the thickness it takes */
+  var segD = function (ax, ay, bx2, by, px, py) { var dx = bx2 - ax, dy = by - ay, l2 = dx*dx + dy*dy, tt = l2 ? Math.max(0, Math.min(1, ((px - ax)*dx + (py - ay)*dy)/l2)) : 0; return Math.hypot(ax + tt*dx - px, ay + tt*dy - py); };
+  var shapeDist = function (a, b) {
+    if (a.s && b.s) { var s1 = a.s, s2 = b.s;
+      var cross = function (p1, p2, p3) { return (p2[0] - p1[0])*(p3[1] - p1[1]) - (p2[1] - p1[1])*(p3[0] - p1[0]); };
+      var d1 = cross(s2[0], s2[1], s1[0]), d2 = cross(s2[0], s2[1], s1[1]), d3 = cross(s1[0], s1[1], s2[0]), d4 = cross(s1[0], s1[1], s2[1]);
+      if (((d1 > 0) !== (d2 > 0)) && ((d3 > 0) !== (d4 > 0))) return 0;
+      return Math.min(segD(s2[0][0], s2[0][1], s2[1][0], s2[1][1], s1[0][0], s1[0][1]), segD(s2[0][0], s2[0][1], s2[1][0], s2[1][1], s1[1][0], s1[1][1]),
+                      segD(s1[0][0], s1[0][1], s1[1][0], s1[1][1], s2[0][0], s2[0][1]), segD(s1[0][0], s1[0][1], s1[1][0], s1[1][1], s2[1][0], s2[1][1])); }
+    if (a.s) return segD(a.s[0][0], a.s[0][1], a.s[1][0], a.s[1][1], b.x, b.y);
+    if (b.s) return segD(b.s[0][0], b.s[0][1], b.s[1][0], b.s[1][1], a.x, a.y);
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  };
+  var fpFace = function (bd, face, x, y, d, depth, through, jk) { var T = bd.T; return { x:x, y:y, r:d/2, z:through ? [0, T] : face === 'A' ? [0, depth] : [T - depth, T], jk:jk }; };
+  var fpEdge = function (bd, edgeK, pos, d, depth, jk) { var p = bd.p, L = p.L, Wd = p.W, s;
+    if (edgeK === 'x0') s = [[0, pos], [depth, pos]]; else if (edgeK === 'x1') s = [[L, pos], [L - depth, pos]]; else if (edgeK === 'y0') s = [[pos, 0], [pos, depth]]; else s = [[pos, Wd], [pos, Wd - depth]];
+    return { s:s, r:d/2, z:[bd.T/2 - d/2, bd.T/2 + d/2], jk:jk }; };
+  var clashes = function (bd, fp) { return bd.occ.some(function (q) {
+    if (q.jk === fp.jk && fp.jk) return false;
+    if (Math.min(q.z[1], fp.z[1]) - Math.max(q.z[0], fp.z[0]) <= 0.2) return false;
+    return shapeDist(q, fp) < q.r + fp.r + 1; }); };
+
+  /* ---- joints: the board whose end meets another's face carries the edge bores */
+  var TYPE_LT = { confirmat:'konfirmatai', cam:'ekscentrikai', dowel:'kaiščiai' }, J = o.joints || {}, seenThin = {};
+  var resolveBox = function (jj, w, label) {
+    var type = TYPE_LT[jj.type] ? jj.type : o.joinery === 'cam' ? 'cam' : 'confirmat';
+    var bs = boxSpots(w, type), pos = bs.pos, dws = bs.dowels, n = +jj.n > 0 ? Math.round(+jj.n) : 0, e = +jj.e > 0 ? +jj.e : 0;
+    var minGap = type === 'cam' ? 24 : 16, minEdge = type === 'cam' ? 12 : 9;
+    var cust = Array.isArray(jj.pos) ? jj.pos.map(Number).filter(function (a) { return isFinite(a); }) : null;
+    if (cust) {
+      var kept = [];
+      cust.map(function (a) { return Math.round(Math.max(minEdge, Math.min(w - minEdge, a))*10)/10; }).sort(function (a, b) { return a - b; })
+          .forEach(function (a) { if (!kept.length || a - kept[kept.length - 1] >= minGap - 0.01) kept.push(a); });
+      if (kept.length < cust.length) warnOnce(label + ': ' + (cust.length - kept.length) + ' jungt. per arti kitos ar krašto — praleista');
+      if (!kept.length) warnOnce(label + ': nėra nė vienos jungties — mazgas nesurištas');
+      pos = kept; n = 0; e = 0;
+    } else if (n || e) {
+      var nn = n || bs.n, ee = Math.max(minEdge, Math.min(e || bs.e, w/2));
+      var maxN = ee >= w/2 - 0.01 ? 1 : Math.floor((w - 2*ee)/minGap + 1e-9) + 1;
+      if (nn > maxN) { warnOnce(label + ': ' + nn + ' jungtys netelpa ' + num(w) + ' mm — sumažinta iki ' + maxN); nn = maxN; }
+      pos = []; if (nn <= 1) pos = [w/2]; else for (var i = 0; i < nn; i++) pos.push(Math.round((ee + (w - 2*ee)*i/(nn - 1))*10)/10);
+    }
+    dws = type === 'cam' ? pairedDowels(pos, w, cm.dowel.offset) : [];
+    if (type === 'cam' && dws.length !== pos.length) { warnOnce(label + ': ekscentrikui ir kaiščiui nepakanka vietos — pakeiskite jungčių vietas'); dws = []; }
+    dws = dws.filter(function (a) { return pos.every(function (q) { return Math.abs(q - a) >= 12; }); });
+    return { type:type, pos:pos, dowels:dws, n:n, e:e, cust:!!cust, base:bs, minGap:minGap, minEdge:minEdge };
+  };
+  var contacts = [];
+  boards.forEach(function (P) { boards.forEach(function (Q) {
+    if (P === Q) return; var a = Q.ax; if (a === P.ax) return;
+    var dir = Math.abs(P.ext[a][1] - Q.ext[a][0]) < 0.01 ? 1 : Math.abs(P.ext[a][0] - Q.ext[a][1]) < 0.01 ? -1 : 0; if (!dir) return;
+    if (P.ext[P.ax][0] < Q.ext[P.ax][0] - 0.01 || P.ext[P.ax][1] > Q.ext[P.ax][1] + 0.01) return;
+    var b = 3 - a - P.ax, lo = Math.max(P.ext[b][0], Q.ext[b][0]), hi = Math.min(P.ext[b][1], Q.ext[b][1]);
+    if (hi - lo < 30) return;
+    contacts.push({ P:P, Q:Q, a:a, b:b, dir:dir, lo:lo, hi:hi });
+  }); });
+  /* order: outer corners first, then partitions, then shelves (later joints move round earlier ones) */
+  var rk = function (bd) { return bd.outer ? 0 : bd.kind === 'part' ? 1 : 2; };
+  contacts.sort(function (x, y) { return (Math.max(rk(x.P), rk(x.Q)) - Math.max(rk(y.P), rk(y.Q))) || (x.P.nr || 0) - (y.P.nr || 0); });
+  var nJ = 0;
+  contacts.forEach(function (ct) {
+    var P = ct.P, Q = ct.Q, key = 'b_' + boxPair(P.id, Q.id), label = cap(P.lt) + ' – ' + Q.lt;
+    if (P.kind === 'shelf' && (Q.id === 'back' || Q.id === 'front')) return;   // shelves only rest against a back / front
+    if (P.adj) return;                                                         // adjustable shelf: on pins
+    if (P.thin || Q.thin) { var th = P.thin ? P : Q; if (!seenThin[th.id]) { seenThin[th.id] = 1; warnOnce(cap(th.lt) + ' ' + num(th.T) + ' mm: plona plokštė — jungčių negręžiama, tvirtinama vinimis / kabėmis'); } return; }
+    var w = ct.hi - ct.lo, plane = ct.dir > 0 ? Q.ext[ct.a][0] : Q.ext[ct.a][1], mid = (P.ext[P.ax][0] + P.ext[P.ax][1]) / 2;
+    var o3 = [0, 0, 0]; o3[ct.a] = plane; o3[P.ax] = mid; o3[ct.b] = ct.lo;
+    var d3 = [0, 0, 0]; d3[ct.b] = 1;
+    var res = resolveBox(J[key] || {}, w, label);
+    var qFace = faceAt(Q, plane), Pfr = P.fr;
+    var edgeK = ct.a === Pfr.u ? (ct.dir > 0 ? 'x1' : 'x0') : (ct.dir > 0 ? 'y1' : 'y0');
+    var along = function (s) { var pt = o3.slice(); pt[ct.b] += s; return pt; };
+    var plan = function (dl) {   // holes of this joint, set moved dl along the joint
+      var hs = [], add = function (bd, kind, a, d, depth, extra) { hs.push(Object.assign({ bd:bd, kind:kind, a:a + dl, d:d, depth:depth }, extra || {})); };
+      if (res.type === 'cam') {
+        res.pos.forEach(function (a) { add(P, 'cam', a, cm.cam.d, cm.cam.depth); add(P, 'edge', a, cm.bolt.d, cm.bolt.depthEdge); add(Q, 'face', a, cm.bolt.d, cm.bolt.depthFace); });
+        res.dowels.forEach(function (a) { add(P, 'edge', a, cm.dowel.d, cm.dowel.depthEdge); add(Q, 'face', a, cm.dowel.d, cm.dowel.depthFace); });
+      } else if (res.type === 'dowel') res.pos.forEach(function (a) { add(P, 'edge', a, cm.dowel.d, cm.dowel.depthEdge); add(Q, 'face', a, cm.dowel.d, cm.dowel.depthFace); });
+      else res.pos.forEach(function (a) { add(P, 'edge', a, cf.pilot.d, cf.pilot.depth); add(Q, 'face', a, cf.d, 0, { through:true }); });
+      return hs.map(function (h) {
+        var pt = along(h.a), l = loc(h.bd, pt);
+        if (h.kind === 'edge') { h.edge = edgeK; h.pos = edgeK[0] === 'x' ? l.y : l.x; h.fp = fpEdge(P, edgeK, h.pos, h.d, Math.min(h.depth, R.post.edgeMaxZ), key); }
+        else if (h.kind === 'cam') { var ce = cm.cam.fromEdge; h.face = P.camFace;
+          h.x = edgeK === 'x0' ? ce : edgeK === 'x1' ? P.p.L - ce : l.x; h.y = edgeK === 'y0' ? ce : edgeK === 'y1' ? P.p.W - ce : l.y;
+          h.fp = fpFace(P, h.face, h.x, h.y, h.d, h.depth, false, key); }
+        else { h.face = qFace; h.x = l.x; h.y = l.y; h.fp = fpFace(Q, qFace, h.x, h.y, h.d, h.depth, !!h.through, key); }
+        return h; });
+    };
+    var ok = function (hs) { return hs.every(function (h) { return h.a >= res.minEdge - 0.01 && h.a <= w - res.minEdge + 0.01 && !clashes(h.bd, h.fp); }); };
+    var dl = 0, cand = [0]; for (var m = 1; m <= 20; m++) cand.push(8*m, -8*m);
+    var hs = null; for (var ci = 0; ci < cand.length; ci++) { var tr = plan(cand[ci]); if (ok(tr)) { hs = tr; dl = cand[ci]; break; } }
+    if (!hs) { hs = plan(0); warnOnce(label + ': jungčių skylės kertasi su kitomis ir jų nepavyko pastumti — pakeiskite jungtis'); }
+    else if (dl) warnOnce(label + ': jungtys pastumtos ' + dl + ' mm, kad nesusitiktų su kitomis skylėmis — patikrinkite');
+    hs.forEach(function (h) {
+      if (h.kind === 'edge') edge(h.bd.p, h.edge, h.pos, h.d, h.depth);
+      else hole(h.bd.p, h.face, h.x, h.y, h.d, h.depth, h.through ? { through:true } : null);
+      h.bd.occ.push(h.fp);
+    });
+    if (Q.T - cm.bolt.depthFace < 2 && res.type === 'cam') warnOnce(cap(Q.lt) + ' ' + num(Q.T) + ' mm: ekscentriko varžto skylė ' + cm.bolt.depthFace + ' mm per gili — pasirinkite konfirmatus');
+    nJ++;
+    var sd = { type:res.type, pos:res.pos.slice(), dowels:res.dowels.slice(), n:res.n, e:res.e, manual:res.cust, custom:!!(J[key] && (J[key].type || J[key].n || J[key].e || J[key].pos)),
+               defPos:res.base.pos.slice(), defN:res.base.n, defE:Math.round(res.base.e*10)/10, minGap:res.minGap, minEdge:res.minEdge };
+    jointsInfo.push(Object.assign({ key:key, label:label, dflt:o.joinery, w:w, single:true, split:false, box:{ P:P.id, Q:Q.id } }, sd, { sides:{ L:sd, R:sd } }));
+    var so = o3.slice(); so[ct.b] += dl;
+    seams.push({ key:key, side:'L', o:so, d:d3, w:w });
+  });
+
+  /* ---- adjustable shelves: Ø5 pin holes in the boards at their ends */
+  boards.forEach(function (S1) {
+    if (S1.kind !== 'shelf' || !S1.adj) return;
+    var pr = R.pins, zc = S1.ext[2][0] - pr.below, ys = [S1.ext[1][0] + pr.fromFront - R.shelf.setback, S1.ext[1][1] - pr.fromBack];
+    var zs = [zc]; if (bx.pinRow) for (var k = 1; k <= pr.extra; k++) zs.push(zc - k*pr.pitch, zc + k*pr.pitch);
+    [[S1.ext[0][0], -1], [S1.ext[0][1], 1]].forEach(function (end) {
+      var Q = boards.filter(function (q) { return q.ax === 0 && Math.abs((end[1] < 0 ? q.ext[0][1] : q.ext[0][0]) - end[0]) < R.shelf.clearW && !q.thin; })[0];
+      if (!Q) { warnOnce(cap(S1.lt) + ': šone nėra plokštės laikikliams'); return; }
+      var plane = end[1] < 0 ? Q.ext[0][1] : Q.ext[0][0], face = faceAt(Q, plane);
+      zs.forEach(function (z) { if (z < Q.ext[2][0] + 10 || z > Q.ext[2][1] - 10) return;
+        ys.forEach(function (y) {
+          var done = [0, 10, -10, 20, -20].some(function (sh) { var pt = [plane, y + sh, z], l = loc(Q, pt), fp = fpFace(Q, face, l.x, l.y, pr.d, pr.depth, false, null);
+            if (clashes(Q, fp)) return false; hole(Q.p, face, l.x, l.y, pr.d, pr.depth, { op:'pin' }); Q.occ.push(fp); pinsN++; return true; });
+          if (!done) warnOnce(cap(S1.lt) + ': laikiklio skylė kliūna už kitos skylės — praleista, perkelkite lentyną');
+        }); });
+    });
+    hw.push({ item:'Lentynų laikikliai', qty:4, unit:'vnt.' });
+  });
+  if (pinsN) warnOnce('lentynų laikiklių skylės pagal standartą — NEPATIKRINTA su SWOOD modeliu');
+
+  /* ---- edge banding: free edges seen from the front, the top and the ends (not the back, not the floor) */
+  boards.forEach(function (bd) {
+    var p = bd.p, fr = bd.fr;
+    [['x0', fr.u, -1], ['x1', fr.u, 1], ['y0', fr.v, -1], ['y1', fr.v, 1]].forEach(function (ek) {
+      var a = ek[1], s = ek[2], end = s > 0 ? bd.ext[a][1] : bd.ext[a][0], probe = bd.ext.map(function (r) { return [r[0] + 0.5, r[1] - 0.5]; });
+      probe[a] = s > 0 ? [end, end + 1] : [end - 1, end];
+      var touched = boards.some(function (q) { return q !== bd && [0, 1, 2].every(function (k) { return Math.min(q.ext[k][1], probe[k][1]) - Math.max(q.ext[k][0], probe[k][0]) > 0.01; }); });
+      if (touched || bd.id === 'back') return;
+      if ((a === 1 && s > 0) || (a === 2 && s < 0) || (a === 0 && bd.id === 'bottom')) return;
+      p.eb[ek[0]] = eCarc || 'KRAŠTAS';
+    });
+  });
+  if (!eCarc && boards.some(function (bd) { return ['x0', 'x1', 'y0', 'y1'].some(function (k) { return bd.p.eb[k]; }); })) warnOnce('krašto medžiaga nenurodyta — kraštai pažymėti „KRAŠTAS“');
+
+  boards.forEach(function (bd) { out.push(bd.p); });
+  out.forEach(orient);
+  out.forEach(rightHanded);
+  /* position note for the machine programs: which face is up, where the part's edges are */
+  boards.forEach(function (bd) {
+    var p = bd.p, q = p.place, ax = function (v) { var i = Math.abs(v[0]) > 0.5 ? 0 : Math.abs(v[1]) > 0.5 ? 1 : 2; return DIR_LT[i + (v[i] < 0 ? '+' : '-')]; };
+    p.note = (bd.outer ? 'vidinė pusė' : bd.kind === 'shelf' ? 'viršus' : 'dešinė pusė') + ' viršuje, Y=0 — ' + ax(q.v) + ' kraštas, X=0 — ' + ax(q.u) + ' kraštas';
+  });
+  var ebEdit = c.ebEdit || {};
+  out.forEach(function (p) {
+    p.key = p.name.slice(base.length + 1);
+    var ov = ebEdit[p.key]; if (!ov) return;
+    ['y0', 'y1', 'x0', 'x1'].forEach(function (e) { if (ov[e] === true) p.eb[e] = p.eb[e] || eCarc || 'KRAŠTAS'; else if (ov[e] === false) p.eb[e] = ''; });
+    p.ebManual = true;
+  });
+  out.forEach(function (p) { p.cab = idx + 1; p.short = (idx + 1) + '-' + p.role.replace(/_/g, '-') + (/\d$/.test(p.name) ? p.name.match(/\d+$/)[0] : ''); });
+  if (nJ) warnOnce('3D konstrukcija: jungtys gręžiamos pagal spintelių taisykles, bet šis surinkimas naujas — patikrinkite pirmą gaminį');
+  hardwareFromHoles(out, o, hw);
+  /* for the 3-D editor: every board's box, the absent outer boards as ghosts, the corners */
+  var ghosts = BOX_IDS.filter(function (id) { return !B[id]; }).map(function (id) { var df = BOX_DEF[id], ext = [[0, W], [0, D], [0, H]]; ext[df.ax] = df.hi ? [S3[df.ax] - t, S3[df.ax]] : [0, t]; return { id:id, ext:ext, lt:df.lt }; });
+  return { panels:out, warnings:warn, hardware:mergeHw(hw), legs:[], joints:jointsInfo, seams:seams, visual:{ doors:[], drawers:[], plinth:null, hb:0 }, dims:{ W:W, H:H, D:D, t:t },
+           box:{ boards:boards.map(function (bd) { return { id:bd.id, name:bd.p.name, short:bd.p.short, role:bd.role, kind:bd.kind || 'outer', ext:bd.ext, T:bd.T, ins:bd.ins || 0, lt:bd.lt, adj:!!bd.adj, col:bd.col, inner:bd.inner ? bd.inner.id : null }; }),
+                 ghosts:ghosts, covers:covers, cavity:cav, comps:comp } };
+}
+function cap(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
+
 /* fixings counted from the drillings themselves */
 /* how high the cabinet stands above the floor on its legs / feet */
 function legHeight(c) { var o = c.cnc || {}; if (c.dishwasher) return +c.legH || 100; return o.legs ? (o.feet ? R.feet.h : (+c.legH || 100)) : 0; }
@@ -1911,7 +2238,8 @@ function programs(p) {
 
 var api = { R:R, DRAWER_HW:DRAWER_HW, DOOR_HW:DOOR_HW, newCabinet:newCabinet, newSection:newSection, cncDefaults:cncDefaults,
             buildCabinet:buildCabinet, programs:programs, num:num, ascii:ascii, safeName:safeName, hingesPerDoor:hingesPerDoor,
-            hingeYs:hingeYs, hingesFit:hingesFit, setRules:setRules, splitFronts:splitFronts, pairedDowels:pairedDowels, legHeight:legHeight };
+            hingeYs:hingeYs, hingesFit:hingesFit, setRules:setRules, splitFronts:splitFronts, pairedDowels:pairedDowels, legHeight:legHeight,
+            buildBox:buildBox, boxDefaults:boxDefaults, BOX_IDS:BOX_IDS, BOX_DEF:BOX_DEF, boxPair:boxPair, boxCoverDefault:boxCoverDefault };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.DBEngine = api;
 })(typeof window !== 'undefined' ? window : this);
 
@@ -2720,16 +3048,18 @@ if (typeof module !== 'undefined' && module.exports) module.exports = api; else 
 'use strict';
 const V={px:0,py:0,yaw:.52,pitch:.32,zoom:1,open:.65,mode:'assembly',hardware:true,handles:false,dimensions:true,edit:false,full:false,exploded:true,wire:true};
 const J={cab:null,key:null,side:'L',scope:'side',index:null};
+const BX={cab:null,sel:null};   // 3D construction: the selected board
 let observer;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const add=(a,b)=>a.map((v,i)=>v+b[i]), sub=(a,b)=>a.map((v,i)=>v-b[i]), mul=(a,s)=>a.map(v=>v*s), dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0), cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]], unit=a=>mul(a,1/(Math.hypot(...a)||1));
 function mount(el,c,r,lang,hooks={}){
  if(observer)observer.disconnect();
  const en=lang==='en', L=(lt,enText)=>en?enText:lt;
- el.innerHTML=`<section class="av ${V.full?'full':''}"><div class="av-head"><div><b>${L('Surinktos spintelės peržiūra','Assembly preview')}</b><small>${Math.round(c.W||c.dishWidth)} × ${Math.round(c.H)} × ${Math.round(c.D)} mm</small></div><span class="av-live">● ${L('Gyvas modelis','Live model')}</span></div><div class="av-tools"><button data-mode="assembly">${L('Surinkta','Assembly')}</button><button data-mode="interior">${L('Be fasadų','Without fronts')}</button><button data-connectors aria-pressed="${V.edit}" ${(r.joints||[]).length?'':'disabled'}>⊙ ${L('Jungtys','Connectors')}</button><button data-view="front">${L('Priekis','Front')}</button><button data-view="perspective">3D</button><button data-view="underside">${L('Apačia','Underside')}</button><button data-full>${L('Išplėsti ⤢','Expand ⤢')}</button></div><div class="av-quickbar" hidden></div><div class="av-explode-tools" hidden><button data-exploded>${L('Išskleistos jungtys','Exploded fittings')}</button><button data-wire>${L('Skaidrus karkasas','Transparent carcass')}</button></div><div class="av-stage"><canvas tabindex="0" role="img" aria-label="${L('Spintelės 3D modelis. Sukite rodyklių klavišais, didinkite pliusu, mažinkite minusu.','3D cabinet. Arrow keys orbit; plus and minus zoom.')}" ></canvas><svg class="av-joints" aria-label="${L('Jungčių redagavimas','Connector editor')}" hidden></svg><div class="av-photo-label" hidden aria-live="polite"></div><div class="av-camera"><button data-zoom="1.15" aria-label="${L('Priartinti','Zoom in')}">+</button><button data-zoom="0.87" aria-label="${L('Atitolinti','Zoom out')}">−</button><button data-reset aria-label="${L('Atkurti vaizdą','Reset view')}">↺</button></div><div class="av-hint">${L('Tempkite — sukite · Ratukas — mastelis ties pele · Shift + tempti — perstumti','Drag to orbit · Wheel to zoom at the pointer · Shift + drag to pan')}</div></div><div class="av-footer"><div class="av-connectors" hidden></div><label class="av-range"><span>${L('Atidarymas','Opening')}</span><input type="range" min="0" max="100" step="1" value="${V.open*100}" aria-label="${L('Durų ir stalčių atidarymas','Door and drawer opening')}"><output>${Math.round(V.open*100)}%</output></label><div class="av-settings"><label><input type="checkbox" data-option="hardware" ${V.hardware?'checked':''}>${L('Furnitūra','Hardware')}</label><label><input type="checkbox" data-option="dimensions" ${V.dimensions?'checked':''}>${L('Matmenys','Dimensions')}</label><label><input type="checkbox" data-option="handles" ${V.handles?'checked':''}>${L('Pavyzdinės rankenos','Example handles')}</label></div><div class="av-note">${L('Plokštės ir tarpai pagal modelį. TANDEM — korpuso dekoro dėžė; TANDEMBOX — antaro tipo metaliniai šonai. Furnitūros forma iliustracinė. Dekoro spalva apytikslė.','Panels and gaps follow the model. TANDEM uses the carcass finish; TANDEMBOX uses antaro-style metal sides. Hardware shapes are illustrative. Finish colours are approximate.')}</div></div></section>`;
+ const isBox=c.kind==='box'&&!!r.box;if(!isBox)V.boards=false;if(BX.cab!==c.id){BX.cab=c.id;BX.sel=null;}if(isBox&&BX.sel&&!r.box.boards.some(b=>b.id===BX.sel))BX.sel=null;
+ el.innerHTML=`<section class="av ${V.full?'full':''}"><div class="av-head"><div><b>${L('Surinktos spintelės peržiūra','Assembly preview')}</b><small>${Math.round(c.W||c.dishWidth)} × ${Math.round(c.H)} × ${Math.round(c.D)} mm</small></div><span class="av-live">● ${L('Gyvas modelis','Live model')}</span></div><div class="av-tools"><button data-mode="assembly">${L('Surinkta','Assembly')}</button><button data-mode="interior">${L('Be fasadų','Without fronts')}</button>${isBox?`<button data-boards aria-pressed="${!!V.boards}">▣ ${L('Plokštės','Boards')}</button>`:''}<button data-connectors aria-pressed="${V.edit}" ${(r.joints||[]).length?'':'disabled'}>⊙ ${L('Jungtys','Connectors')}</button><button data-view="front">${L('Priekis','Front')}</button><button data-view="perspective">3D</button><button data-view="underside">${L('Apačia','Underside')}</button><button data-full>${L('Išplėsti ⤢','Expand ⤢')}</button></div><div class="av-quickbar" hidden></div><div class="av-explode-tools" hidden><button data-exploded>${L('Išskleistos jungtys','Exploded fittings')}</button><button data-wire>${L('Skaidrus karkasas','Transparent carcass')}</button></div><div class="av-stage"><canvas tabindex="0" role="img" aria-label="${L('Spintelės 3D modelis. Sukite rodyklių klavišais, didinkite pliusu, mažinkite minusu.','3D cabinet. Arrow keys orbit; plus and minus zoom.')}" ></canvas><svg class="av-joints" aria-label="${L('Jungčių redagavimas','Connector editor')}" hidden></svg><div class="av-photo-label" hidden aria-live="polite"></div><div class="av-camera"><button data-zoom="1.15" aria-label="${L('Priartinti','Zoom in')}">+</button><button data-zoom="0.87" aria-label="${L('Atitolinti','Zoom out')}">−</button><button data-reset aria-label="${L('Atkurti vaizdą','Reset view')}">↺</button></div><div class="av-hint">${L('Tempkite — sukite · Ratukas — mastelis ties pele · Shift + tempti — perstumti','Drag to orbit · Wheel to zoom at the pointer · Shift + drag to pan')}</div></div><div class="av-footer"><div class="av-boards" hidden></div><div class="av-connectors" hidden></div><label class="av-range"><span>${L('Atidarymas','Opening')}</span><input type="range" min="0" max="100" step="1" value="${V.open*100}" aria-label="${L('Durų ir stalčių atidarymas','Door and drawer opening')}"><output>${Math.round(V.open*100)}%</output></label><div class="av-settings"><label><input type="checkbox" data-option="hardware" ${V.hardware?'checked':''}>${L('Furnitūra','Hardware')}</label><label><input type="checkbox" data-option="dimensions" ${V.dimensions?'checked':''}>${L('Matmenys','Dimensions')}</label><label><input type="checkbox" data-option="handles" ${V.handles?'checked':''}>${L('Pavyzdinės rankenos','Example handles')}</label></div><div class="av-note">${L('Plokštės ir tarpai pagal modelį. TANDEM — korpuso dekoro dėžė; TANDEMBOX — antaro tipo metaliniai šonai. Furnitūros forma iliustracinė. Dekoro spalva apytikslė.','Panels and gaps follow the model. TANDEM uses the carcass finish; TANDEMBOX uses antaro-style metal sides. Hardware shapes are illustrative. Finish colours are approximate.')}</div></div></section>`;
  el.querySelector('.av-stage').insertAdjacentElement('afterend',el.querySelector('.av-photo-label'));
  const canvas=el.querySelector('canvas'), ctx=canvas.getContext('2d'), shell=el.querySelector('.av');
- let width,height,scale,panX=0,panY=0,faces=[],guides=[],drag=null,raf=0;
+ let width,height,scale,panX=0,panY=0,faces=[],guides=[],drag=null,raf=0,pickBuf=null;
  const d=r.dims||{W:+c.W||+c.dishWidth||600,H:+c.H||720,D:+c.D||560,t:18}, leg=(r.legs||[]).reduce((h,l)=>Math.max(h,l.h),0);
  function projection(q){let x=q[0]-d.W/2,y=q[1]-d.D*.32,z=q[2]-(d.H-leg)/2;let rx=x*Math.cos(V.yaw)+y*Math.sin(V.yaw),dp=-x*Math.sin(V.yaw)+y*Math.cos(V.yaw);return [width/2+panX+rx*scale,height*.46+panY-(z*Math.cos(V.pitch)+dp*Math.sin(V.pitch))*scale,dp*Math.cos(V.pitch)-z*Math.sin(V.pitch)];}
  // Connector editing overlays the same assembly camera and writes through the manufacturing engine.
@@ -2764,9 +3094,10 @@ function mount(el,c,r,lang,hooks={}){
  quickbar.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;if(b.hasAttribute('data-quick-add'))addConnector();if(b.hasAttribute('data-quick-undo'))hooks.onUndo();if(b.hasAttribute('data-quick-clear'))deselect();});
  function renderPositions(){const target=editor.querySelector('.av-j-positions'),side=jointSide();if(!target||!side)return;target.innerHTML=side.pos.map((p,i)=>`<div class="av-j-row ${J.index===i?'selected':''}"><span style="color:${colors[side.type]}">● ${i+1}</span><label><input type="number" step="0.1" data-j-position="${i}" value="${Math.round(p*10)/10}" aria-label="${L('Jungties vieta','Connector position')} ${i+1}"> mm</label><button data-j-remove="${i}" aria-label="${L('Pašalinti jungtį','Remove connector')} ${i+1}">×</button></div>`).join('')||`<p>${L('Jungčių nėra. Pridėkite jungtį.','No connectors. Add a connector.')}</p>`;}
  function renderEditor(){
- renderQuickbar();el.querySelector('.av-explode-tools').hidden=!V.edit;el.querySelector('[data-exploded]').setAttribute('aria-pressed',String(V.exploded));el.querySelector('[data-wire]').setAttribute('aria-pressed',String(V.wire));shell.classList.toggle('connector-mode',V.edit);editor.hidden=!V.edit;overlay.toggleAttribute('hidden',!V.edit);
+ renderQuickbar();renderBoards();el.querySelector('.av-explode-tools').hidden=!V.edit;el.querySelector('[data-exploded]').setAttribute('aria-pressed',String(V.exploded));el.querySelector('[data-wire]').setAttribute('aria-pressed',String(V.wire));shell.classList.toggle('connector-mode',V.edit||!!V.boards);editor.hidden=!V.edit;overlay.toggleAttribute('hidden',!V.edit&&!V.boards);{const bb=el.querySelector('[data-boards]');if(bb)bb.setAttribute('aria-pressed',String(!!V.boards));}
  el.querySelector('[data-connectors]').setAttribute('aria-pressed',String(V.edit));
  el.querySelector('.av-hint').textContent=V.edit?L('Taškas — pasirinkti · Tuščia vieta arba Esc — atžymėti · Matmenys — apačioje','Click a point to select · Empty space or Esc to deselect · Dimensions below'):L('Tempkite — sukite · Ratukas — mastelis ties pele · Shift + tempti — perstumti','Drag to orbit · Wheel to zoom at the pointer · Shift + drag to pan');
+ if(V.boards)el.querySelector('.av-hint').textContent=L('Spustelėkite plokštę — pasirinkti · ＋ — pridėti plokštę · ⇄ — kuri dengia kurią · Tempkite — sukite','Click a board to select · ＋ adds a board · ⇄ swaps which board covers · Drag to orbit');
  if(!V.edit){el.querySelector('.av-photo-label').hidden=true;return;}
  const j=findJoint(),side=jointSide();
  editor.innerHTML=`<div class="av-j-heading"><b>${L('Jungčių redagavimas','Edit connectors')}</b><button data-j-undo ${hooks.canUndo?'':'disabled'}>↶ ${L('Atšaukti','Undo')}</button></div><p class="av-j-help">${L('Korpuso vaizdas. Galvutės rodomos gręžimo vietose; redagavimo simboliai padidinti. Punktyras — paslėpta jungtis. Pasirinkite liniją, tada naudokite „Pridėti“ apačioje.','Carcass view. Heads follow drilling locations; editing symbols are enlarged. Dashed rings mark hidden fittings. Select a line, then use Add below.')}</p><label class="av-j-select">${L('Jungtis','Joint')}<select data-j-select><option value="">${L('Pasirinkite modelyje arba sąraše','Select on the model or from this list')}</option>${joints.map(jj=>`<option value="${esc(jj.key)}" ${J.key===jj.key?'selected':''}>${esc(nameOf(jj))}</option>`).join('')}</select></label>`;
@@ -2777,7 +3108,7 @@ function mount(el,c,r,lang,hooks={}){
  editor.innerHTML+=hardwareCard(side.type);
  renderPositions();
  }
- function drawOverlay(depths,pixelW,ratio){const photoLabel=el.querySelector('.av-photo-label');photoLabel.hidden=true;let selectedPoint=null;if(depths)connectorDepth={depths,pixelW,ratio};else if(connectorDepth){depths=connectorDepth.depths;pixelW=connectorDepth.pixelW;ratio=connectorDepth.ratio;}if(!overlay||!V.edit){if(overlay)overlay.innerHTML='';return;}
+ function drawOverlay(depths,pixelW,ratio){const photoLabel=el.querySelector('.av-photo-label');photoLabel.hidden=true;let selectedPoint=null;if(depths)connectorDepth={depths,pixelW,ratio};else if(connectorDepth){depths=connectorDepth.depths;pixelW=connectorDepth.pixelW;ratio=connectorDepth.ratio;}if(V.boards&&overlay){overlay.setAttribute('viewBox',`0 0 ${width} ${height}`);overlay.innerHTML=boardsOverlay();return;}if(!overlay||!V.edit){if(overlay)overlay.innerHTML='';return;}
  overlay.setAttribute('viewBox',`0 0 ${width} ${height}`);let out=hardwareDefs('av-hw');
  const occupied=[{x:width-52,y:0,w:52,h:140}],labels=[];
  const reserve=(x,y,w,h)=>{const r={x,y,w,h};occupied.push(r);return r;};
@@ -2832,7 +3163,6 @@ function mount(el,c,r,lang,hooks={}){
  if(b.hasAttribute('data-j-even')&&side.pos.length>=3){const first=side.pos[0],last=side.pos[side.pos.length-1];commitPositions(side.pos.map((v,i)=>Math.round((first+(last-first)*i/(side.pos.length-1))*10)/10));}
  if(b.hasAttribute('data-j-reset'))hooks.onReset(j.key,j.single||J.scope==='both'?null:J.side);
  });
- renderEditor();
  function face(points,color,wood=false,metal=false,front=false){const normal=unit(cross(sub(points[1],points[0]),sub(points[2],points[0])));faces.push({p:points,color,wood,metal,front,n:normal});}
  function box(o,size,color,transform,wood=false,metal=false,front=false){if(size.some(v=>v<=0))return;const [x,y,z]=size;let p=[[0,0,0],[x,0,0],[x,y,0],[0,y,0],[0,0,z],[x,0,z],[x,y,z],[0,y,z]].map(q=>{q=add(o,q);return transform?transform(q):q;});[[0,3,2,1],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]].forEach(f=>{let pts=f.map(i=>p[i]),center=mul(p.reduce((a,b)=>add(a,b),[0,0,0]),1/8),fc=mul(pts.reduce((a,b)=>add(a,b),[0,0,0]),1/4);if(dot(cross(sub(pts[1],pts[0]),sub(pts[2],pts[0])),sub(fc,center))<0)pts.reverse();face(pts,color,wood,metal,front);});}
  function cylinder(center,axis,radius,length,color,transform){const n=unit(axis),u=unit(cross(n,Math.abs(n[2])<.9?[0,0,1]:[1,0,0])),v=cross(n,u);let a=[],b=[];for(let i=0;i<16;i++){let q=add(center,add(mul(u,radius*Math.cos(i*Math.PI/8)),mul(v,radius*Math.sin(i*Math.PI/8))));a.push(transform?transform(q):q);q=add(q,mul(n,length));b.push(transform?transform(q):q);}face(a.slice().reverse(),color,false,true);face(b,color,false,true);for(let i=0;i<16;i++)face([a[i],a[(i+1)%16],b[(i+1)%16],b[i]],color,false,true);}
@@ -2874,9 +3204,66 @@ function mount(el,c,r,lang,hooks={}){
 
  function missingJoints(){return joints.flatMap(j=>(j.single?['L']:['L','R']).filter(sd=>!(j.sides?j.sides[sd]||j.sides.L:j).pos.length).map(sd=>({key:j.key,side:sd,single:j.single})));}
  function jointOverview(){const missing=missingJoints();return `<div class="av-j-overview">${joints.map(j=>{const total=(j.single?['L']:['L','R']).reduce((n,sd)=>n+(j.sides?j.sides[sd]||j.sides.L:j).pos.length,0),empty=missing.some(m=>m.key===j.key);return `<button data-j-pick="${esc(j.key)}" class="${empty?'empty-joint':''}" aria-pressed="${J.key===j.key}">${esc(nameOf(j))} <b>${total}</b>${empty?' ＋':''}</button>`;}).join('')}</div>${missing.length?`<button class="av-j-fill" data-j-fill>${L('Pridėti trūkstamas jungtis','Add missing connectors')} (${missing.length})</button>`:''}`;}
+
+ // ---- 3D construction: boards placed and removed in the model, the corners swapped, inner boards added
+ const BXN={bottom:L('Apačia','Bottom'),top:L('Viršus','Top'),left:L('Kairė','Left'),right:L('Dešinė','Right'),back:L('Nugara','Back'),front:L('Priekis','Front')};
+ const bxName=b=>b.kind==='part'?L('Pertvara','Partition')+' '+(b.lt.match(/\d+$/)||[''])[0]:b.kind==='shelf'?L('Lentyna','Shelf')+' '+(b.lt.match(/\d+$/)||[''])[0]:BXN[b.id];
+ const bxBoard=id=>isBox?r.box.boards.find(b=>b.id===id):null;
+ const corners=q=>{const e=q;const out=[];for(const x of e[0])for(const y of e[1])for(const z of e[2])out.push(projection([x,y,z]));return out;};
+ function hull(ps){ps=ps.map(p=>[p[0],p[1]]).sort((a,b)=>a[0]-b[0]||a[1]-b[1]);const cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);const lo=[],up=[];for(const p of ps){while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],p)<=0)lo.pop();lo.push(p);}for(let i=ps.length-1;i>=0;i--){const p=ps[i];while(up.length>=2&&cr(up[up.length-2],up[up.length-1],p)<=0)up.pop();up.push(p);}up.pop();lo.pop();return lo.concat(up);}
+ const ptsAttr=h=>h.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+ function boardsOverlay(){if(!isBox)return '';let out='';
+  const chip=(x,y,label,attrs,cls)=>{ctx.font='600 11px system-ui';const w=Math.ceil(ctx.measureText(label).width)+16;return `<g class="av-bx-chip ${cls||''}" ${attrs} tabindex="0" role="button"><rect x="${x-w/2}" y="${y-12}" width="${w}" height="24" rx="12"/><text x="${x}" y="${y+4}" text-anchor="middle">${esc(label)}</text></g>`;};
+  r.box.ghosts.forEach(g=>{const h=hull(corners(g.ext));out+=`<polygon class="av-bx-ghost" points="${ptsAttr(h)}"/>`;});
+  const sel=bxBoard(BX.sel);if(sel)out+=`<polygon class="av-bx-selline" points="${ptsAttr(hull(corners(sel.ext)))}"/>`;
+  // which board covers which: one marker on every corner line between two outer boards
+  r.box.covers.forEach(cv=>{const a=bxBoard(cv.a),b=bxBoard(cv.b);if(!a||!b)return;const axA=['left','right'].includes(a.id)?0:['front','back'].includes(a.id)?1:2,axB=['left','right'].includes(b.id)?0:['front','back'].includes(b.id)?1:2,axC=3-axA-axB;
+   const m=[0,0,0];m[axA]=(a.ext[axA][0]+a.ext[axA][1])/2;m[axB]=(b.ext[axB][0]+b.ext[axB][1])/2;const lo=Math.max(a.ext[axC][0],b.ext[axC][0]),hi=Math.min(a.ext[axC][1],b.ext[axC][1]);m[axC]=(lo+hi)/2;
+   const q=projection(m),other=cv.by===cv.a?cv.b:cv.a,mine=BX.sel===cv.a||BX.sel===cv.b,tip=`${BXN[cv.by]} ${L('dengia','covers')} ${BXN[other].toLowerCase()}`+(cv.forced?' · '+L('įleista plokštė visada viduje','a set-in board always sits inside'):' · '+L('spustelėkite — sukeisti','click to swap'));
+   out+=`<g class="av-bx-flip ${cv.forced?'forced':''} ${mine?'mine':''}" ${cv.forced?'':`data-bx-flip="${cv.key}" data-bx-by="${other}"`} tabindex="0" role="button"><circle cx="${q[0]}" cy="${q[1]}" r="${mine?12:9}"/><text x="${q[0]}" y="${q[1]+4}" text-anchor="middle">${cv.forced?'🔒':'⇄'}</text><title>${esc(tip)}</title></g>`;});
+  r.box.ghosts.forEach(g=>{const c3=[0,1,2].map(k=>(g.ext[k][0]+g.ext[k][1])/2);if(g.id!=='top'&&g.id!=='bottom')c3[2]=g.ext[2][0]+(g.ext[2][1]-g.ext[2][0])*.2;const q=projection(c3);out+=chip(q[0],q[1],'＋ '+BXN[g.id],`data-bx-add="${g.id}"`,'add');});
+  return out;}
+ function pickBoard(e){if(!pickBuf||!isBox)return;const rect=canvas.getBoundingClientRect(),px=Math.round((e.clientX-rect.left)*pickBuf.ratio),py=Math.round((e.clientY-rect.top)*pickBuf.ratio);if(px<0||py<0||px>=pickBuf.pixelW||py>=pickBuf.pixelH)return;const k=pickBuf.idbuf[py*pickBuf.pixelW+px];const b=k?r.box.boards[k-1]:null;BX.sel=b&&b.id!==BX.sel?b.id:null;renderBoards();schedule();}
+ const numIn=v=>{const n=Number(String(v).replace(',','.').trim());return isFinite(n)?n:0;};
+ function boxDo(fn,sel){if(!hooks.onBox)return;if(sel!==undefined)BX.sel=sel;hooks.onBox(fn);}
+ function newShelf(cc){const bx=cc.box,cav=r.box.cavity,cs=r.box.comps,sb=bxBoard(BX.sel),col=sb&&sb.kind==='shelf'?sb.col:sb&&sb.kind==='part'?Math.max(0,r.box.boards.filter(b=>b.kind==='part').indexOf(sb)):0,t=r.dims.t||18;
+  const zs=r.box.boards.filter(b=>b.kind==='shelf'&&b.col===col).map(b=>b.ext[2]).sort((a,b)=>a[0]-b[0]);let best=null,lo=cav[2][0];zs.concat([[cav[2][1],cav[2][1]]]).forEach(z=>{const g=z[0]-lo;if(!best||g>best[1]-best[0])best=[lo,z[0]];lo=z[1];});
+  const id=Math.max(0,...bx.inner.map(q=>+q.id||0))+1;bx.inner.push({id,kind:'shelf',z:Math.round((best[0]+best[1])/2-t/2),col:Math.min(col,cs.length-1),adj:false});return 'i'+id;}
+ function newPart(cc){const bx=cc.box,cs=r.box.comps;let w=-1,k=0;cs.forEach((c2,i)=>{if(c2[1]-c2[0]>w){w=c2[1]-c2[0];k=i;}});const id=Math.max(0,...bx.inner.map(q=>+q.id||0))+1;bx.inner.push({id,kind:'part',x:Math.round((cs[k][0]+cs[k][1])/2)});return 'i'+id;}
+ function renderBoards(){const host=el.querySelector('.av-boards');if(!host)return;host.hidden=!V.boards||!isBox;if(host.hidden)return;
+  const ids=['bottom','top','left','right','back','front'],on=id=>!!bxBoard(id),sel=bxBoard(BX.sel),bx=c.box||{boards:{},inner:[]};
+  let h=`<div class="av-j-heading"><b>${L('Plokštės','Boards')}</b><button data-j-undo ${hooks.canUndo?'':'disabled'}>↶ ${L('Atšaukti','Undo')}</button></div><p class="av-j-help">${L('Spustelėkite plokštę modelyje arba ＋ vietą, kurios dar nėra. ⇄ kampe — kuri plokštė dengia kurią.','Click a board in the model, or ＋ where there is none yet. ⇄ on a corner swaps which board covers the other.')}</p>`;
+  h+=`<div class="av-bx-chips" role="group" aria-label="${L('Išorinės plokštės','Outer boards')}">${ids.map(id=>`<button data-bx-toggle="${id}" aria-pressed="${on(id)}">${on(id)?'✓ ':'＋ '}${BXN[id]}</button>`).join('')}</div><div class="av-j-actions"><button data-bx-new="shelf">＋ ${L('Lentyna','Shelf')}</button><button data-bx-new="part">＋ ${L('Pertvara','Partition')}</button>${sel?`<button data-bx-clear>✕ ${L('Atžymėti','Deselect')}</button>`:''}</div>`;
+  if(sel){const p=(r.panels||[]).find(q=>q.name===sel.name),sz=p?`${Math.round(p.L*10)/10} × ${Math.round(p.W*10)/10} × ${p.T} mm`:'';
+   h+=`<div class="av-bx-sel"><div><b>${esc(bxName(sel))}</b><small>${esc(p?p.short:'')} · ${sz}</small></div><div class="av-bx-fields">`;
+   const fld=(k,label,val,ph)=>`<label>${label}<input type="text" inputmode="decimal" data-bx-field="${k}" value="${esc(val==null?'':val)}" placeholder="${esc(ph||'')}"><span>mm</span></label>`;
+   if(sel.kind==='outer'){const s=bx.boards[sel.id]||{};h+=fld('inset',L('Įleista','Set in'),s.inset||0)+fld('T',L('Storis','Thickness'),s.T||'',String(r.dims.t||18));
+    h+=`</div><div class="av-bx-corners">${r.box.covers.filter(cv=>cv.a===sel.id||cv.b===sel.id).map(cv=>{const o2=cv.a===sel.id?cv.b:cv.a;return `<div class="av-bx-corner"><span>${L('Su','With')} ${BXN[o2].toLowerCase()}</span><span class="av-bx-seg"><button ${cv.forced?'disabled':''} data-bx-flip="${cv.key}" data-bx-by="${sel.id}" aria-pressed="${cv.by===sel.id}">${BXN[sel.id]} ${L('dengia','covers')}</button><button ${cv.forced?'disabled':''} data-bx-flip="${cv.key}" data-bx-by="${o2}" aria-pressed="${cv.by===o2}">${BXN[o2]} ${L('dengia','covers')}</button></span></div>`;}).join('')}</div><div class="av-j-actions"><button class="danger" data-bx-toggle="${sel.id}">✕ ${L('Pašalinti plokštę','Remove board')}</button></div>`;}
+   else{const it=bx.inner.find(q=>'i'+q.id===sel.id)||{};
+    if(sel.kind==='part')h+=fld('x',L('Nuo kairės (centras)','From the left (centre)'),it.x)+fld('T',L('Storis','Thickness'),it.T||'',String(r.dims.t||18))+'</div>';
+    else h+=fld('z',L('Aukštis (apačia)','Height (underside)'),it.z)+(r.box.comps.length>1?`<label>${L('Skyrius','Compartment')}<select data-bx-field="col">${r.box.comps.map((c2,i)=>`<option value="${i}" ${i===sel.col?'selected':''}>${i+1}</option>`).join('')}</select></label>`:'')+`</div><div class="av-bx-seg"><button data-bx-adj="false" aria-pressed="${!sel.adj}">${L('Fiksuota (jungtys)','Fixed (connectors)')}</button><button data-bx-adj="true" aria-pressed="${sel.adj}">${L('Ant laikiklių','On pins')}</button></div>`;
+    h+=`<div class="av-j-actions"><button class="danger" data-bx-del="${sel.id}">✕ ${L('Pašalinti','Remove')}</button></div>`;}
+   h+='</div>';}
+  else h+=`<p class="av-j-status" role="status">${L('Pasirinkite plokštę modelyje.','Select a board in the model.')}</p>`;
+  host.innerHTML=h;}
+ function boardsClick(e){const t=e.target.closest('[data-bx-add],[data-bx-flip],[data-bx-toggle],[data-bx-new],[data-bx-del],[data-bx-adj],[data-bx-clear],[data-j-undo]');if(!t||t.disabled)return;e.preventDefault();e.stopPropagation();
+  if(t.hasAttribute('data-j-undo')){hooks.onUndo();return;}
+  if(t.hasAttribute('data-bx-clear')){BX.sel=null;renderBoards();schedule();return;}
+  if(t.dataset.bxAdd){const id=t.dataset.bxAdd;boxDo(cc=>{cc.box.boards[id].on=true;},id);return;}
+  if(t.dataset.bxToggle){const id=t.dataset.bxToggle,now=!!bxBoard(id);boxDo(cc=>{cc.box.boards[id].on=!now;},now?null:id);return;}
+  if(t.dataset.bxFlip){const k=t.dataset.bxFlip,by=t.dataset.bxBy;boxDo(cc=>{cc.box.cover[k]=by;});return;}
+  if(t.dataset.bxNew){let nid=null;hooks.onBox(cc=>{nid=t.dataset.bxNew==='shelf'?newShelf(cc):newPart(cc);BX.sel=nid;});return;}
+  if(t.dataset.bxDel){const id=t.dataset.bxDel;boxDo(cc=>{cc.box.inner=cc.box.inner.filter(q=>'i'+q.id!==id);},null);return;}
+  if(t.dataset.bxAdj){const v=t.dataset.bxAdj==='true',id=BX.sel;boxDo(cc=>{const it=cc.box.inner.find(q=>'i'+q.id===id);if(it)it.adj=v;});return;}}
+ el.querySelector('.av-boards').addEventListener('click',boardsClick);
+ overlay.addEventListener('pointerdown',e=>{if(!V.boards)return;if(e.target.closest('[data-bx-add],[data-bx-flip]'))boardsClick(e);});
+ overlay.addEventListener('keydown',e=>{if(!V.boards||!['Enter',' '].includes(e.key))return;if(e.target.closest('[data-bx-add],[data-bx-flip]'))boardsClick(e);});
+ el.querySelector('.av-boards').addEventListener('change',e=>{const f=e.target.closest('[data-bx-field]');if(!f)return;const k=f.dataset.bxField,id=BX.sel,raw=f.value;
+  boxDo(cc=>{if(id&&id[0]==='i'){const it=cc.box.inner.find(q=>'i'+q.id===id);if(!it)return;it[k]=k==='T'&&!String(raw).trim()?'':k==='col'?+raw:numIn(raw);}else if(id){const s=cc.box.boards[id];s[k]=k==='T'&&!String(raw).trim()?'':numIn(raw);}});});
+ renderEditor();
  function scene(){faces=[];guides=[];
  // Actual panel placement, including panel rotations performed by the manufacturing engine.
- (r.panels||[]).forEach(p=>{if(!p.place||/^(DURYS|FASADAS)$/.test(p.role))return;let q=p.place;const tf=v=>add(q.o,add(mul(q.u,v[0]),add(mul(q.v,v[1]),mul(q.n,-v[2]))));box([0,0,0],[p.L,p.W,p.T],mat(p.mat,'#e5e2da'),tf,wood(p.mat));});
+ (r.panels||[]).forEach(p=>{if(!p.place||/^(DURYS|FASADAS)$/.test(p.role))return;let q=p.place;const tf=v=>add(q.o,add(mul(q.u,v[0]),add(mul(q.v,v[1]),mul(q.n,-v[2]))));const bi=isBox?r.box.boards.findIndex(b=>b.name===p.name):-1,sel=V.boards&&bi>=0&&r.box.boards[bi].id===BX.sel,k0=faces.length;box([0,0,0],[p.L,p.W,p.T],sel?'#9fd0b4':mat(p.mat,'#e5e2da'),tf,!sel&&wood(p.mat));for(let k=k0;k<faces.length;k++)faces[k].bid=bi+1;});
  faces.forEach(f=>f.carcass=true);
  (r.legs||[]).forEach(l=>{if(l.feet){cylinder([l.x,l.y,-l.h],[0,0,1],l.d*.5,l.h,'#343b3a');return;}cylinder([l.x,l.y,-l.h],[0,0,1],l.d*.5,l.h,'#343b3a');cylinder([l.x,l.y,-l.h],[0,0,1],l.d*.68,8,'#272e2c');cylinder([l.x,l.y,-12],[0,0,1],30,12,'#414844');});
  {const pl=(r.visual||{}).plinth;if(pl&&V.mode==='assembly'&&!V.edit)box([pl.x0,pl.y0,pl.z0],[pl.x1-pl.x0,pl.t,pl.z1-pl.z0],mat(pl.mat,'#d5cbbd'),null,wood(pl.mat),false,true);}
@@ -2952,7 +3339,7 @@ function mount(el,c,r,lang,hooks={}){
  const view=[Math.sin(V.yaw)*Math.cos(V.pitch),-Math.cos(V.yaw)*Math.cos(V.pitch),Math.sin(V.pitch)];
  // Rasterize surfaces with a depth buffer: hardware behind a side panel must never show through it.
  const pixelW=canvas.width,pixelH=canvas.height,frame=ctx.getImageData(0,0,pixelW,pixelH),pixels=frame.data;
- const depths=new Float32Array(pixelW*pixelH);depths.fill(Infinity);
+ const depths=new Float32Array(pixelW*pixelH);depths.fill(Infinity);const idbuf=new Uint8Array(pixelW*pixelH);pickBuf={idbuf,pixelW,pixelH,ratio};
  const lightDirection=unit([-1,-2,3]);
  faces.forEach(f=>{
  if(V.edit&&V.wire&&f.carcass)return;
@@ -2968,7 +3355,7 @@ function mount(el,c,r,lang,hooks={}){
  const xmin=Math.max(0,Math.floor(Math.min(a[0],b[0],cc[0]))),xmax=Math.min(pixelW-1,Math.ceil(Math.max(a[0],b[0],cc[0]))),ymin=Math.max(0,Math.floor(Math.min(a[1],b[1],cc[1]))),ymax=Math.min(pixelH-1,Math.ceil(Math.max(a[1],b[1],cc[1])));
  for(let y=ymin;y<=ymax;y++)for(let x=xmin;x<=xmax;x++){
  const px=x+.5,py=y+.5,u=((b[1]-cc[1])*(px-cc[0])+(cc[0]-b[0])*(py-cc[1]))/den,v=((cc[1]-a[1])*(px-cc[0])+(a[0]-cc[0])*(py-cc[1]))/den,w=1-u-v;if(u<-.00001||v<-.00001||w<-.00001)continue;
- const z=u*a[2]+v*b[2]+w*cc[2],idx=y*pixelW+x;if(z>=depths[idx])continue;depths[idx]=z;
+ const z=u*a[2]+v*b[2]+w*cc[2],idx=y*pixelW+x;if(z>=depths[idx])continue;depths[idx]=z;idbuf[idx]=f.bid||0;
  let factor=light,highlight=0;
  if(f.metal){const wy=u*f.p[0][1]+v*f.p[k][1]+w*f.p[k+1][1],wz=u*f.p[0][2]+v*f.p[k][2]+w*f.p[k+1][2];factor+=.10*Math.sin(wy*.017+wz*.008);}
  if(f.wood){const wx=u*f.p[0][0]+v*f.p[k][0]+w*f.p[k+1][0],wy=u*f.p[0][1]+v*f.p[k][1]+w*f.p[k+1][1],wz=u*f.p[0][2]+v*f.p[k][2]+w*f.p[k+1][2];factor+=.025*Math.sin(wx*.65+wy*.12+Math.sin(wz*.016)*.9);}
@@ -2991,13 +3378,13 @@ function mount(el,c,r,lang,hooks={}){
  el.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===V.mode));
  }
  function schedule(){if(!raf)raf=requestAnimationFrame(draw);}
- el.addEventListener('click',e=>{let b=e.target.closest('button');if(!b)return;if(b.hasAttribute('data-connectors')){V.edit=!V.edit;renderEditor();}if(b.hasAttribute('data-exploded')){V.exploded=!V.exploded;renderEditor();}if(b.hasAttribute('data-wire')){V.wire=!V.wire;renderEditor();}if(b.dataset.mode){V.mode=b.dataset.mode;V.edit=false;renderEditor();}if(b.dataset.view){V.yaw=b.dataset.view==='front'?0:.52;V.pitch=b.dataset.view==='front'?0:b.dataset.view==='underside'?-.8:.32;V.zoom=1;V.px=V.py=0;}if(b.dataset.zoom){const z2=Math.max(.5,Math.min(8,V.zoom*+b.dataset.zoom)),kk=z2/V.zoom;V.px*=kk;V.py*=kk;V.zoom=z2;}if(b.hasAttribute('data-reset')){V.yaw=.52;V.pitch=.32;V.zoom=1;V.px=V.py=0;}if(b.hasAttribute('data-full')){V.full=!V.full;shell.classList.toggle('full',V.full);}schedule();});
+ el.addEventListener('click',e=>{let b=e.target.closest('button');if(!b)return;if(b.hasAttribute('data-connectors')){V.edit=!V.edit;if(V.edit)V.boards=false;renderEditor();}if(b.hasAttribute('data-boards')){V.boards=!V.boards;if(V.boards)V.edit=false;renderEditor();}if(b.hasAttribute('data-exploded')){V.exploded=!V.exploded;renderEditor();}if(b.hasAttribute('data-wire')){V.wire=!V.wire;renderEditor();}if(b.dataset.mode){V.mode=b.dataset.mode;V.edit=false;V.boards=false;renderEditor();}if(b.dataset.view){V.yaw=b.dataset.view==='front'?0:.52;V.pitch=b.dataset.view==='front'?0:b.dataset.view==='underside'?-.8:.32;V.zoom=1;V.px=V.py=0;}if(b.dataset.zoom){const z2=Math.max(.5,Math.min(8,V.zoom*+b.dataset.zoom)),kk=z2/V.zoom;V.px*=kk;V.py*=kk;V.zoom=z2;}if(b.hasAttribute('data-reset')){V.yaw=.52;V.pitch=.32;V.zoom=1;V.px=V.py=0;}if(b.hasAttribute('data-full')){V.full=!V.full;shell.classList.toggle('full',V.full);}schedule();});
  // Handlers belong to the newly created nodes; mounts can safely replace the preview.
  el.querySelector('input[type=range]').oninput=e=>{V.open=+e.target.value/100;el.querySelector('output').textContent=e.target.value+'%';schedule();};
  el.querySelectorAll('[data-option]').forEach(i=>i.onchange=()=>{V[i.dataset.option]=i.checked;schedule();});
- canvas.onpointerdown=e=>{if(e.button!==0&&e.button!==1)return;if(e.button===1)e.preventDefault();drag={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,pan:e.shiftKey||e.button===1};canvas.setPointerCapture(e.pointerId);};canvas.onpointermove=e=>{if(!drag)return;if(drag.pan){V.px+=e.clientX-drag.x;V.py+=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;schedule();return;}V.yaw-=(e.clientX-drag.x)*.008;V.pitch=Math.max(-1.2,Math.min(1.2,V.pitch+(e.clientY-drag.y)*.006));drag={x:e.clientX,y:e.clientY};schedule();};canvas.onpointerup=e=>{const d0=drag;drag=null;if(d0&&V.edit&&J.key&&Math.hypot(e.clientX-d0.x0,e.clientY-d0.y0)<5)deselect();};canvas.onpointercancel=()=>drag=null;
- canvas.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','+','-','=','Escape'].includes(e.key))return;e.preventDefault();if(e.key==='Escape'){if(V.edit&&J.key){e.stopPropagation();deselect();return;}V.full=false;shell.classList.remove('full');}if(e.key==='ArrowLeft')V.yaw+=.1;if(e.key==='ArrowRight')V.yaw-=.1;if(e.key==='ArrowUp')V.pitch=Math.min(1.2,V.pitch+.1);if(e.key==='ArrowDown')V.pitch=Math.max(-1.2,V.pitch-.1);if(e.key==='+'||e.key==='=')V.zoom=Math.min(2.5,V.zoom*1.1);if(e.key==='-')V.zoom=Math.max(.5,V.zoom/1.1);schedule();};
- shell.onkeydown=e=>{if(e.key==='Escape'){if(V.edit&&J.key&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){deselect();return;}V.full=false;shell.classList.remove('full');schedule();}};
+ canvas.onpointerdown=e=>{if(e.button!==0&&e.button!==1)return;if(e.button===1)e.preventDefault();drag={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,pan:e.shiftKey||e.button===1};canvas.setPointerCapture(e.pointerId);};canvas.onpointermove=e=>{if(!drag)return;if(drag.pan){V.px+=e.clientX-drag.x;V.py+=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;schedule();return;}V.yaw-=(e.clientX-drag.x)*.008;V.pitch=Math.max(-1.2,Math.min(1.2,V.pitch+(e.clientY-drag.y)*.006));drag={x:e.clientX,y:e.clientY};schedule();};canvas.onpointerup=e=>{const d0=drag;drag=null;if(d0&&V.edit&&J.key&&Math.hypot(e.clientX-d0.x0,e.clientY-d0.y0)<5)deselect();if(d0&&V.boards&&!d0.pan&&Math.hypot(e.clientX-d0.x0,e.clientY-d0.y0)<5)pickBoard(e);};canvas.onpointercancel=()=>drag=null;
+ canvas.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','+','-','=','Escape'].includes(e.key))return;e.preventDefault();if(e.key==='Escape'){if(V.edit&&J.key){e.stopPropagation();deselect();return;}if(V.boards&&BX.sel){e.stopPropagation();BX.sel=null;renderBoards();schedule();return;}V.full=false;shell.classList.remove('full');}if(e.key==='ArrowLeft')V.yaw+=.1;if(e.key==='ArrowRight')V.yaw-=.1;if(e.key==='ArrowUp')V.pitch=Math.min(1.2,V.pitch+.1);if(e.key==='ArrowDown')V.pitch=Math.max(-1.2,V.pitch-.1);if(e.key==='+'||e.key==='=')V.zoom=Math.min(2.5,V.zoom*1.1);if(e.key==='-')V.zoom=Math.max(.5,V.zoom/1.1);schedule();};
+ shell.onkeydown=e=>{if(e.key==='Escape'){if(V.edit&&J.key&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){deselect();return;}if(V.boards&&BX.sel&&!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)){BX.sel=null;renderBoards();schedule();return;}V.full=false;shell.classList.remove('full');schedule();}};
  // wheel: zoom at the pointer (the page does not scroll while the pointer is over the model)
  canvas.addEventListener('wheel',e=>{e.preventDefault();const rect=canvas.getBoundingClientRect(),mx=e.clientX-rect.left,my=e.clientY-rect.top,step=e.deltaMode===1?e.deltaY*16:e.deltaY;
  const z2=Math.max(.5,Math.min(8,V.zoom*Math.exp(-step*.0015))),kk=z2/V.zoom;if(Math.abs(kk-1)<1e-4)return;const cx=mx-width/2,cy=my-height*.46;
@@ -3006,7 +3393,7 @@ function mount(el,c,r,lang,hooks={}){
  observer=new ResizeObserver(schedule);observer.observe(canvas);draw();
 }
 // Prevent old closure listeners from accumulating when live numeric inputs refresh the mount.
-window.DBAssembly={mount:function(el,c,r,lang,hooks){let clean=el.cloneNode(false);el.replaceWith(clean);mount(clean,c,r,lang,hooks);}};
+window.DBAssembly={mount:function(el,c,r,lang,hooks){let clean=el.cloneNode(false);el.replaceWith(clean);mount(clean,c,r,lang,hooks);},setBoards:function(on){V.boards=!!on;if(on){V.edit=false;V.mode='assembly';}}};
 })();
 </script>
 <script>
@@ -4529,7 +4916,10 @@ lt:{
  tCab:'Spintelės', tRes:'Detalės ir CNC', tSet:'Nustatymai', projects:'Projektai',
  cabs:'Spintelės', newCab:'＋ Nauja spintelė', dup:'Kopijuoti', del:'Ištrinti', delSure:'Tikrai ištrinti?',
  pickTitle:'Kokią spintelę kuriame?', pickLead:'Pasirinkite panašiausią — viską galėsite pakeisti.', cancel:'Atšaukti',
- pDrawers:'Stalčių spintelė', pDoors:'Durų spintelė', pDrDoors:'Stalčius + durys', pWall:'Pakabinama', pTall:'Aukšta su orkaite', pDish:'Indaplovės fasadas', pEmpty:'Tuščia (lentynos)',
+ pDrawers:'Stalčių spintelė', pDoors:'Durų spintelė', pDrDoors:'Stalčius + durys', pWall:'Pakabinama', pTall:'Aukšta su orkaite', pDish:'Indaplovės fasadas', pEmpty:'Tuščia (lentynos)', pBox:'3D konstrukcija',
+ bxS1l:'Išoriniai matmenys. Plokštes dėliokite modelyje (▣ Plokštės) arba žemiau.', bxS2:'Plokštės', bxS2l:'Kurios plokštės yra, kiek įleistos ir kuri kurią dengia kampuose.', bxS3:'Vidus', bxS3l:'Pertvaros — per visą aukštį tarp apačios ir viršaus; lentynos — skyriuje tarp pertvarų.', bxS4:'Jungtys', bxS4l:'Kiekvienas galas, atsiremiantis į kitos plokštės plokštumą, sujungiamas — rūšis, kiekis ir vietos kiekvienam mazgui.',
+ bx_bottom:'Apačia', bx_top:'Viršus', bx_left:'Kairė', bx_right:'Dešinė', bx_back:'Nugara', bx_front:'Priekis', bxInset:'Įleista', bxT:'Storis', bxCorners:'Kampai — kuri plokštė dengia kurią', bxCovers:'dengia', bxForced:'įleista plokštė visada viduje', bxWith:'su',
+ bxAddShelf:'＋ Lentyna', bxAddPart:'＋ Pertvara', bxShelf:'Lentyna', bxPart:'Pertvara', bxZ:'Aukštis (apačia)', bxX:'Nuo kairės (centras)', bxCol:'Skyrius', bxAdj:'Ant laikiklių', bxFixed:'Fiksuota', bxRm:'Pašalinti', bxPinRow:'Laikiklių eilė (po 2 skyles aukščiau ir žemiau)', bxNoInner:'Vidinių plokščių nėra.', bxDefJ:'Numatyta jungtis', bxTph:'kaip korpusas', bx3d:'▣ Dėlioti modelyje',
  s1:'Matmenys', s1l:'Karkaso išoriniai matmenys milimetrais, be kojelių. Galima rašyti 600-18.',
  name:'Pavadinimas', type:'Tipas', tBase:'Pastatoma', tWall:'Pakabinama', tTall:'Aukšta', W:'Plotis', H:'Aukštis', D:'Gylis', thick:'Plokštė', facT:'Fasadas', dishW:'Indaplovės plotis',
  s2:'Sekcijos', s2l:'Viršus sąrašo viršuje. „Likęs“ — užima likusį aukštį.',
@@ -4644,7 +5034,10 @@ en:{
  tCab:'Cabinets', tRes:'Parts & CNC', tSet:'Settings', projects:'Projects',
  cabs:'Cabinets', newCab:'＋ New cabinet', dup:'Duplicate', del:'Delete', delSure:'Really delete?',
  pickTitle:'What are we building?', pickLead:'Pick the closest one — everything can be changed.', cancel:'Cancel',
- pDrawers:'Drawer cabinet', pDoors:'Door cabinet', pDrDoors:'Drawer + doors', pWall:'Wall cabinet', pTall:'Tall with oven', pDish:'Dishwasher front', pEmpty:'Empty (shelves)',
+ pDrawers:'Drawer cabinet', pDoors:'Door cabinet', pDrDoors:'Drawer + doors', pWall:'Wall cabinet', pTall:'Tall with oven', pDish:'Dishwasher front', pEmpty:'Empty (shelves)', pBox:'3D construction',
+ bxS1l:'Outer size. Place the boards in the model (▣ Boards) or below.', bxS2:'Boards', bxS2l:'Which boards there are, how far they are set in, and which covers which at the corners.', bxS3:'Inside', bxS3l:'Partitions run the full height between bottom and top; shelves sit in one compartment.', bxS4:'Joints', bxS4l:'Every end that meets another board\'s face is joined — type, count and positions per joint.',
+ bx_bottom:'Bottom', bx_top:'Top', bx_left:'Left', bx_right:'Right', bx_back:'Back', bx_front:'Front', bxInset:'Set in', bxT:'Thickness', bxCorners:'Corners — which board covers which', bxCovers:'covers', bxForced:'a set-in board always sits inside', bxWith:'with',
+ bxAddShelf:'＋ Shelf', bxAddPart:'＋ Partition', bxShelf:'Shelf', bxPart:'Partition', bxZ:'Height (underside)', bxX:'From the left (centre)', bxCol:'Compartment', bxAdj:'On pins', bxFixed:'Fixed', bxRm:'Remove', bxPinRow:'Pin row (2 more holes above and below)', bxNoInner:'No inner boards.', bxDefJ:'Default joint', bxTph:'as carcass', bx3d:'▣ Place in the model',
  s1:'Dimensions', s1l:'Outer carcass size in millimetres, without legs. You can type 600-18.',
  name:'Name', type:'Type', tBase:'Base', tWall:'Wall', tTall:'Tall', W:'Width', H:'Height', D:'Depth', thick:'Board', facT:'Front', dishW:'Dishwasher width',
  s2:'Sections', s2l:'Top of the list is the top of the cabinet. “Fill” takes the remaining height.',
@@ -4838,12 +5231,14 @@ var PRESETS = [
   { k:'pWall',    type:'PAKABINAMOS', W:600, H:720, D:330, secs:[['doors', { fill:true, nDoors:2, shelves:2 }]] },
   { k:'pTall',    type:'ŪKINĖ', W:600, H:2100, D:580, secs:[['drawers', { fill:false, height:560, nDrawers:2 }], ['oven', { fill:false, height:595, shelves:2 }], ['doors', { fill:true, nDoors:1, shelves:2, hingeSide:'right' }]] },
   { k:'pDish',    type:'PASTATOMOS', W:600, H:720, D:560, dish:true, secs:[] },
-  { k:'pEmpty',   type:'PASTATOMOS', W:600, H:720, D:560, secs:[['open', { fill:true, shelves:2 }]] }
+  { k:'pEmpty',   type:'PASTATOMOS', W:600, H:720, D:560, secs:[['open', { fill:true, shelves:2 }]] },
+  { k:'pBox',     type:'PASTATOMOS', W:600, H:720, D:560, box:true, secs:[] }
 ];
 function fromPreset(pr) {
   var c = newCabinet(pr.type); c.W = pr.W; c.H = pr.H; c.D = pr.D; c.dishWidth = pr.W;
   if (pr.dish) { c.dishwasher = true; c.name = S.lang === 'lt' ? 'Indaplovė' : 'Dishwasher'; }
   c.sections = pr.secs.map(function (s) { return Object.assign(newSection(s[0]), s[1]); });
+  if (pr.box) { c.kind = 'box'; c.box = { boards:{}, cover:{}, inner:[] }; E.boxDefaults(c); c.cnc.legs = false; c.cnc.feet = false; }
   return c;
 }
 
@@ -4879,6 +5274,7 @@ function normCab(c) {
   c.cnc.joints = (c.cnc.joints && typeof c.cnc.joints === 'object') ? c.cnc.joints : {};
   c.sections = (c.sections || []).map(function (s) { return Object.assign(newSection(s.kind || 'doors'), s); });
   fixCols(c);
+  if (c.kind === 'box') { E.boxDefaults(c); c.cnc.legs = false; c.cnc.feet = false; }
   return c;
 }
 function sample() {   // first run: a realistic small project so the tool opens working
@@ -4946,6 +5342,10 @@ function engineDef(c) {
   d.cnc.facadeT = num(d.cnc.facadeT) || 18;
   d.sections.forEach(function (s) { ['height', 'nDrawers', 'rail', 'nDoors', 'shelves'].forEach(function (k) { s[k] = num(s[k]); }); s.shelfPos = (s.shelfPos || []).map(num); });
   d.cols = colsOf(c); d.colW = d.cols > 1 ? colWidths(c) : [];
+  if (d.kind === 'box' && d.box) {
+    Object.keys(d.box.boards || {}).forEach(function (k) { var b = d.box.boards[k]; b.inset = num(b.inset) || 0; b.T = num(b.T) || ''; });
+    (d.box.inner || []).forEach(function (q) { ['x', 'z', 'col', 'setback'].forEach(function (k) { if (q[k] != null) q[k] = num(q[k]); }); q.T = num(q.T) || ''; });
+  }
   return d;
 }
 function buildOne(i) {
@@ -4988,6 +5388,7 @@ function ico(kind) {
     pTall:'<rect x="15" y="2" width="24" height="50" rx="1.5" ' + st + '/><rect x="18" y="20" width="18" height="14" ' + st + '/><line x1="15" y1="38" x2="39" y2="38" ' + st + '/><line x1="15" y1="45" x2="39" y2="45" ' + st + '/>',
     pDish:box + '<line x1="14" y1="12" x2="40" y2="12" ' + st + '/><circle cx="18" cy="9" r="0.5" ' + st + '/>',
     pEmpty:box + '<line x1="8" y1="20" x2="46" y2="20" ' + st + '/><line x1="8" y1="34" x2="46" y2="34" ' + st + '/>',
+    pBox:'<path d="M8 17 L27 8 L46 17 L46 39 L27 48 L8 39 Z" ' + st + '/><path d="M8 17 L27 26 L46 17 M27 26 L27 48" ' + st + '/><path d="M17 21.5 L17 43.5" ' + st + ' stroke-dasharray="3 3"/>',
     conf:'<rect x="4" y="22" width="36" height="9" ' + st + '/><rect x="31" y="4" width="9" height="36" ' + st + '/><line x1="35.5" y1="2" x2="35.5" y2="30" stroke="currentColor" stroke-width="3"/>',
     cam:'<rect x="4" y="22" width="36" height="9" ' + st + '/><rect x="31" y="4" width="9" height="36" ' + st + '/><circle cx="35.5" cy="26.5" r="5" ' + st + '/><line x1="14" y1="26.5" x2="31" y2="26.5" stroke="currentColor" stroke-width="2.5"/>'
   };
@@ -5047,10 +5448,10 @@ function viewCab(info) {
   return '<div class="ws">' + rail + '<section class="editor">' + stepNav(c, inf) + viewEditor(c) + '</section>' + viewSheet(c, inf) + '</div>';
 }
 /* where am I / what is left: the steps of this cabinet, with a mark where something needs attention */
-function needsMats(c) { if (c.dishwasher) return !c.mat.facade; return !c.mat.carc || (c.sections.some(function (s) { return s.kind === 'drawers' || s.kind === 'doors'; }) && !c.mat.facade); }
+function needsMats(c) { if (c.dishwasher) return !c.mat.facade; if (c.kind === 'box') return !c.mat.carc; return !c.mat.carc || (c.sections.some(function (s) { return s.kind === 'drawers' || s.kind === 'doors'; }) && !c.mat.facade); }
 function stepNav(c, inf) {
   var z = c.dishwasher ? null : zoneInfo(c), bad = inf.warnings.some(function (w) { return level(w) === 'bad'; });
-  var st = c.dishwasher ? [['dims', 1, t('n1')], ['mats', 2, t('n5'), needsMats(c)]]
+  var st = c.kind === 'box' ? [['dims', 1, t('n1')], ['boards', 2, t('bxS2'), !inf.r.panels.length], ['inner', 3, t('bxS3')], ['joints', 4, t('bxS4'), bad], ['mats', 5, t('n5'), needsMats(c)], ['extra', 6, t('n6')]] : c.dishwasher ? [['dims', 1, t('n1')], ['mats', 2, t('n5'), needsMats(c)]]
     : [['dims', 1, t('n1')], ['secs', 2, t('n2'), z.over || !c.sections.length], ['ops', 3, t('n4'), bad], ['mats', 4, t('n5'), needsMats(c)], ['extra', 5, t('n6')]];
   return '<nav class="stepnav" aria-label="' + t('stepsNav') + '">' + st.map(function (x, i) {
     return '<button type="button" class="' + (i === 0 ? 'on' : '') + (x[3] ? ' need' : '') + '" data-act="goto" data-v="st-' + x[0] + '"' + (x[3] ? ' title="' + t('stepNeed') + '"' : '') + '><span class="sn">' + x[1] + '</span><span class="sl">' + esc(x[2]) + '</span>' + (x[3] ? '<i class="sdot" aria-label="' + t('stepNeed') + '"></i>' : '') + '</button>';
@@ -5071,7 +5472,7 @@ window.addEventListener('scroll', function () {   // highlight the step being re
   if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) act = bs.length - 1;
   bs.forEach(function (b, i) { b.classList.toggle('on', i === act); });
 }, { passive:true });
-function typeName(c) { return c.dishwasher ? t('pDish') : ({ 'PASTATOMOS':t('tBase'), 'PAKABINAMOS':t('tWall'), 'ŪKINĖ':t('tTall') })[c.type] || c.type; }
+function typeName(c) { if (c.kind === 'box') return t('pBox'); return c.dishwasher ? t('pDish') : ({ 'PASTATOMOS':t('tBase'), 'PAKABINAMOS':t('tWall'), 'ŪKINĖ':t('tTall') })[c.type] || c.type; }
 function viewPick() {
   return '<div class="card"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px"><div><h3 style="margin:0;font:600 24px var(--f-display)">' + (S.proj.cabinets.length ? t('pickTitle') : t('firstCabQ')) + '</h3><p class="note" style="margin:2px 0 0">' + t('pickLead') + '</p></div>' +
     (S.proj.cabinets.length ? '<button class="btn ghost" data-act="unpick">' + t('cancel') + '</button>' : '') + '</div><div class="presets">' +
@@ -5127,6 +5528,7 @@ function colMapInner(c) {
 }
 function zoneHtml(z) { return t('zone') + ' <b>' + fmt(z.Hz) + '</b> mm · ' + t('used') + ' <b>' + fmt(z.exp + z.fillH * z.nFill) + '</b>' + (z.over ? ' · <b>' + t('over') + ' ' + fmt(z.exp - z.Hz) + '</b>' : ''); }
 function viewEditor(c) {
+  if (c.kind === 'box') return boxEditor(c);
   var b = 'c.', o = c.cnc, h = '';
   /* 1 — dimensions */
   var bIn = o.bottom === 'inside';
@@ -5195,12 +5597,13 @@ function jointsBlock(c, r) {
   var ORDER = ['bottom', 'top', 'railF', 'railB', 'railV', 'railVH', 'railBottom', 'railBotB', 'back', 'partB', 'partT', 'partF', 'partR', 'backP', 'shelf', 'oven'];
   var oi = function (k) { var m = /^(\D+)(\d)$/.exec(k); return m ? ORDER.indexOf(m[1]) * 10 + +m[2] : ORDER.indexOf(k) * 10; };   // partitions in order: 1, 2, …
   var js = ((r && r.joints) || []).slice().sort(function (a, b) { return oi(a.key) - oi(b.key); }); if (!js.length) return '';
+  var jl = function (j) { return tJ('jk_' + j.key); };
   var rows = js.map(function (j) {
     var b = 'c.cnc.joints.' + j.key + '.', own = (c.cnc.joints || {})[j.key] || {}, id = 'f-j-' + j.key;
     var sideTxt = function (x) { return '<b>' + esc(t('isoT_' + x.type)) + '</b> ' + (x.pos.length ? x.pos.map(function (a) { return E.num(Math.round(a * 10) / 10); }).join(' · ') : '—') + ' <span class="unit">mm</span>'; };
-    if (j.split) return '<div class="jrow custom"><span class="jl">' + t('jk_' + j.key) + '</span><span class="jnums jman jsplit"><span><span class="unit">' + t('sideL') + ':</span> ' + sideTxt(j.sides.L) + '</span><span><span class="unit">' + t('sideR') + ':</span> ' + sideTxt(j.sides.R) + '</span>' +
+    if (j.split) return '<div class="jrow custom"><span class="jl">' + esc(jl(j)) + '</span><span class="jnums jman jsplit"><span><span class="unit">' + t('sideL') + ':</span> ' + sideTxt(j.sides.L) + '</span><span><span class="unit">' + t('sideR') + ':</span> ' + sideTxt(j.sides.R) + '</span>' +
       '<button type="button" class="btn ghost" data-act="isosel" data-v="' + j.key + '">' + t('isoEdit') + '</button></span><button class="btn ghost jreset" data-act="jreset" data-v="' + j.key + '" title="' + t('jAuto') + '">↺ ' + t('jAuto') + '</button></div>';
-    return '<div class="jrow' + (j.custom ? ' custom' : '') + '"><span class="jl">' + t('jk_' + j.key) + '</span>' +
+    return '<div class="jrow' + (j.custom ? ' custom' : '') + '"><span class="jl">' + esc(jl(j)) + '</span>' +
       segI(b + 'type', j.type, [['confirmat', t('jtConf')], ['cam', t('jtCam')], ['dowel', t('jtDowel')]]) +
       (j.manual ? '<span class="jnums jman"><span class="unit">' + t('isoManual') + ':</span> <b>' + (j.pos.length ? j.pos.map(function (a) { return E.num(Math.round(a * 10) / 10); }).join(' · ') : '—') + '</b> <span class="unit">mm</span> <button type="button" class="btn ghost" data-act="isosel" data-v="' + j.key + '">' + t('isoEdit') + '</button></span>' :
       '<span class="jnums"><label for="' + id + '-n">' + t('jN') + '</label><input id="' + id + '-n" type="text" inputmode="numeric" data-bind="' + b + 'n" data-num="1" data-empty="1" value="' + esc(own.n || '') + '" placeholder="' + j.defN + '">' +
@@ -5208,6 +5611,50 @@ function jointsBlock(c, r) {
       (j.custom ? '<button class="btn ghost jreset" data-act="jreset" data-v="' + j.key + '" title="' + t('jAuto') + '">↺ ' + t('jAuto') + '</button>' : '<span class="badge mut">' + t('jAuto') + '</span>') + '</div>';
   }).join('');
   return '<div class="lbl" style="margin-top:4px">' + t('jTitle') + '</div><p class="note" style="margin:0 0 8px">' + t('jLead') + '</p><div class="jrows">' + rows + '</div>';
+}
+/* ---- 3D construction (c.kind 'box'): boards, corners, inner boards and joints; the same choices as the model's ▣ Plokštės mode */
+function cap1(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
+/* joint names of a 3D construction come from the engine in Lithuanian ('Lentyna 1 – kairė') */
+function boxLabel(s) { if (S.lang !== 'en') return cap1(s); var m = { 'apačia':'bottom', 'viršus':'top', 'kairė':'left', 'dešinė':'right', 'nugara':'back', 'priekis':'front', 'pertvara':'partition', 'lentyna':'shelf' };
+  return cap1(String(s || '').replace(/[a-ząčęėįšųūž]+/gi, function (w) { var k = w.toLowerCase(); return m[k] || w; })); }
+function tJ(k) { if (/^jk_b_/.test(k)) { var r = S._info && S._info[S.sel] && S._info[S.sel].r, j = r && (r.joints || []).filter(function (x) { return 'jk_' + x.key === k; })[0]; return j ? boxLabel(j.label) : k; } return t(k); }
+function boxEditor(c) {
+  var b = 'c.', bx = c.box, inf = S._info && S._info[S.sel] ? S._info[S.sel] : null, r = inf ? inf.r : null, rb = r && r.box ? r.box : { boards:[], covers:[], comps:[[0, 0]] }, h = '';
+  var tPh = function (bind, val) { var id = 'f-' + bind.replace(/\./g, '-'); return '<label class="f n s" for="' + id + '"><span>' + t('bxT') + '</span><input id="' + id + '" inputmode="decimal" type="text" data-bind="' + bind + '" data-num="1" data-empty="1" value="' + esc(val || '') + '" placeholder="' + esc(fmt(num(c.thick) || 18)) + '" autocomplete="off"></label>'; };
+  var dims = '<div class="row">' + fT(t('name'), b + 'name', c.name, null, 'grow') + '</div><div class="row" style="margin-top:10px">' +
+    fN(t('W'), b + 'W', c.W) + fN(t('H'), b + 'H', c.H) + fN(t('D'), b + 'D', c.D) + fN(t('thick'), b + 'thick', c.thick, 's') +
+    '<span class="row" style="margin-left:auto;gap:6px"><button class="btn ghost" data-act="dup">' + t('dup') + '</button><button class="btn ghost danger" data-act="del">' + (S.confirm === 'del' ? t('delSure') : t('del')) + '</button></span></div>' +
+    '<div class="row" style="margin-top:10px"><button type="button" class="btn" data-act="box3d">' + t('bx3d') + '</button></div>';
+  h += step(1, t('s1'), t('bxS1l'), dims, 'dims');
+  /* 2 — the six outer boards and their corners */
+  var rows = '<div class="bxrows">' + E.BOX_IDS.map(function (id) { var s0 = bx.boards[id], bb = b + 'box.boards.' + id + '.';
+    return '<div class="bxrow' + (s0.on ? '' : ' off') + '">' + chk(bb + 'on', s0.on, '<b>' + t('bx_' + id) + '</b>') +
+      (s0.on ? fN(t('bxInset'), bb + 'inset', s0.inset || 0, 's') + tPh(bb + 'T', s0.T) : '') + '</div>'; }).join('') + '</div>';
+  var cv = rb.covers.map(function (k) { var other = k.by === k.a ? k.b : k.a;
+    return '<div class="bxcorner"><span>' + t('bx_' + k.a) + ' – ' + t('bx_' + k.b).toLowerCase() + '</span>' +
+      (k.forced ? '<span class="note">' + t('bx_' + k.by) + ' ' + t('bxCovers') + ' · ' + t('bxForced') + '</span>' :
+        '<div class="seg" role="group">' + [k.a, k.b].map(function (w) { return '<button type="button" data-act="boxcover" data-v="' + k.key + '" data-w="' + w + '" class="' + (k.by === w ? 'on' : '') + '" aria-pressed="' + (k.by === w) + '">' + t('bx_' + w) + ' ' + t('bxCovers') + '</button>'; }).join('') + '</div>') + '</div>'; }).join('');
+  h += step(2, t('bxS2'), t('bxS2l'), rows + (cv ? '<div class="lbl" style="margin-top:14px">' + t('bxCorners') + '</div><div class="bxcorners">' + cv + '</div>' : ''), 'boards');
+  /* 3 — partitions and shelves */
+  var inner = bx.inner.map(function (q, i) { var bb = b + 'box.inner.' + i + '.', rbd = rb.boards.filter(function (x) { return x.id === 'i' + q.id; })[0];
+    var miss = !rbd ? ' <span class="badge mut">' + (S.lang === 'lt' ? 'praleista' : 'skipped') + '</span>' : '';
+    if (q.kind === 'part') return '<div class="bxitem"><span class="kind">' + t('bxPart') + (rbd ? ' ' + rbd.lt.replace(/\D+/g, '') : '') + miss + '</span>' + fN(t('bxX'), bb + 'x', q.x) + tPh(bb + 'T', q.T) +
+      '<button class="btn ghost danger" data-act="boxrm" data-i="' + i + '">' + t('bxRm') + '</button></div>';
+    return '<div class="bxitem"><span class="kind">' + t('bxShelf') + (rbd ? ' ' + rbd.lt.replace(/\D+/g, '') : '') + miss + '</span>' + fN(t('bxZ'), bb + 'z', q.z) +
+      (rb.comps.length > 1 ? fS(t('bxCol'), bb + 'col', +q.col || 0, rb.comps.map(function (cp, k) { return [k, String(k + 1)]; })) : '') +
+      '<div class="f"><span>&nbsp;</span>' + seg(bb + 'adj', !!q.adj, [['false', t('bxFixed')], ['true', t('bxAdj')]]) + '</div>' +
+      '<button class="btn ghost danger" data-act="boxrm" data-i="' + i + '">' + t('bxRm') + '</button></div>'; }).join('');
+  var anyAdj = bx.inner.some(function (q) { return q.kind === 'shelf' && q.adj; });
+  h += step(3, t('bxS3'), t('bxS3l'), '<div class="bxinner">' + (inner || '<p class="note" style="margin:0">' + t('bxNoInner') + '</p>') + '</div>' +
+    '<div class="addsec" style="margin-top:10px"><button class="btn" data-act="boxadd" data-v="shelf">' + t('bxAddShelf') + '</button><button class="btn" data-act="boxadd" data-v="part">' + t('bxAddPart') + '</button></div>' +
+    (anyAdj ? '<div class="row" style="margin-top:10px">' + chk(b + 'box.pinRow', bx.pinRow, t('bxPinRow')) + '</div>' : ''), 'inner');
+  /* 4 — joints */
+  var jo = '<div class="lbl">' + t('bxDefJ') + '</div><div class="choices">' + choice(b + 'cnc.joinery', c.cnc.joinery, 'confirmat', artOf('confirmat'), t('jConf'), t('jConfD')) +
+    choice(b + 'cnc.joinery', c.cnc.joinery, 'cam', artOf('cam'), t('jCam'), t('jCamD')) + '</div>' + (r ? '<div style="margin-top:14px">' + jointsBlock(c, r) + '</div>' : '');
+  h += step(4, t('bxS4'), t('bxS4l'), jo, 'joints');
+  h += step(5, t('s5'), t('s5l'), matsBlock(c), 'mats');
+  h += step(6, t('s6'), t('s6l'), extrasBlock(c), 'extra');
+  return h;
 }
 function railsEditor(c) {
   var b = 'c.cnc.', r = c.cnc.rails;
@@ -5413,7 +5860,7 @@ function viewSheet(c, inf) {
     '<details class="preview-warnings"><summary>' + (S.lang === 'lt' ? 'Gamybos patikra' : 'Manufacturing checks') + ' <span>' + inf.warnings.length + '</span></summary><div class="warns" id="warns">' + w + '</div></details>' +
     '<button class="btn pri big go" data-act="tab" data-v="res">' + t('toRes') + '</button></aside>';
 }
-function sketchOf(c) { try { var d = engineDef(c); d.colW = colsOf(c) > 1 ? colWidths(c) : []; var bs = c.cnc.backs || []; d.hasBack = bs.some(function (x) { return x !== 'none'; }); d.backs = colsOf(c) > 1 && bs.length === colsOf(c) ? bs.slice() : null; d.backType = bs.indexOf('hdf') >= 0 ? 'hdf' : 'carcass'; return SK.svg(d, S.lang); } catch (e) { return '<div class="empty">' + esc(e.message) + '</div>'; } }
+function sketchOf(c) { if (c.kind === 'box') { var ib = S._info && S._info[S.sel]; return ib && window.DBFront ? window.DBFront.svg(c, ib.r, { bnd:[0, num(c.W)], label:c.name || '' }) : ''; } try { var d = engineDef(c); d.colW = colsOf(c) > 1 ? colWidths(c) : []; var bs = c.cnc.backs || []; d.hasBack = bs.some(function (x) { return x !== 'none'; }); d.backs = colsOf(c) > 1 && bs.length === colsOf(c) ? bs.slice() : null; d.backType = bs.indexOf('hdf') >= 0 ? 'hdf' : 'carcass'; return SK.svg(d, S.lang); } catch (e) { return '<div class="empty">' + esc(e.message) + '</div>'; } }
 
 /* ----------------------------------------------------------------- render: results */
 function viewRes(pj) {
@@ -5625,11 +6072,11 @@ function refreshLive() {
 
 /* ----------------------------------------------------------------- 3D connector editor (iso.js) */
 S.iso = null; S.undo = [];
-function pushUndo() { var c = cur(); if (!c) return; S.undo.push({ id:c.id, joints:clone(c.cnc.joints || {}) }); if (S.undo.length > 40) S.undo.shift(); }
+function pushUndo() { var c = cur(); if (!c) return; S.undo.push({ id:c.id, joints:clone(c.cnc.joints || {}), box:c.box ? clone(c.box) : null }); if (S.undo.length > 40) S.undo.shift(); }
 function canUndo() { var c = cur(); return !!c && S.undo.some(function (u) { return u.id === c.id; }); }
 function undoJoints() {
   var c = cur(); if (!c) return false;
-  for (var i = S.undo.length - 1; i >= 0; i--) if (S.undo[i].id === c.id) { c.cnc.joints = S.undo[i].joints; S.undo.splice(i, 1); save(); render(); toast(t('isoUndone')); return true; }
+  for (var i = S.undo.length - 1; i >= 0; i--) if (S.undo[i].id === c.id) { c.cnc.joints = S.undo[i].joints; if (S.undo[i].box) c.box = S.undo[i].box; S.undo.splice(i, 1); save(); render(); toast(t('isoUndone')); return true; }
   return false;
 }
 /* patch from the 3D editor: { side:null|'L'|'R', type, pos|null }. side null → both sides; otherwise only that side
@@ -5651,10 +6098,11 @@ function syncXsec() {
 }
 function mountAssembly() {
  var el=document.getElementById('assembly-preview'); if(el && cur() && S._info && S._info[S.sel]) window.DBAssembly.mount(el,cur(),S._info[S.sel].r,S.lang,{
- t:t,canUndo:canUndo(),
+ t:tJ,canUndo:canUndo(),
  onCommit:function(key,patch,selection){pushUndo();setJoint(cur(),key,patch);S.iso=selection;save();render();},
  onReset:function(key,side){pushUndo();if(side)setJoint(cur(),key,{side:side,pos:null});else if(cur().cnc.joints)delete cur().cnc.joints[key];S.iso={key:key,side:side,idx:null};save();render();},
  onUndo:function(){undoJoints();},
+ onBox:function(fn){pushUndo();fn(cur());save();render();},
  onFillMissing:function(){var info=S._info[S.sel].r,missing=[];(info.joints||[]).forEach(function(j){(j.single?['L']:['L','R']).forEach(function(sd){var v=j.sides?j.sides[sd]:j;if(!v.pos.length)missing.push({key:j.key,side:j.single?null:sd,type:v.type});});});if(!missing.length)return;pushUndo();missing.forEach(function(m){setJoint(cur(),m.key,{side:m.side,type:m.type,pos:null});});save();render();}
  });
 }
@@ -5760,7 +6208,7 @@ app.addEventListener('change', function (e) {
   else if (el.getAttribute('data-num') && el.getAttribute('data-empty') && !String(el.value).trim()) assign(bind, '');
   else if (el.getAttribute('data-num')) { var n = num(el.value); assign(bind, n); el.value = E.num(n); }
   else assign(bind, el.value);
-  var full = el.type === 'checkbox' || el.tagName === 'SELECT' || /\.(nDrawers|nDoors|shelves|height|frontH\.\d+|doorSplit)$/.test(bind) || /cnc\.joints\./.test(bind) || /^c\.(colW\.|W$)/.test(bind) || bind === 'p.name';
+  var full = el.type === 'checkbox' || el.tagName === 'SELECT' || /\.(nDrawers|nDoors|shelves|height|frontH\.\d+|doorSplit)$/.test(bind) || /cnc\.joints\./.test(bind) || /^c\.box\./.test(bind) || /^c\.(colW\.|W$)/.test(bind) || bind === 'p.name';
   if (full) { if (bind.indexOf('s.') === 0) { store('dbKurejas.settings', S.settings); applyRules(); } else save(); setTimeout(render, 0); }   // after focus has moved, so it is restored
   else after(bind, false);
 });
@@ -5792,6 +6240,15 @@ app.addEventListener('click', function (e) {
     case 'set': assign(el.getAttribute('data-bind'), v); after(el.getAttribute('data-bind'), true); return;
     case 'addsec': { var ns = newSection(v); ns.col = isNaN(i) ? 0 : i; S.colSel = ns.col; cur().sections.push(ns); save(); break; }
     case 'colsel': S.colSel = +v; break;
+    case 'boxadd': { pushUndo(); var bc = cur(), nid = Math.max.apply(null, [0].concat(bc.box.inner.map(function (q) { return +q.id || 0; }))) + 1, rb = S._info[S.sel].r.box, tt = num(bc.thick) || 18;
+      if (v === 'part') { var cw = -1, ck = 0; rb.comps.forEach(function (cp, k) { if (cp[1] - cp[0] > cw) { cw = cp[1] - cp[0]; ck = k; } }); bc.box.inner.push({ id:nid, kind:'part', x:Math.round((rb.comps[ck][0] + rb.comps[ck][1]) / 2) }); }
+      else { var cz = rb.cavity[2], zs = rb.boards.filter(function (q) { return q.kind === 'shelf' && q.col === 0; }).map(function (q) { return q.ext[2]; }).sort(function (a, b2) { return a[0] - b2[0]; }), lo = cz[0], best = null;
+        zs.concat([[cz[1], cz[1]]]).forEach(function (z) { if (!best || z[0] - lo > best[1] - best[0]) best = [lo, z[0]]; lo = z[1]; });
+        bc.box.inner.push({ id:nid, kind:'shelf', z:Math.round((best[0] + best[1]) / 2 - tt / 2), col:0, adj:false }); }
+      save(); break; }
+    case 'boxrm': pushUndo(); cur().box.inner.splice(i, 1); save(); break;
+    case 'boxcover': pushUndo(); cur().box.cover[v] = el.getAttribute('data-w'); save(); break;
+    case 'box3d': if (window.DBAssembly.setBoards) window.DBAssembly.setBoards(true); mountAssembly(); { var ap = document.getElementById('assembly-preview'); if (ap) ap.scrollIntoView({ behavior:'smooth', block:'center' }); } return;
     case 'mv': { var cc0 = cur(), a = cc0.sections, cl = colOf(cc0, a[i]), idx = a.map(function (s, q) { return q; }).filter(function (q) { return colOf(cc0, a[q]) === cl; }), p0 = idx.indexOf(i), j = idx[p0 + (+v)];
       if (j == null) return; var tmp = a[i]; a[i] = a[j]; a[j] = tmp; save(); break; }
     case 'fhreset': delete cur().sections[i].frontH; save(); break;
