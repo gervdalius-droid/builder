@@ -1,4 +1,4 @@
-// Drawing sheets (drawings.js) for many cabinets and room layouts:
+// Drawing sheets (drawings.js) for many cabinets and room layouts (one sheet per cabinet: views, parts, assembly):
 //  every sheet is made without an error and is well-formed XML (checked by the caller: python xml),
 //  the far-to-near order of the parts never puts a part behind one it covers (every overlapping pair whose order
 //  an axis decides is drawn in that order — in the front, side, top and 3-D views, assembled and exploded),
@@ -71,10 +71,10 @@ for (let run = 0; run < 60; run++) {
       if (out && lang === 'lt' && run < 12) fs.writeFileSync(out + '/r' + run + '_' + k + '_' + sh.id + '.svg', sh.svg);
       if (sh.cab != null) {
         const r = infos[sh.cab].r;
-        if (sh.id[0] === 'a') r.panels.forEach(p => { if (!p.place) return; const want = nm(p.L) + ' × ' + nm(p.W) + ' × ' + nm(p.T);
+        if (sh.id[0] === 'c') r.panels.forEach(p => { if (!p.place) return; const want = nm(p.L) + ' × ' + nm(p.W) + ' × ' + nm(p.T);
           if (!sh.svg.includes('>' + (p.short || p.role) + '<') && !sh.svg.includes('>' + (p.short || p.role).slice(0, 10))) B('PART MISSING ' + p.name);
           if (!sh.svg.includes('>' + want + '<')) B('PART SIZE ' + p.name + ' ' + want); });
-        if (sh.id[0] === 'v') { const b = DR.cabBoxes(r, {}), e = [0, 1, 2].map(k2 => [Math.min(...b.map(x => x.e[k2][0])), Math.max(...b.map(x => x.e[k2][1]))]);
+        if (sh.id[0] === 'c') { const b = DR.cabBoxes(r, {}), e = [0, 1, 2].map(k2 => [Math.min(...b.map(x => x.e[k2][0])), Math.max(...b.map(x => x.e[k2][1]))]);
           [e[0][1] - e[0][0], e[1][1] - e[1][0]].forEach(v => { if (!sh.svg.includes('>' + nm(v) + '<')) B('DIM MISSING ' + sh.id + ' ' + nm(v)); }); }
       }
     });

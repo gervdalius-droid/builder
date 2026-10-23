@@ -4981,6 +4981,91 @@ function sheetAssembly(c, r, nr, meta) {
   return svg + '</svg>';
 }
 
+/* ---------------------------------------------------------------- one cabinet on one sheet
+   left: front, without fronts and left views (dimensioned), parts and hardware lists under them;
+   right: the exploded assembly with part numbers and connector lines */
+function viewsBlock(r, s, x0, y0, two) {   // two: front | left on the first row, without fronts under the front
+  var all = cabBoxes(r, {}), carc = cabBoxes(r, { fronts:false });
+  var b3 = boundsOf(all), W = b3[0][1] - b3[0][0], Ht = b3[2][1] - b3[2][0], Dt = b3[1][1] - b3[1][0], zMin = b3[2][0];
+  var hasInner = carc.some(function (b) { return b.p; }), svg = '', V, rowH = Ht * s + 40, lab = '1:' + Math.round(1 / s);
+  var yB = y0 + 14 + Ht * s;   // floor line of the first row
+  /* front */
+  V = viewOrtho('front'); var oF = solve(cabBoxes(r, {}), V), mF = M(s, x0 - b3[0][0] * s, yB + zMin * s);
+  svg += viewTitle(x0, y0, L.front, lab) + drawBoxes(oF, mF, { lw:0.28 }) + frontMarks(oF, mF, V, {});
+  var Pf = function (x, z) { return mF([x, z]); }, H0 = r.dims.H;
+  svg += dim(Pf(b3[0][0], zMin), Pf(b3[0][1], zMin), [0, 1], 7, nm(W), { size:2.3 });
+  var lv = [zMin, 0, H0].filter(function (v, i, a) { return a.indexOf(v) === i; }).sort(function (a, b) { return a - b; });
+  svg += dimChain(lv.map(function (z) { var q = Pf(b3[0][1], z); return [q[0], q[1], z]; }), [1, 0], 6, { size:2.3 });
+  if (lv.length > 2) svg += dim(Pf(b3[0][1], zMin), Pf(b3[0][1], H0), [1, 0], 13, nm(H0 - zMin), { size:2.3 });
+  var xR = x0 + W * s + 30;
+  /* without fronts: next to the front, or under it */
+  if (hasInner) {
+    var xi = two ? x0 : xR, yi = two ? yB + 28 + 14 + Ht * s : yB;
+    if (two) svg += viewTitle(x0, yB + 28, L.inner, lab);
+    V = viewOrtho('front'); var oI = solve(cabBoxes(r, { fronts:false, plinth:false }), V), mI = M(s, xi - b3[0][0] * s, yi + zMin * s);
+    if (!two) svg += viewTitle(xi, y0, L.inner, lab);
+    svg += drawBoxes(oI, mI, { lw:0.28 }) + openingDims(oI, function (q) { return mI(q); }, V, { topZ:b3[2][1] });
+    if (!two) xR = xi + W * s + 10;
+  }
+  /* from the left (front edge on the right) */
+  V = viewOrtho('left'); var oL = solve(cabBoxes(r, {}), V), mL = M(s, xR + b3[1][1] * s, yB + zMin * s);
+  svg += viewTitle(xR, y0, L.left, lab) + drawBoxes(oL, mL, { lw:0.28 });
+  var Pl = function (y, z) { return mL(V.pr([0, y, z])); }, cpp = carc.filter(function (b) { return b.p; }), dC = cpp.length ? boundsOf(cpp)[1] : b3[1];
+  svg += dim(Pl(dC[1], zMin), Pl(dC[0], zMin), [0, 1], 7, nm(dC[1] - dC[0]), { size:2.3 });
+  if (b3[1][0] < dC[0] - 0.5) svg += dim(Pl(b3[1][1], zMin), Pl(b3[1][0], zMin), [0, 1], 13, nm(Dt), { size:2.3 });
+  svg += txt(Pl(b3[1][0], zMin)[0], yB + 20, '◂ ' + L.frontEdge, 2, { anchor:'end', fill:'#6b736e' });
+  var bottom = two && hasInner ? yB + 28 + rowH : yB + 24;
+  return { svg:svg, bottom:bottom, right:xR + Dt * s };
+}
+function viewsSize(r, s, two) {   // width and height the views take at scale s
+  var all = cabBoxes(r, {}), b3 = boundsOf(all), W = b3[0][1] - b3[0][0], Ht = b3[2][1] - b3[2][0], Dt = b3[1][1] - b3[1][0];
+  var inner = cabBoxes(r, { fronts:false }).some(function (b) { return b.p; });
+  var w = two || !inner ? s * (W + Dt) + 34 : s * (2 * W + Dt) + 44, h = (two && inner ? 2 : 1) * (s * Ht + 14) + (two && inner ? 28 : 0) + 24;
+  return [w, h];
+}
+function sheetCabinet(c, r, nr, meta) {
+  r = Object.assign({}, r, { dims:dimsOf(r) });
+  var svg = sheetOpen(), parts = partOrder(r.panels || []), posOf = {};
+  parts.forEach(function (p, i) { posOf[p.name] = i + 1; });
+  var LX = FR + 8, LW = 196, top = FR + 12, bottomY = SH - FR - 4;
+  /* lists */
+  var hwRows = (r.hardware || []).map(function (h) { return [h.item, String(h.qty), h.unit]; });
+  var extras = (c.extras || []).filter(function (x) { return x && +x.L > 0 && +x.W > 0; });
+  var rows = parts.map(function (p, i) { var eb = p.eb || {}; return [String(i + 1), p.short || p.role, nm(p.L) + ' × ' + nm(p.W) + ' × ' + nm(p.T), p.mat || L.none,
+    [eb.y0 ? 'L1' : '', eb.y1 ? 'L2' : '', eb.x0 ? 'W1' : '', eb.x1 ? 'W2' : ''].filter(Boolean).join(' ') || L.none, '1']; });
+  extras.forEach(function (x) { rows.push(['–', (x.name || L.extra), nm(+x.L) + ' × ' + nm(+x.W) + ' × ' + nm(+x.T || +c.thick || 18), x.mat || (c.mat && c.mat.carc) || L.none, [x.e1 ? 'L1' : '', x.e2 ? 'L2' : '', x.e3 ? 'W1' : '', x.e4 ? 'W2' : ''].filter(Boolean).join(' ') || L.none, String(Math.max(1, Math.round(+x.qty || 1)))]); });
+  var nRows = rows.length + 1 + (hwRows.length ? hwRows.length + 1 : 0), listNeed = nRows * 3.2 + 16;
+  /* views: the larger of the two arrangements that leaves room for the lists */
+  var best = null;
+  [false, true].forEach(function (two) { for (var i = 0; i < DEN.length; i++) { var s = 1 / DEN[i], sz = viewsSize(r, s, two);
+    if (sz[0] <= LW && sz[1] <= bottomY - top - listNeed) { if (!best || s > best.s + 1e-9) best = { s:s, two:two }; break; } } });
+  if (!best) best = { s:1 / 50, two:true };
+  var vb = viewsBlock(r, best.s, LX + 2, top, best.two); svg += vb.svg;
+  /* parts and hardware under the views */
+  var yT = vb.bottom + 8, rh = Math.max(2.7, Math.min(4.2, (bottomY - yT - 8) / nRows)), fs = Math.min(2.3, rh * 0.6);
+  svg += txt(LX, yT - 1.8, L.parts, 3, { bold:true });
+  var tp = table(LX, yT, [{ w:9, label:L.pos }, { w:30, label:L.part }, { w:36, label:L.size }, { w:72, label:L.mat }, { w:34, label:L.edge }, { w:15, label:L.qty, align:'end' }], rows, { rh:rh, fs:fs });
+  svg += tp.svg;
+  if (hwRows.length) { var yH = yT + tp.h + rh + 4; svg += txt(LX, yH - 1.8, L.hw, 3, { bold:true });
+    svg += table(LX, yH, [{ w:146, label:L.name }, { w:25, label:L.qty, align:'end' }, { w:25, label:L.unit }], hwRows, { rh:rh, fs:fs }).svg; }
+  /* exploded assembly on the right */
+  var AX = LX + LW + 10, area = [AX + 10, SW - FR - 10, FR + 26, SH - FR - TB.h - 10];
+  svg += line([AX - 4, FR + 4], [AX - 4, SH - FR - 4], 0.15, '#c3c8c5');
+  var V = viewIso(ISO_D), boxes = cabBoxes(r, { plinth:false }); explode(r, boxes);
+  var order = solve(boxes, V), fp = fitPic(order, area[0] + 4, area[2] + 4, area[1] - area[0] - 8, area[3] - area[2] - 8);
+  svg += viewTitle(AX, top, L.expl, L.nts);
+  svg += drawBoxes(order, fp.m, { lw:0.26, shade:true, after:connectorLines(r, boxes, V, function (q) { return fp.m(q); }, order) });
+  var items = order.filter(function (b) { return b.p && posOf[b.p.name]; }).map(function (b) { return { a:fp.m(anchorOf(b, order)), n:posOf[b.p.name] }; });
+  var pbS = [fp.m([fp.pb[0], fp.pb[3]]), fp.m([fp.pb[1], fp.pb[2]])], ring = [Math.max(AX + 4, pbS[0][0] - 8), Math.min(SW - FR - 5, pbS[1][0] + 8), Math.max(FR + 20, pbS[0][1] - 8), Math.min(SH - FR - TB.h - 5, pbS[1][1] + 8)];
+  placeBalloons(items, ring, 3.1).forEach(function (it) { svg += line(it.a, it.p, 0.18, '#3a423e') + '<circle cx="' + f2(it.a[0]) + '" cy="' + f2(it.a[1]) + '" r="0.55" fill="#3a423e"/>' + balloon(it.p, it.n, 3.1); });
+  var lg = FR + 16.5, lx = AX;
+  svg += txt(lx, lg, L.conn, 2.1, { fill:'#55605a' }); lx += tw(L.conn, 2.1) + 3;
+  [[COL.conf, L.cConf], [COL.cam, L.cCam], [COL.dowel, L.cDowel]].forEach(function (k) { svg += line([lx, lg - 0.7], [lx + 6, lg - 0.7], 0.3, k[0], '1.4 0.9') + txt(lx + 7.5, lg, k[1], 2.1, { fill:'#55605a' }); lx += 10 + tw(k[1], 2.1) + 4; });
+  if ((r.panels || []).some(function (p) { return p.role === 'DURYS'; })) svg += txt(LX, SH - FR - 2.2, L.open, 1.9, { fill:'#6b736e' });
+  svg += titleBlock(Object.assign({}, meta, { title:L.cab + ' ' + nr + (c.name ? ' „' + c.name + '“' : ''), scale:'1:' + Math.round(1 / best.s) }));
+  return svg + '</svg>';
+}
+
 /* ---------------------------------------------------------------- whole furniture */
 function kindOf(c, RM) { if (c.kind === 'box') return L.box; if (c.dishwasher) return L.dish; var lv = RM.level(c); return lv === 'wall' ? L.wallc : lv === 'tall' ? L.tall : L.base; }
 /* every placed cabinet's boxes in plan world coordinates (x right, y up = against the plan's y, z up) */
@@ -5124,8 +5209,7 @@ function sheets(proj, infos, opts) {
   proj.cabinets.forEach(function (c, i) {
     if (only != null && only !== i) return; var inf = infos[i]; if (!inf || !inf.r || !inf.r.panels || !inf.r.panels.length) return;
     var nm2 = (i + 1) + (c.name ? ' „' + c.name + '“' : '');
-    list.push({ id:'v' + i, cab:i, title:L.cab + ' ' + nm2 + ' — ' + L.views, make:function (m) { return sheetViews(c, inf.r, i + 1, m); } });
-    list.push({ id:'a' + i, cab:i, title:L.cab + ' ' + nm2 + ' — ' + L.assembly, make:function (m) { return sheetAssembly(c, inf.r, i + 1, m); } });
+    list.push({ id:'c' + i, cab:i, title:L.cab + ' ' + nm2, make:function (m) { return sheetCabinet(c, inf.r, i + 1, m); } });
   });
   return list.map(function (sh, k) { var svg; try { svg = sh.make(Object.assign({}, meta, { no:k + 1, of:list.length })); } catch (e) { svg = sheetOpen() + txt(30, 40, 'Error: ' + (e && e.message), 5) + '</svg>'; sh.error = String(e && e.stack || e); }
     return { id:sh.id, cab:sh.cab, title:sh.title, svg:svg, error:sh.error }; });
@@ -5185,7 +5269,7 @@ function pdf(list, o) {
   return next();
 }
 
-var api = { overlap2:overlap2, sheets:sheets, pdf:pdf, pdfBytes:pdfBytes, solve:solve, viewIso:viewIso, viewOrtho:viewOrtho, cabBoxes:cabBoxes, pbox:pbox, explode:explode, partOrder:partOrder, TX:TX };
+var api = { overlap2:overlap2, sheets:sheets, sheetViews:sheetViews, sheetAssembly:sheetAssembly, pdf:pdf, pdfBytes:pdfBytes, solve:solve, viewIso:viewIso, viewOrtho:viewOrtho, cabBoxes:cabBoxes, pbox:pbox, explode:explode, partOrder:partOrder, TX:TX };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.DBDraw = api;
 })(typeof window !== 'undefined' ? window : this);
 </script>
