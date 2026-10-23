@@ -6538,6 +6538,7 @@ function sketchOf(c) { if (c.kind === 'box') { var ib = S._info && S._info[S.sel
 S.drwOnly = 'all'; S.drwPaper = store('dbKurejas.paper') || 'A3'; S.drwOpen = null;
 function drwSheets(only) {
   var o = only === undefined ? S.drwOnly : only;
+  if (RM && RM.ensure(S.proj)) save();   // never opened in Baldai: place the cabinets the way the Baldai tab does, so the furniture is drawn
   var list = DR.sheets(S.proj, S._info || [], { lang:S.lang, project:S.proj.name || projName(), date:new Date().toISOString().slice(0, 10), paper:S.drwPaper, only:o === 'all' || o === 'furn' ? null : +o, RM:RM });
   if (o === 'furn') { list = list.filter(function (x) { return x.cab == null; }); list.forEach(function (x, k) { x.svg = x.svg.replace(/>\d+ \/ \d+</, '>' + (k + 1) + ' / ' + list.length + '<'); }); }
   return list;
@@ -6546,7 +6547,7 @@ function viewDrw() {
   if (!DR) return '<div class="card empty">drawings.js</div>';
   if (!S.proj.cabinets.length) return '<div class="card empty">' + t('drwNone') + '</div>';
   var list = S._drw = drwSheets(), cabs = S.proj.cabinets;
-  var opts = [['all', t('drwAll')]].concat(RM && RM.placed(S.proj).length ? [['furn', t('drwFurn')]] : []).concat(cabs.map(function (c, i) { return [String(i), (i + 1) + ' · ' + (c.name || typeName(c))]; }));
+  var opts = [['all', t('drwAll')]].concat(RM && S.proj.layout && RM.placed(S.proj).length ? [['furn', t('drwFurn')]] : []).concat(cabs.map(function (c, i) { return [String(i), (i + 1) + ' · ' + (c.name || typeName(c))]; }));
   var h = '<div class="drw"><div class="card drwhead"><div><h2 style="margin:0 0 6px;font:600 26px var(--f-display)">' + t('drwTitle') + ' <span class="unit">· ' + list.length + ' ' + t('drwSheets') + '</span></h2><p class="note" style="margin:0;max-width:760px">' + t('drwLead') + '</p></div>' +
     '<div class="drwctl"><label class="f"><span>' + t('drwShow') + '</span><select id="drw-only" data-act-change="drwonly">' + opts.map(function (o) { return '<option value="' + o[0] + '"' + (String(S.drwOnly) === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select></label>' +
     '<div class="f"><span>' + t('drwPaper') + '</span>' + ['A3', 'A4'].map(function (pp) { return '<button type="button" class="btn' + (S.drwPaper === pp ? ' on' : '') + '" data-act="drwpaper" data-v="' + pp + '" aria-pressed="' + (S.drwPaper === pp) + '">' + pp + '</button>'; }).join('') + '</div>' +
