@@ -950,6 +950,23 @@ button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(
 .drwgo{width:100%;margin-top:8px}
 @media (max-width:700px){.drwgrid{grid-template-columns:1fr}.drwctl select{min-width:0;width:100%}.drwctl .f:has(select){width:100%}}
 </style>
+<style>/* admin pricing */
+.adminbadge{background:#fff6e4!important;color:#80500e!important;border-color:#e6c48a!important;font-weight:600}
+.cabprice{display:block;color:#80500e;font:600 11px var(--f-mono);margin-top:2px}
+.pricecard{margin-top:12px;border:1px solid #e6c48a;border-radius:12px;background:#fffdf8}
+.pricecard>summary{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;font-weight:600}
+.pricecard>summary b{font:700 17px var(--f-mono);color:#80500e}.pricecard>summary small{font:500 10px var(--f-body,inherit);color:var(--muted)}
+.pr-body{padding:0 14px 12px}.pricecard .pr-r>span{flex:1;min-width:0;display:block!important}.pricecard .pr-r>b{display:inline!important;flex:none;margin:0!important}.pr-r{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px solid #f1e6d2;font-size:12px}
+.pr-r b{font:600 12px var(--f-mono);white-space:nowrap}.pr-r.ps{color:var(--muted)}.pr-r.ps b{font-weight:500}.pr-r.pt{font-weight:600;border-top:1px solid #d8c29a}
+.pr-r.pg{background:#3d2a0c;color:#fff4dd;border-radius:7px;padding:7px 9px;margin-top:6px;border:0}.pr-r.pg b{font-size:14px}.pr-r.pb{color:#b3261e}
+.pr-def{color:#b06d00;font-style:normal;font-weight:700}
+.pr-miss{margin-top:8px;padding:8px;background:#fff1d6;border-radius:8px;font-size:11px;display:flex;flex-direction:column;gap:3px}.pr-miss .btn{align-self:flex-start;margin-top:4px}
+.pricing .pr-tot{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.pricing .pr-tot>div{flex:1;min-width:160px;border:1px solid var(--line);border-radius:9px;padding:9px 12px;display:flex;flex-direction:column;gap:2px}
+.pricing .pr-tot span{font-size:11px;color:var(--muted)}.pricing .pr-tot b{font:700 17px var(--f-mono)}.pricing .pr-tot .g{background:#3d2a0c;color:#fff4dd;border-color:#3d2a0c}.pricing .pr-tot .g span{color:#e9d6b2}
+.admincard{grid-column:1/-1;border-color:#e6c48a}.prgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:24px}
+.prkv{max-height:300px;overflow:auto;padding-right:4px}.prkv label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:900px){.prgrid{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
 <div id="app"></div>
@@ -6261,7 +6278,7 @@ function render() {
     '<label class="projname"><span class="unit">' + t('project') + '</span><input id="projname" type="text" data-bind="p.name" value="' + esc(S.proj.name) + '" placeholder="' + t('projPh') + '" autocomplete="off"' + (S.proj.name ? '' : ' aria-invalid="true"') + '><span class="saved" id="saved" title="' + t('autosaveT') + '">✓ ' + t('autosaved') + '</span></label>' +
     '<nav class="tabs" aria-label="tabs">' +
       tabBtn('cab', t('tCab'), S.proj.cabinets.length) + tabBtn('room', t('tRoom')) + tabBtn('res', t('tRes'), nParts) + tabBtn('drw', t('tDrw')) + tabBtn('set', t('tSet')) + '</nav>' +
-    '<div class="hbtns"><button class="btn newbtn" data-act="pnew" title="' + esc(t('prNew2')) + '">＋<span class="nlbl"> ' + t('prNew2') + '</span></button>' + langBtns() + '</div>' +
+    '<div class="hbtns">' + (S.admin ? '<button class="btn adminbadge" data-act="tab" data-v="set" title="' + (S.lang === 'lt' ? 'Administratoriaus režimas — kainos matomos' : 'Admin mode — prices shown') + '">€ Admin</button>' : '') + '<button class="btn newbtn" data-act="pnew" title="' + esc(t('prNew2')) + '">＋<span class="nlbl"> ' + t('prNew2') + '</span></button>' + langBtns() + '</div>' +
     '</div></header><main class="wrap">';
   if (S.tab === 'cab') h += viewCab(cabInfo);
   else if (S.tab === 'res') h += viewRes(buildProjectAll());
@@ -6288,7 +6305,7 @@ function viewCab(info) {
   var rail = '<aside class="rail"><h2>' + t('cabs') + '</h2><div class="cablist">' + cabs.map(function (c, i) {
     var lv = info[i].warnings.map(level), dot = lv.indexOf('bad') >= 0 ? '<span class="dot bad"></span>' : lv.indexOf('warn') >= 0 ? '<span class="dot warn"></span>' : '';
     return '<button class="cab' + (i === S.sel && !S.picking ? ' on' : '') + '" data-act="sel" data-i="' + i + '"><span class="nr">' + (i + 1) + '</span><span><b>' + esc(c.name || typeName(c)) + dot + '</b><small>' +
-      fmt(c.dishwasher ? c.dishWidth : c.W) + '×' + fmt(c.H) + '×' + fmt(c.D) + '</small></span></button>';
+      fmt(c.dishwasher ? c.dishWidth : c.W) + '×' + fmt(c.H) + '×' + fmt(c.D) + '</small>' + (S.admin && info[i] ? '<small class="cabprice">' + eur(priceCabinet(c, info[i].r).offer) + ' €</small>' : '') + '</span></button>';
   }).join('') + '</div><button class="btn pri" data-act="pick">' + t('newCab') + '</button></aside>';
   if (S.picking || !cabs.length) return '<div class="ws">' + rail + '<section class="editor" style="grid-column:span 2">' + viewPick() + '</section></div>';
   var c = cur(), inf = info[S.sel];
@@ -6702,12 +6719,196 @@ function viewSheet(c, inf) {
   var nParts = inf.r.panels.length;
   var w = inf.warnings.map(function (x) { var lv = level(x); return '<div class="w ' + lv + '"><span class="tag">' + t(lv === 'bad' ? 'errTag' : lv === 'warn' ? 'warnTag' : 'infoTag') + '</span><span>' + esc(x) + '</span></div>'; }).join('');
   var j = c.dishwasher ? '—' : (c.cnc.joinery === 'cam' ? t('jCam') : t('jConf'));
-  return '<aside class="sheet"><div id="assembly-preview"></div><details class="technical-preview"><summary>' + (S.lang === 'lt' ? 'Brėžinys ir gamybos suvestinė' : 'Drawing & manufacturing summary') + '</summary><div class="paper"><div class="tb"><b>' + (S.sel + 1) + ' · ' + esc(c.name || typeName(c)) + '</b><span>' + fmt(c.dishwasher ? c.dishWidth : c.W) + '×' + fmt(c.H) + '×' + fmt(c.D) + '</span></div>' +
+  return '<aside class="sheet"><div id="assembly-preview"></div><div id="pricecard-wrap">' + priceCard(c, inf) + '</div><details class="technical-preview"><summary>' + (S.lang === 'lt' ? 'Brėžinys ir gamybos suvestinė' : 'Drawing & manufacturing summary') + '</summary><div class="paper"><div class="tb"><b>' + (S.sel + 1) + ' · ' + esc(c.name || typeName(c)) + '</b><span>' + fmt(c.dishwasher ? c.dishWidth : c.W) + '×' + fmt(c.H) + '×' + fmt(c.D) + '</span></div>' +
     '<div class="draw" id="sketch">' + sketchOf(c) + '</div><div class="titleblk"><div>' + t('parts') + '<b>' + nParts + '</b></div><div>' + t('progs') + '<b>' + inf.nProg + '</b></div><div>' + (S.lang === 'lt' ? 'Jungtys' : 'Joinery') + '<b style="font-size:11px">' + esc(j) + '</b></div></div></div></details>' +
     '<details class="preview-warnings"><summary>' + (S.lang === 'lt' ? 'Gamybos patikra' : 'Manufacturing checks') + ' <span>' + inf.warnings.length + '</span></summary><div class="warns" id="warns">' + w + '</div></details>' +
     '<button class="btn pri big go" data-act="tab" data-v="res">' + t('toRes') + '</button><button class="btn big go drwgo" data-act="drwcab">' + t('drwCab') + '</button></aside>';
 }
 function sketchOf(c) { if (c.kind === 'box') { var ib = S._info && S._info[S.sel]; return ib && window.DBFront ? window.DBFront.svg(c, ib.r, { bnd:[0, num(c.W)], label:c.name || '' }) : ''; } try { var d = engineDef(c); d.colW = colsOf(c) > 1 ? colWidths(c) : []; var bs = c.cnc.backs || []; d.hasBack = bs.some(function (x) { return x !== 'none'; }); d.backs = colsOf(c) > 1 && bs.length === colsOf(c) ? bs.slice() : null; d.backType = bs.indexOf('hdf') >= 0 ? 'hdf' : 'carcass'; return SK.svg(d, S.lang); } catch (e) { return '<div class="empty">' + esc(e.message) + '</div>'; } }
+
+/* ----------------------------------------------------------------- admin mode: pricing (same model as the offer app)
+   Direct cost of a cabinet from its real parts: board m² × material €/m², cutting €/m of every part's outline,
+   edge banding €/m of every banded edge, drawer boxes (bottom + back of a metal system, or a whole wooden box —
+   the offer app's drawerBox) and the fittings list × €/unit. Then the offer app's ladder: material markup, packing,
+   defects, fasteners, waste, depreciation, design → production; assembly, admin; margin; VAT. Every step is
+   linear, so each cabinet carries its own share and the project is their sum (+ installation and delivery).
+   Prices and the PIN stay in this browser only; the lock keeps prices from the workshop screen, it is not security. */
+var PR_HW = { 'BLUM TANDEM':26, 'BLUM TANDEMBOX':40, 'GUOLINIAI':8, 'KT. PASLĖPTO MONTAVIMO':12, 'BLUM LANKSTAI':13, 'BLUM TIP-ON':16, 'KT. LANKSTAI':6, 'KT. TIP-ON':9, 'BE FURNITŪROS':0 };
+function prDefaults() {
+  return { cut:0.6, edge:1.7, def:{ carc:8, facade:29, back:5 }, mat:{}, edgeMat:{}, hw:clone(PR_HW),
+           q:{ use:'VIRTUVĖ', margin:28, pvm:21, vat:true, matMarkup:10, packing:1, defects:5, fasteners:4, waste:25, depreciation:2.5,
+               designKitchen:9, designWardrobe:6, assemblyKitchen:10, assemblyWardrobe:9, admin:10 } };
+}
+var PR = (function () { var d = prDefaults(), s = store('dbKurejas.pricing') || {};
+  return Object.assign(d, s, { def:Object.assign(d.def, s.def || {}), q:Object.assign(d.q, s.q || {}), mat:s.mat || {}, edgeMat:s.edgeMat || {}, hw:Object.assign(d.hw, s.hw || {}) }); })();
+function prSave() { store('dbKurejas.pricing', PR); }
+S.admin = (function () { try { return !!sessionStorage.getItem('dbKurejas.admin') && sessionStorage.getItem('dbKurejas.admin') === store('dbKurejas.adminPin'); } catch (e) { return false; } })();
+function pinHash(pin) {
+  var s = 'db-kurejas:' + String(pin);
+  if (window.crypto && crypto.subtle && window.TextEncoder) return crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)).then(function (b) { return Array.prototype.map.call(new Uint8Array(b), function (x) { return (x < 16 ? '0' : '') + x.toString(16); }).join(''); });
+  var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return Promise.resolve('f' + h.toString(16));
+}
+function eur(v) { v = Math.round((+v || 0) * 100) / 100; var p = v.toFixed(2).split('.'); return p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ',' + p[1]; }
+var CONNECTOR_HW = /konfirmat|confirmat|ekscentrik|minifix|kaišč|dowel|varžt|laikikl/i;   // connectors and shelf supports: covered by "fasteners €/m²" (as in the offer app) unless given a price
+function hwBase(item) { return String(item || '').replace(/\s+L=\d+.*$/, '').trim(); }
+function hwPrice(item) {
+  if (PR.hw[item] != null && PR.hw[item] !== '') return { p:num(PR.hw[item]), ok:true };
+  var b = hwBase(item); if (PR.hw[b] != null && PR.hw[b] !== '') return { p:num(PR.hw[b]), ok:true, base:b };
+  if (CONNECTOR_HW.test(item)) return { p:0, ok:true, incl:true };
+  return { p:0, ok:false };
+}
+function matPrice(name, kind) {   // kind: carc | facade | back
+  if (name && PR.mat[name] != null && PR.mat[name] !== '') return { p:num(PR.mat[name]), ok:true };
+  return { p:num(PR.def[kind]), ok:false };
+}
+function offerDrawerBox(openIn, fh, hw, rail) {   // the offer app's drawerBox for one drawer: board m², cut mm, banded mm
+  var cl = function (v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }, boxD = Math.max(150, (num(rail) || 500) - 10);
+  if (/TANDEMBOX/i.test(hw || '')) { var bw = Math.max(120, openIn - 84), sh = cl(fh - 60, 70, 224);
+    return { m2:(bw * boxD + bw * sh) / 1e6, perim:2 * (bw + boxD) + 2 * (bw + sh), band:0 }; }
+  var bw2 = Math.max(120, openIn - 26), sh2 = cl(fh - 50, 70, 200);
+  return { m2:(2 * (boxD * sh2) + 2 * (bw2 * sh2) + bw2 * (boxD - 2)) / 1e6, perim:2 * (2 * (boxD + sh2)) + 2 * (2 * (bw2 + sh2)) + 2 * (bw2 + (boxD - 2)), band:2 * boxD + 2 * bw2 };
+}
+function priceCabinet(c, r) {
+  var out = { boards:{}, m2:0, mat:0, cutM:0, cut:0, edgeM:0, edge:0, hw:[], hwCost:0, drawers:{ n:0, m2:0, cost:0 }, missing:[], basisM2:0 };
+  var miss = function (s) { if (out.missing.indexOf(s) < 0) out.missing.push(s); };
+  var mats = c.mat || {}, eds = c.edge || {};
+  var addBoard = function (name, kind, m2, inBasis) { var mp = matPrice(name, kind); if (!mp.ok && name) miss((S.lang === 'lt' ? 'medžiaga „' : 'material “') + name + (S.lang === 'lt' ? '“ — imama numatyta ' : '” — default ') + eur(mp.p) + ' €/m²');
+    var key = (name || (S.lang === 'lt' ? '(be pavadinimo)' : '(no name)')) + '|' + kind, g = out.boards[key] = out.boards[key] || { name:name, kind:kind, m2:0, price:mp.p, cost:0, ok:mp.ok };
+    g.m2 += m2; g.cost += m2 * mp.p; out.m2 += m2; out.mat += m2 * mp.p; if (inBasis) out.basisM2 += m2; };
+  var edgeOf = function (name) { return name && PR.edgeMat[name] != null && PR.edgeMat[name] !== '' ? num(PR.edgeMat[name]) : num(PR.edge); };
+  (r.panels || []).forEach(function (p) {
+    var front = /^(FASADAS|DURYS)$/.test(p.role), hdf = p.role === 'PLAUSAS' || /HDF/i.test(p.mat || ''), back = hdf || p.role === 'NUGARA';
+    var kind = front ? 'facade' : hdf ? 'back' : 'carc', m2 = p.L * p.W / 1e6;
+    addBoard(p.mat || (front ? mats.facade : back ? mats.back : mats.carc) || '', kind, m2, !back);   // the offer app leaves backs out of the m² that overheads follow
+    var per = 2 * (p.L + p.W) / 1000; out.cutM += per; out.cut += per * num(PR.cut);
+    var eb = p.eb || {}; ['y0', 'y1', 'x0', 'x1'].forEach(function (k) { if (!eb[k]) return; var len = (k[0] === 'y' ? p.L : p.W) / 1000; out.edgeM += len; out.edge += len * edgeOf(eb[k]); });
+  });
+  (c.extras || []).forEach(function (x) {
+    var L0 = num(x.L), W0 = num(x.W), q = Math.max(1, Math.round(num(x.qty) || 1)); if (!(L0 > 0 && W0 > 0)) return;
+    addBoard(x.mat || mats.carc || '', x.mat && x.mat === mats.facade ? 'facade' : 'carc', L0 * W0 * q / 1e6, true);
+    var per = 2 * (L0 + W0) * q / 1000; out.cutM += per; out.cut += per * num(PR.cut);
+    var em = x.edgeMat || eds.carc || ''; [['e1', L0], ['e2', L0], ['e3', W0], ['e4', W0]].forEach(function (e) { if (x[e[0]]) { out.edgeM += e[1] * q / 1000; out.edge += e[1] * q / 1000 * edgeOf(em); } });
+  });
+  /* drawer boxes (not cut by the CNC program here, as in the offer app) */
+  var vis = (r.visual && r.visual.drawers) || [], t_ = (r.dims && r.dims.t) || num(c.thick) || 18;
+  if (vis.length && DR) {
+    var vert = (r.panels || []).filter(function (p) { if (!p.place || /^(FASADAS|DURYS)$/.test(p.role)) return false; var e = DR.pbox(p); return (e[0][1] - e[0][0]) < Math.min(e[1][1] - e[1][0], e[2][1] - e[2][0]); }).map(function (p) { return DR.pbox(p); });
+    vis.forEach(function (f) {
+      var xc = f.x + f.w / 2, zc = f.bottom + f.h / 2, lo = -Infinity, hi = Infinity;
+      vert.forEach(function (e) { if (zc < e[2][0] || zc > e[2][1]) return; if (e[0][1] <= xc + 1) lo = Math.max(lo, e[0][1]); if (e[0][0] >= xc - 1) hi = Math.min(hi, e[0][0]); });
+      var openIn = isFinite(lo) && isFinite(hi) ? hi - lo : f.w - 2 * t_;
+      var secs = (c.sections || []).filter(function (s2) { return Math.max(0, Math.floor(num(s2.col) || 0)) === (f.col || 0); }), s2 = secs[f.sec] || {};
+      var db = offerDrawerBox(openIn, f.h + 3, f.hw || s2.hw, s2.rail), mp = matPrice(mats.carc || '', 'carc');
+      out.drawers.n++; out.drawers.m2 += db.m2; out.drawers.cost += db.m2 * mp.p + db.perim / 1000 * num(PR.cut) + db.band / 1000 * num(PR.edge);
+      out.basisM2 += db.m2; out.cutM += db.perim / 1000; out.edgeM += db.band / 1000;
+    });
+  }
+  (r.hardware || []).forEach(function (h) {
+    var hp = hwPrice(h.item); if (!hp.ok) miss((S.lang === 'lt' ? 'furnitūra „' : 'fitting “') + h.item + (S.lang === 'lt' ? '“ — kaina nenurodyta' : '” — no price'));
+    out.hw.push({ item:h.item, qty:h.qty, unit:h.unit, price:hp.p, cost:h.qty * hp.p, incl:!!hp.incl, ok:hp.ok }); out.hwCost += h.qty * hp.p;
+  });
+  return ladder(out);
+}
+function ladder(o) {   // the offer app's computeQuote, for one cabinet
+  var q = PR.q, w = q.use === 'SPINTA', m2 = o.basisM2;
+  o.ae = o.mat + o.cut + o.edge + o.drawers.cost; o.direct = o.ae + o.hwCost;
+  o.over = [['matMarkup', num(q.matMarkup) / 100 * o.direct], ['packing', num(q.packing) * m2], ['defects', num(q.defects) / 100 * o.direct], ['fasteners', num(q.fasteners) * m2],
+            ['waste', num(q.waste) / 100 * o.ae], ['depreciation', num(q.depreciation) * m2], ['design', num(w ? q.designWardrobe : q.designKitchen) * m2]];
+  o.production = o.direct + o.over.reduce(function (a, x) { return a + x[1]; }, 0);
+  o.assembly = num(w ? q.assemblyWardrobe : q.assemblyKitchen) * m2; o.adminEur = o.production * num(q.admin) / 100;
+  o.full = o.production + o.assembly + o.adminEur; o.marginEur = o.full * num(q.margin) / 100; o.offer = o.full + o.marginEur;
+  o.vatRate = q.vat === false ? 0 : num(q.pvm) / 100; o.vat = o.offer * o.vatRate; o.withVat = o.offer + o.vat;
+  return o;
+}
+function priceProject() {
+  var cabs = S.proj.cabinets.map(function (c, i) { var inf = S._info && S._info[i]; return { i:i, c:c, p:inf ? priceCabinet(c, inf.r) : null }; });
+  var pp = S.proj.pricing || {}, sum = function (k) { return cabs.reduce(function (a, x) { return a + (x.p ? x.p[k] : 0); }, 0); };
+  var inst = num(pp.montavimas), deliv = num(pp.delivery), extraFull = inst + deliv, rate = PR.q.vat === false ? 0 : num(PR.q.pvm) / 100;
+  var extraOffer = extraFull * (1 + num(PR.q.margin) / 100);   // as in the offer app: installation and delivery are costs and get the margin
+  var offer = sum('offer') + extraOffer;
+  return { cabs:cabs, direct:sum('direct'), full:sum('full') + extraFull, inst:inst, deliv:deliv, offer:offer, vat:offer * rate, withVat:offer * (1 + rate), m2:sum('basisM2') };
+}
+var PRL = { lt:{ matMarkup:'Medžiagos antkainis', packing:'Pakavimas', defects:'Brokas', fasteners:'Tvirtinimai', waste:'Medžiagos atlieka', depreciation:'Nusidėvėjimas', design:'Projektavimas' },
+            en:{ matMarkup:'Material markup', packing:'Packing', defects:'Defects', fasteners:'Fasteners', waste:'Material waste', depreciation:'Depreciation', design:'Design' } };
+function prLabel(k) { return (PRL[S.lang] || PRL.lt)[k] || k; }
+/* the cabinet's price card (cabinet editor, right column) */
+function priceCard(c, inf) {
+  if (!S.admin || !inf) return '';
+  var o = priceCabinet(c, inf.r), lt = S.lang === 'lt', row = function (l, v, cls) { return '<div class="pr-r' + (cls ? ' ' + cls : '') + '"><span>' + l + '</span><b>' + eur(v) + ' €</b></div>'; };
+  var h = '<details class="pricecard"' + (S.prOpen ? ' open' : '') + '><summary><span>€ ' + (lt ? 'Kaina' : 'Price') + ' <span class="badge mut">admin</span></span><b>' + eur(o.offer) + ' € <small>' + (lt ? 'be PVM' : 'excl. VAT') + '</small></b></summary><div class="pr-body">';
+  Object.keys(o.boards).forEach(function (k) { var g = o.boards[k]; h += '<div class="pr-r ps"><span>' + esc(g.name || '—') + ' · ' + fmt(Math.round(g.m2 * 100) / 100) + ' m² × ' + eur(g.price) + (g.ok ? '' : ' <i class="pr-def" title="' + (lt ? 'numatyta kaina' : 'default price') + '">*</i>') + '</span><b>' + eur(g.cost) + ' €</b></div>'; });
+  h += row((lt ? 'Pjovimas ' : 'Cutting ') + fmt(o.cutM) + ' m', o.cut, 'ps') + row((lt ? 'Kraštų laminavimas ' : 'Edge banding ') + fmt(o.edgeM) + ' m', o.edge, 'ps');
+  if (o.drawers.n) h += row((lt ? 'Stalčių dėžės (dugnas, nugarėlė) × ' : 'Drawer boxes (bottom, back) × ') + o.drawers.n, o.drawers.cost, 'ps');
+  o.hw.forEach(function (x) { h += '<div class="pr-r ps' + (x.ok ? '' : ' pb') + '"><span>' + esc(x.item) + ' · ' + x.qty + ' × ' + (x.incl ? (lt ? 'į tvirtinimus' : 'in fasteners') : eur(x.price)) + '</span><b>' + eur(x.cost) + ' €</b></div>'; });
+  h += row(lt ? 'Tiesioginė savikaina' : 'Direct cost', o.direct, 'pt');
+  o.over.forEach(function (x) { if (x[1]) h += row(prLabel(x[0]), x[1], 'ps'); });
+  h += row(lt ? 'Gamyba' : 'Production', o.production, 'pt') + row(lt ? 'Surinkimas' : 'Assembly', o.assembly, 'ps') + row(lt ? 'Administracija' : 'Admin', o.adminEur, 'ps') +
+       row(lt ? 'Pilna savikaina' : 'Full cost', o.full, 'pt') + row((lt ? 'Antkainis ' : 'Margin ') + fmt(PR.q.margin) + ' %', o.marginEur, 'ps') +
+       row(lt ? 'Kaina be PVM' : 'Price excl. VAT', o.offer, 'pt') + row('PVM ' + fmt(o.vatRate * 100) + ' %', o.vat, 'ps') + row(lt ? 'KAINA SU PVM' : 'PRICE INCL. VAT', o.withVat, 'pg');
+  if (o.missing.length) h += '<div class="pr-miss"><b>' + (lt ? 'Patikrinkite kainas:' : 'Check prices:') + '</b>' + o.missing.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '<button class="btn ghost" data-act="tab" data-v="set">' + (lt ? 'Kainos →' : 'Prices →') + '</button></div>';
+  return h + '<p class="note" style="margin:6px 0 0">' + (lt ? 'Skaičiuojama kaip pasiūlymų skaičiuoklėje, iš tikrų detalių dydžių ir furnitūros sąrašo. * — numatyta kaina.' : 'Worked out as in the offer app, from the real part sizes and the fittings list. * — default price.') + '</p></div></details>';
+}
+/* project pricing on the Parts & CNC tab */
+function priceProjectCard() {
+  if (!S.admin) return '';
+  var P = priceProject(), lt = S.lang === 'lt', pp = S.proj.pricing || {};
+  var rows = P.cabs.map(function (x) { return x.p ? '<tr><td class="n">' + (x.i + 1) + '</td><td>' + esc(x.c.name || typeName(x.c)) + (x.p.missing.length ? ' <span class="badge warn" title="' + esc(x.p.missing.join('\n')) + '">!</span>' : '') + '</td><td class="n">' + fmt(Math.round(x.p.basisM2 * 100) / 100) + '</td><td class="n">' + eur(x.p.direct) + '</td><td class="n">' + eur(x.p.full) + '</td><td class="n"><b>' + eur(x.p.offer) + '</b></td><td class="n">' + eur(x.p.withVat) + '</td></tr>' : ''; }).join('');
+  var fN2 = function (k, label) { return '<label class="f n s"><span>' + label + '</span><input type="text" inputmode="decimal" data-bind="pp.' + k + '" data-num="1" value="' + esc(pp[k] || '') + '" placeholder="0"></label>'; };
+  return '<div class="card pricing noprint"><div class="row" style="justify-content:space-between;align-items:baseline"><h3 style="margin:0;font:600 20px var(--f-display)">€ ' + (lt ? 'Kainodara' : 'Pricing') + ' <span class="badge mut">admin</span></h3><button class="btn ghost" data-act="tab" data-v="set">' + (lt ? 'Kainos ir antkainiai →' : 'Prices & margins →') + '</button></div>' +
+    '<div class="tablewrap" style="margin-top:8px"><table><thead><tr><th class="n">Nr</th><th>' + (lt ? 'Spintelė' : 'Cabinet') + '</th><th class="n">m²</th><th class="n">' + (lt ? 'Tiesioginė' : 'Direct') + ' €</th><th class="n">' + (lt ? 'Savikaina' : 'Full cost') + ' €</th><th class="n">' + (lt ? 'Be PVM' : 'Excl. VAT') + ' €</th><th class="n">' + (lt ? 'Su PVM' : 'Incl. VAT') + ' €</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+    '<div class="row" style="margin-top:10px;gap:10px;align-items:flex-end">' + fN2('montavimas', (lt ? 'Montavimas' : 'Installation') + ' €') + fN2('delivery', (lt ? 'Pristatymas' : 'Delivery') + ' €') + '</div>' +
+    '<div class="pr-tot"><div><span>' + (lt ? 'Savikaina' : 'Full cost') + '</span><b>' + eur(P.full) + ' €</b></div><div><span>' + (lt ? 'Pasiūlymas be PVM' : 'Quote excl. VAT') + '</span><b>' + eur(P.offer) + ' €</b></div><div class="g"><span>' + (lt ? 'Pasiūlymas su PVM' : 'Quote incl. VAT') + '</span><b>' + eur(P.withVat) + ' €</b></div></div></div>';
+}
+/* settings: lock / unlock and the price lists */
+function adminCard() {
+  var lt = S.lang === 'lt', hasPin = !!store('dbKurejas.adminPin');
+  var head = '<div class="card admincard"><div class="row" style="justify-content:space-between;align-items:center"><h3 style="margin:0;font:600 19px var(--f-display)">€ ' + (lt ? 'Administratoriaus režimas — kainos' : 'Admin mode — pricing') + '</h3>' + (S.admin ? '<span class="row" style="gap:6px"><button class="btn ghost" data-act="adminpin">' + (lt ? 'Keisti PIN' : 'Change PIN') + '</button><button class="btn" data-act="adminlock">🔒 ' + (lt ? 'Užrakinti' : 'Lock') + '</button></span>' : '') + '</div>';
+  if (!S.admin) return head + '<p class="note" style="margin:6px 0 10px">' + (hasPin ? (lt ? 'Kainos matomos tik atrakinus administratoriaus PIN kodu.' : 'Prices show only after unlocking with the admin PIN.') : (lt ? 'Nustatykite PIN kodą — tada spintelių kainos bus matomos tik jį įvedus. Kainos ir PIN saugomi tik šiame naršyklės profilyje.' : 'Set a PIN — cabinet prices then show only after entering it. Prices and the PIN stay in this browser only.')) + '</p>' +
+    '<div class="row" style="gap:8px;align-items:flex-end"><label class="f s"><span>PIN</span><input id="adm-pin" type="password" inputmode="numeric" autocomplete="off"></label>' + (hasPin ? '' : '<label class="f s"><span>' + (lt ? 'Pakartokite' : 'Repeat') + '</span><input id="adm-pin2" type="password" inputmode="numeric" autocomplete="off"></label>') +
+    '<button class="btn pri" data-act="' + (hasPin ? 'adminunlock' : 'adminset') + '">' + (hasPin ? (lt ? 'Atrakinti' : 'Unlock') : (lt ? 'Nustatyti PIN' : 'Set PIN')) + '</button></div></div>';
+  var b = 'pr.', inp = function (bind, val, ph, w) { return '<input type="text" inputmode="decimal" data-bind="' + bind + '" data-num="1" data-empty="1" value="' + esc(val == null ? '' : val) + '" placeholder="' + esc(ph == null ? '' : ph) + '" style="width:' + (w || 90) + 'px">'; };
+  var kvr = function (bind, label, val, unit) { return '<label>' + label + '</label><span class="row" style="gap:5px;align-items:center">' + inp(bind, val) + '<span class="unit">' + unit + '</span></span>'; };
+  /* names used in this project and the settings lists */
+  var mats = {}, edges = {}, hws = {};
+  (S.settings.materials || []).forEach(function (m) { mats[m] = 1; }); Object.keys(PR.mat).forEach(function (m) { mats[m] = 1; });
+  (S.settings.edges || []).forEach(function (m) { edges[m] = 1; }); Object.keys(PR.edgeMat).forEach(function (m) { edges[m] = 1; });
+  S.proj && S.proj.cabinets.forEach(function (c, i) { [c.mat.carc, c.mat.facade, c.mat.back].forEach(function (m) { if (m) mats[m] = 1; }); [c.edge.carc, c.edge.facade].forEach(function (m) { if (m) edges[m] = 1; });
+    (c.extras || []).forEach(function (x) { if (x.mat) mats[x.mat] = 1; }); var inf = S._info && S._info[i]; if (inf) inf.r.hardware.forEach(function (h) { hws[hwBase(h.item)] = 1; }); });
+  Object.keys(PR.hw).forEach(function (k) { hws[k] = 1; });
+  var esck = function (k) { return k.replace(/\./g, '․'); };   // a dot in a name must not split the binding path
+  var matRows = Object.keys(mats).sort().map(function (m) { return '<label title="' + esc(m) + '">' + esc(m) + '</label><span class="row" style="gap:5px;align-items:center">' + inp(b + 'mat.' + esck(m), PR.mat[m], lt ? 'numatyta' : 'default') + '<span class="unit">€/m²</span></span>'; }).join('');
+  var edgeRows = Object.keys(edges).sort().map(function (m) { return '<label title="' + esc(m) + '">' + esc(m) + '</label><span class="row" style="gap:5px;align-items:center">' + inp(b + 'edgeMat.' + esck(m), PR.edgeMat[m], fmt(PR.edge)) + '<span class="unit">€/m</span></span>'; }).join('');
+  var hwRows = Object.keys(hws).sort().map(function (m) { return '<label title="' + esc(m) + '">' + esc(m) + (CONNECTOR_HW.test(m) ? ' <span class="unit">(' + (lt ? 'tuščia — į tvirtinimus' : 'empty — in fasteners') + ')</span>' : '') + '</label><span class="row" style="gap:5px;align-items:center">' + inp(b + 'hw.' + esck(m), PR.hw[m], CONNECTOR_HW.test(m) ? '—' : '?') + '<span class="unit">€/' + (lt ? 'vnt.' : 'unit') + '</span></span>'; }).join('');
+  var q = PR.q;
+  return head + '<p class="note" style="margin:6px 0 12px">' + (lt ? 'Kaina skaičiuojama kaip pasiūlymų skaičiuoklėje (offer), bet iš tikrų detalių dydžių ir furnitūros sąrašo. Tuščia medžiagos kaina — imama numatyta pagal detalės rūšį.' : 'Priced like the offer app, but from the real part sizes and fittings list. An empty material price uses the default for that kind of part.') + '</p>' +
+    '<div class="row" style="gap:8px;margin-bottom:12px"><button class="btn" data-act="primport">⤓ ' + (lt ? 'Perimti kainas iš pasiūlymų skaičiuoklės' : 'Take prices from the offer app') + '</button><label class="btn ghost" for="f-prjson">' + (lt ? 'Iš offer projekto JSON…' : 'From an offer project JSON…') + '</label><input id="f-prjson" type="file" accept=".json" data-act-change="prjson" hidden><button class="btn ghost" data-act="prreset">' + (lt ? 'Numatytos kainos' : 'Default prices') + '</button></div>' +
+    '<div class="prgrid"><div><div class="lbl">' + (lt ? 'Operacijos ir numatytos kainos' : 'Operations and defaults') + '</div><div class="kv">' + kvr(b + 'cut', lt ? 'Pjovimas' : 'Cutting', PR.cut, '€/m') + kvr(b + 'edge', lt ? 'Laminavimas' : 'Edge banding', PR.edge, '€/m') +
+      kvr(b + 'def.carc', lt ? 'Korpusas (numatyta)' : 'Carcass (default)', PR.def.carc, '€/m²') + kvr(b + 'def.facade', lt ? 'Fasadai (numatyta)' : 'Fronts (default)', PR.def.facade, '€/m²') + kvr(b + 'def.back', lt ? 'Plaušas / HDF (numatyta)' : 'HDF back (default)', PR.def.back, '€/m²') + '</div>' +
+      '<div class="lbl" style="margin-top:14px">' + (lt ? 'Kaštai ir antkainis' : 'Costs and margin') + '</div><div class="kv">' +
+      '<label>' + (lt ? 'Projekto tipas' : 'Project type') + '</label>' + seg('pr.q.use', q.use, [['VIRTUVĖ', lt ? 'Virtuvė' : 'Kitchen'], ['SPINTA', lt ? 'Spinta' : 'Wardrobe']]) +
+      kvr(b + 'q.matMarkup', prLabel('matMarkup'), q.matMarkup, '%') + kvr(b + 'q.packing', prLabel('packing'), q.packing, '€/m²') + kvr(b + 'q.defects', prLabel('defects'), q.defects, '%') + kvr(b + 'q.fasteners', prLabel('fasteners'), q.fasteners, '€/m²') +
+      kvr(b + 'q.waste', prLabel('waste'), q.waste, '%') + kvr(b + 'q.depreciation', prLabel('depreciation'), q.depreciation, '€/m²') +
+      kvr(b + 'q.designKitchen', prLabel('design') + (lt ? ' (virtuvė)' : ' (kitchen)'), q.designKitchen, '€/m²') + kvr(b + 'q.designWardrobe', prLabel('design') + (lt ? ' (spinta)' : ' (wardrobe)'), q.designWardrobe, '€/m²') +
+      kvr(b + 'q.assemblyKitchen', (lt ? 'Surinkimas (virtuvė)' : 'Assembly (kitchen)'), q.assemblyKitchen, '€/m²') + kvr(b + 'q.assemblyWardrobe', (lt ? 'Surinkimas (spinta)' : 'Assembly (wardrobe)'), q.assemblyWardrobe, '€/m²') +
+      kvr(b + 'q.admin', lt ? 'Administracija' : 'Admin', q.admin, '%') + kvr(b + 'q.margin', lt ? 'Antkainis' : 'Margin', q.margin, '%') + kvr(b + 'q.pvm', 'PVM', q.pvm, '%') +
+      '<label>' + (lt ? 'PVM taikomas' : 'VAT applies') + '</label>' + seg('pr.q.vat', q.vat !== false, [['true', lt ? 'Taip' : 'Yes'], ['false', lt ? 'Ne' : 'No']]) + '</div></div>' +
+    '<div><div class="lbl">' + (lt ? 'Medžiagos' : 'Materials') + '</div><div class="kv prkv">' + (matRows || '<span class="note">—</span>') + '</div>' +
+      '<div class="lbl" style="margin-top:14px">' + (lt ? 'Kraštų juostos (tuščia — laminavimo kaina)' : 'Edge bands (empty — banding rate)') + '</div><div class="kv prkv">' + (edgeRows || '<span class="note">—</span>') + '</div>' +
+      '<div class="lbl" style="margin-top:14px">' + (lt ? 'Furnitūra' : 'Fittings') + '</div><div class="kv prkv">' + hwRows + '</div></div></div></div>';
+}
+/* the offer app keeps its prices in this same site's storage (gervdalius-droid.github.io) — read them when they are there */
+function prFromOffer(o) {
+  if (!o || !o.rates) return 0; var n = 0, set = function (obj, k, v) { if (v != null && isFinite(+v)) { obj[k] = +v; n++; } };
+  set(PR, 'cut', o.rates.cut); set(PR, 'edge', o.rates.edge);
+  Object.keys(o.rates.hw || {}).forEach(function (k) { set(PR.hw, k, o.rates.hw[k]); });
+  var net = function (m) { var d = (100 - (+m.disc || 0)) / 100; if (m.unit === 'sheet') { var a = (+m.sL || 0) * (+m.sW || 0) / 1e6; return a > 0 ? (+m.price || 0) * d / a : 0; } return (+m.price || 0) * d; };
+  var cheap = { KARKASAS:null, FASADAS:null };
+  (o.materials || []).forEach(function (m) { if (!m.name) return; var v = net(m); set(PR.mat, m.name, Math.round(v * 100) / 100); var cat = String(m.cat || '').toUpperCase(); if (cheap[cat] === null || (cheap[cat] != null && v < cheap[cat])) cheap[cat] = v; });
+  if (cheap.KARKASAS != null) set(PR.def, 'carc', Math.round(cheap.KARKASAS * 100) / 100); if (cheap.FASADAS != null) set(PR.def, 'facade', Math.round(cheap.FASADAS * 100) / 100);
+  var oq = o.quote || {}; ['margin', 'pvm', 'matMarkup', 'packing', 'defects', 'fasteners', 'waste', 'depreciation', 'designKitchen', 'designWardrobe', 'assemblyKitchen', 'assemblyWardrobe', 'admin'].forEach(function (k) { set(PR.q, k, oq[k]); });
+  if (oq.projType) PR.q.use = oq.projType === 'SPINTA' ? 'SPINTA' : 'VIRTUVĖ'; if (oq.country) PR.q.vat = oq.country === 'LIETUVA';
+  return n;
+}
 
 /* ----------------------------------------------------------------- render: drawings (drawings.js) */
 S.drwOnly = 'all'; S.drwPaper = store('dbKurejas.paper') || 'A3'; S.drwOpen = null;
@@ -6755,7 +6956,7 @@ function viewRes(pj) {
     '<button class="btn" data-act="dlall" title="' + t('xxlAllT') + '">' + t('xxlAll').replace('{n}', pj.files.length) + '</button>' +
     '<button class="btn" data-act="dl" data-v="xlsm">' + t('xlsm') + '</button><button class="btn" data-act="dl" data-v="csv">' + t('csv') + '</button>' + (IN_ARTIFACT ? '' : '<button class="btn" data-act="print">' + t('print') + '</button>') +
     '</div><p class="note" style="margin:6px 0 0">' + t('zipNote') + '</p></div></div>';
-  h += readyCheck(pj);
+  h += readyCheck(pj) + priceProjectCard();
   var bad = pj.warnings.filter(function (w) { return level(w) === 'bad'; });
   if (bad.length) h += '<div class="warns">' + bad.map(function (x) { return '<div class="w bad"><span class="tag">' + t('errTag') + '</span><span>' + esc(x) + '</span></div>'; }).join('') + '</div>';
   var rows = '', curG = null, nr = 0;
@@ -6885,7 +7086,7 @@ function viewSet() {
     '<label for="f-s-tbd">' + t('tbHoleSet') + ' Ø</label><input id="f-s-tbd" type="text" inputmode="decimal" data-bind="s.rules.tbHole.d" data-num="1" value="' + esc(st.rules.tbHole.d) + '">' +
     '<label for="f-s-tbz">' + t('tbHoleSet') + ' ' + (S.lang === 'lt' ? 'gylis' : 'depth') + '</label><input id="f-s-tbz" type="text" inputmode="decimal" data-bind="s.rules.tbHole.depth" data-num="1" value="' + esc(st.rules.tbHole.depth) + '"></div>' +
     '<p class="note" style="margin:8px 0 0">' + t('drillsTopL') + '</p>';
-  return '<div style="display:flex;flex-direction:column;gap:16px"><div><h2 style="margin:0;font:600 26px var(--f-display)">' + t('setTitle') + '</h2><p class="note" style="margin:2px 0 0">' + t('setLead') + '</p></div><div class="setgrid">' +
+  return '<div style="display:flex;flex-direction:column;gap:16px"><div><h2 style="margin:0;font:600 26px var(--f-display)">' + t('setTitle') + '</h2><p class="note" style="margin:2px 0 0">' + t('setLead') + '</p></div><div class="setgrid">' + adminCard() +
     '<div class="card"><h3 style="margin:0 0 4px;font:600 19px var(--f-display)">' + t('setTypes') + '</h3><p class="note" style="margin:0 0 10px">' + t('setTypesL') + '</p>' + types + '</div>' +
     '<div class="card"><h3 style="margin:0 0 10px;font:600 19px var(--f-display)">' + t('setOps') + '</h3>' + ops + '</div>' +
     '<div class="card"><h3 style="margin:0 0 10px;font:600 19px var(--f-display)">' + (S.lang === 'lt' ? 'Staklės' : 'Machine') + '</h3>' + mach + '</div>' +
@@ -6947,6 +7148,7 @@ function refreshLive() {
   if (tb) tb.innerHTML = '<b>' + (S.sel + 1) + ' · ' + esc(c.name || typeName(c)) + '</b><span>' + fmt(c.dishwasher ? c.dishWidth : c.W) + '×' + fmt(c.H) + '×' + fmt(c.D) + '</span>';
   var cmap = document.getElementById('colmap'); if (cmap && !c.dishwasher) cmap.innerHTML = colMapInner(c);
   liveSections(c);
+  var pcw = document.getElementById('pricecard-wrap'); if (pcw) pcw.innerHTML = priceCard(c, inf);
   if (!c.dishwasher) document.querySelectorAll('.zone[data-col]').forEach(function (zn) { var z2 = zoneInfo(c, +zn.getAttribute('data-col')); zn.className = 'zone' + (z2.over ? ' over' : ''); zn.innerHTML = zoneHtml(z2); });
   var zone = null; if (zone && !c.dishwasher) { var z = zoneInfo(c); zone.className = 'zone' + (z.over ? ' over' : ''); zone.innerHTML = t('zone') + ' <b>' + fmt(z.Hz) + '</b> mm · ' + t('used') + ' <b>' + fmt(z.exp + z.fillH * z.nFill) + '</b>' + (z.over ? ' · <b>' + t('over') + ' ' + fmt(z.exp - z.Hz) + '</b>' : ''); }
 }
@@ -7049,11 +7251,19 @@ function target(bind) {
   return null;
 }
 function after(bind, full) {
+  if (bind.indexOf('pr.') === 0) { if (full) render(); return; }
   if (bind.indexOf('s.') === 0) { store('dbKurejas.settings', S.settings); applyRules(); }
   else save();
   if (full) render(); else refreshLive();
 }
 function assign(bind, raw) {
+  if (bind.indexOf('pr.') === 0) {   // admin prices: names may hold dots (written as \u2024 in the binding)
+    var ks = bind.slice(3).split('.').map(function (k) { return k.replace(/\u2024/g, '.'); }), last = ks.pop(), o = PR;
+    ks.forEach(function (k) { o = o[k] = o[k] || {}; });
+    var v0 = raw === 'true' ? true : raw === 'false' ? false : raw;
+    if ((v0 === '' || v0 == null) && ks.length) delete o[last]; else o[last] = typeof v0 === 'boolean' || ks[0] === 'q' && last === 'use' ? v0 : num(v0);
+    prSave(); return; }
+  if (bind.indexOf('pp.') === 0) { S.proj.pricing = S.proj.pricing || {}; S.proj.pricing[bind.slice(3)] = raw === '' ? '' : num(raw); return; }
   var tg = target(bind); if (!tg) return;
   var v = raw;
   if (raw === 'true') v = true; else if (raw === 'false') v = false;
@@ -7084,16 +7294,18 @@ app.addEventListener('change', function (e) {
   var el = e.target;
   if (el.getAttribute('data-act-change') === 'import') { importFile(el.files && el.files[0]); return; }
   if (el.getAttribute('data-act-change') === 'tpl') { loadTemplateFile(el.files && el.files[0]); el.value = ''; return; }
+  if (el.getAttribute('data-act-change') === 'prjson' && S.admin) { var fl = el.files && el.files[0]; if (!fl) return; var rdr = new FileReader(); rdr.onload = function () { try { var nJ = prFromOffer(JSON.parse(rdr.result)); prSave(); render(); toast((S.lang === 'lt' ? 'Perimta kainų: ' : 'Prices taken: ') + nJ); } catch (er) { toast(t('badFile'), true); } }; rdr.readAsText(fl); el.value = ''; return; }
   if (el.getAttribute('data-act-change') === 'drwonly') { S.drwOnly = el.value; S.drwOpen = null; render(); return; }
   var bind = el.getAttribute('data-bind'); if (!bind || el.getAttribute('data-lines')) return;
   if (el.type === 'checkbox') assign(bind, el.checked);
   else if (el.getAttribute('data-num') && el.getAttribute('data-empty') && !String(el.value).trim()) assign(bind, '');
   else if (el.getAttribute('data-num')) { var n = num(el.value); assign(bind, n); el.value = E.num(n); }
   else assign(bind, el.value);
-  var full = el.type === 'checkbox' || el.tagName === 'SELECT' || /\.(nDrawers|nDoors|shelves|height|frontH\.\d+|doorSplit)$/.test(bind) || /cnc\.joints\./.test(bind) || /^c\.box\./.test(bind) || /^c\.(colW\.|W$)/.test(bind) || bind === 'p.name';
+  var full = /^(pr|pp)\./.test(bind) || el.type === 'checkbox' || el.tagName === 'SELECT' || /\.(nDrawers|nDoors|shelves|height|frontH\.\d+|doorSplit)$/.test(bind) || /cnc\.joints\./.test(bind) || /^c\.box\./.test(bind) || /^c\.(colW\.|W$)/.test(bind) || bind === 'p.name';
   if (full) { if (bind.indexOf('s.') === 0) { store('dbKurejas.settings', S.settings); applyRules(); } else save(); setTimeout(render, 0); }   // after focus has moved, so it is restored
   else after(bind, false);
 });
+document.addEventListener('toggle', function (e) { if (e.target && e.target.classList && e.target.classList.contains('pricecard')) S.prOpen = e.target.open; }, true);
 document.addEventListener('keydown', function (e) {   // sheet preview: Esc closes, arrows page
   if (S.tab === 'drw' && S.drwOpen != null && /^(Escape|ArrowLeft|ArrowRight)$/.test(e.key) && !/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) { e.preventDefault(); if (e.key === 'Escape') S.drwOpen = null; else S.drwOpen = Math.max(0, Math.min((S._drw || []).length - 1, S.drwOpen + (e.key === 'ArrowRight' ? 1 : -1))); render(); var bx = document.querySelector('.drwbox .btn.pri'); if (bx) bx.focus(); }
 });
@@ -7125,6 +7337,20 @@ app.addEventListener('click', function (e) {
     case 'set': assign(el.getAttribute('data-bind'), v); after(el.getAttribute('data-bind'), true); return;
     case 'addsec': { var ns = newSection(v); ns.col = isNaN(i) ? 0 : i; S.colSel = ns.col; cur().sections.push(ns); save(); break; }
     case 'colsel': S.colSel = +v; break;
+    case 'adminset': { var p1 = (document.getElementById('adm-pin') || {}).value || '', p2 = (document.getElementById('adm-pin2') || {}).value || '';
+      if (p1.length < 4) { toast(S.lang === 'lt' ? 'PIN — bent 4 simboliai' : 'PIN — at least 4 characters', true); return; }
+      if (p1 !== p2) { toast(S.lang === 'lt' ? 'PIN nesutampa' : 'PINs do not match', true); return; }
+      pinHash(p1).then(function (h) { store('dbKurejas.adminPin', h); try { sessionStorage.setItem('dbKurejas.admin', h); } catch (er) {} S.admin = true; render(); toast(S.lang === 'lt' ? 'Administratoriaus režimas įjungtas' : 'Admin mode on'); }); return; }
+    case 'adminunlock': { var p3 = (document.getElementById('adm-pin') || {}).value || '';
+      pinHash(p3).then(function (h) { if (h !== store('dbKurejas.adminPin')) { toast(S.lang === 'lt' ? 'Neteisingas PIN' : 'Wrong PIN', true); var f = document.getElementById('adm-pin'); if (f) { f.value = ''; f.focus(); } return; }
+        try { sessionStorage.setItem('dbKurejas.admin', h); } catch (er) {} S.admin = true; render(); toast(S.lang === 'lt' ? 'Kainos matomos' : 'Prices shown'); }); return; }
+    case 'adminlock': S.admin = false; try { sessionStorage.removeItem('dbKurejas.admin'); } catch (er) {} toast(S.lang === 'lt' ? 'Užrakinta — kainos paslėptos' : 'Locked — prices hidden'); break;
+    case 'adminpin': if (!S.admin) return; store('dbKurejas.adminPin', ''); S.admin = false; try { sessionStorage.removeItem('dbKurejas.admin'); } catch (er) {} toast(S.lang === 'lt' ? 'Įveskite naują PIN' : 'Enter a new PIN'); break;
+    case 'primport': { if (!S.admin) return; var oa = null; try { oa = JSON.parse(localStorage.getItem('dedesBaldai.calc.v1') || 'null'); } catch (er) {}
+      if (!oa) { toast(S.lang === 'lt' ? 'Pasiūlymų skaičiuoklės kainų šioje naršyklėje nerasta — įkelkite offer projekto JSON' : 'No offer-app prices in this browser — load an offer project JSON', true); return; }
+      var nI = prFromOffer(oa); prSave(); toast((S.lang === 'lt' ? 'Perimta kainų: ' : 'Prices taken: ') + nI); break; }
+    case 'prreset': if (!S.admin) return; if (S.confirm !== 'prreset') { S.confirm = 'prreset'; toast(S.lang === 'lt' ? 'Paspauskite dar kartą — visos kainos taps numatytomis' : 'Click again — all prices go back to defaults'); return; }
+      S.confirm = null; PR = prDefaults(); prSave(); break;
     case 'drwcab': S.tab = 'drw'; S.drwOnly = String(S.sel); S.drwOpen = null; window.scrollTo(0, 0); break;
     case 'drwpaper': S.drwPaper = v; store('dbKurejas.paper', v); break;
     case 'drwopen': S.drwOpen = i; break;
@@ -7294,7 +7520,7 @@ function saveFile(name, data, type) {
 
 document.documentElement.lang = S.lang;
 render();
-window.__dbk = { S:S, render:render, buildProjectAll:buildProjectAll, zipAll:zipAll, xlsmBytes:xlsmBytes, csvOf:csvOf, fromOffer:fromOffer, normCab:normCab, PRESETS:PRESETS, fromPreset:fromPreset };
+window.__dbk = { S:S, render:render, priceCabinet:priceCabinet, buildProjectAll:buildProjectAll, zipAll:zipAll, xlsmBytes:xlsmBytes, csvOf:csvOf, fromOffer:fromOffer, normCab:normCab, PRESETS:PRESETS, fromPreset:fromPreset };
 })();
 
 </script>
