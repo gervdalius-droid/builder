@@ -56,10 +56,10 @@ for (let run = 0; run < 60; run++) {
   nCab += n;
   /* painter's order, every cabinet, every view */
   infos.forEach((inf, i) => {
-    ['front', 'left', 'top'].forEach(v => { const V = DR.viewOrtho(v), o = DR.solve(DR.cabBoxes(inf.r, {}), V); orderOk(o, V, v + ' cab' + i);
+    ['front', 'left', 'top'].forEach(v => { const V = DR.viewOrtho(v), o = DR.solve(DR.cabBoxes(inf.r, { fit:true, c:proj.cabinets[i] }), V); orderOk(o, V, v + ' cab' + i);
       if (v === 'front') o.forEach((b, bi) => { if (!b.front) return; o.forEach((q, qi) => { if (qi > bi && !q.front && q.p && q.e[1][0] >= b.e[1][1] - 0.01 && Math.min(q.bb[1], b.bb[1]) - Math.max(q.bb[0], b.bb[0]) > 0.05 && Math.min(q.bb[3], b.bb[3]) - Math.max(q.bb[2], b.bb[2]) > 0.05) B('FRONT UNDER CARCASS ' + b.p.name + ' ' + q.p.name); }); }); });
     const Vi = DR.viewIso([-0.55, 0.78, -0.42]); orderOk(DR.solve(DR.cabBoxes(inf.r, {}), Vi), Vi, 'iso cab' + i);
-    const bx = DR.cabBoxes(inf.r, { plinth:false }); DR.explode(inf.r, bx); orderOk(DR.solve(bx, Vi), Vi, 'exploded cab' + i);
+    const bx = DR.cabBoxes(inf.r, { plinth:false, fit:true, c:proj.cabinets[i] }); DR.explode(inf.r, bx); orderOk(DR.solve(bx, Vi), Vi, 'exploded cab' + i);
   });
   ['lt', 'en'].forEach(lang => {
     const list = DR.sheets(proj, infos, { lang, project:proj.name, date:'2026-10-23', RM });
@@ -74,6 +74,10 @@ for (let run = 0; run < 60; run++) {
         if (sh.id[0] === 'c') r.panels.forEach(p => { if (!p.place) return; const want = nm(p.L) + ' × ' + nm(p.W) + ' × ' + nm(p.T);
           if (!sh.svg.includes('>' + (p.short || p.role) + '<') && !sh.svg.includes('>' + (p.short || p.role).slice(0, 10))) B('PART MISSING ' + p.name);
           if (!sh.svg.includes('>' + want + '<')) B('PART SIZE ' + p.name + ' ' + want); });
+        if (sh.id[0] === 'c') (r.hardware || []).forEach((h, hi) => { const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          if (!sh.svg.includes('>' + esc(h.item) + '<') && !sh.svg.includes('>' + esc(h.item).slice(0, 20))) B('FITTING NOT LISTED ' + h.item);
+          const k = DR.hwKind(h.item), letter = String.fromCharCode(65 + hi);
+          if ((k === 'drawer' || k === 'leg') && !sh.svg.includes('fill="#7a4d12">' + letter + '<')) B('FITTING WITHOUT BALLOON ' + h.item); });
         if (sh.id[0] === 'c') { const b = DR.cabBoxes(r, {}), e = [0, 1, 2].map(k2 => [Math.min(...b.map(x => x.e[k2][0])), Math.max(...b.map(x => x.e[k2][1]))]);
           [e[0][1] - e[0][0], e[1][1] - e[1][0]].forEach(v => { if (!sh.svg.includes('>' + nm(v) + '<')) B('DIM MISSING ' + sh.id + ' ' + nm(v)); }); }
       }

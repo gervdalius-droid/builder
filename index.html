@@ -4607,7 +4607,7 @@ function cabBoxes(r, o) {
     if (!p.place) return; var fr = isFront(p); if (fr && o.fronts === false) return; if (!fr && o.carcass === false) return;
     out.push({ e:pbox(p), fill:partFill(p), p:p, front:fr, door:p.role === 'DURYS', hingeLeft:p.hingeLeft, pi:i });
   });
-  if (o.legs !== false) (r.legs || []).forEach(function (l) { var d = l.d || 40; out.push({ e:[[l.x - d / 2, l.x + d / 2], [l.y - d / 2, l.y + d / 2], [-l.h, 0]], fill:COL.leg, leg:true }); });
+  if (o.legs !== false) (r.legs || []).forEach(function (l) { var d = l.d || 40; out.push({ e:[[l.x - d / 2, l.x + d / 2], [l.y - d / 2, l.y + d / 2], [-l.h, 0]], fill:COL.leg, leg:true, fit:'leg' }); });
   var pl = r.visual && r.visual.plinth;
   if (pl && o.plinth !== false) {   // the plinth stops under the parts above it (it is drawn, never cut into the carcass)
     var pe = [[pl.x0, pl.x1], [pl.y0, pl.y0 + pl.t], [pl.z0, pl.z1]];
@@ -4615,6 +4615,67 @@ function cabBoxes(r, o) {
       if (e[0][0] < pe[0][1] - 0.01 && e[0][1] > pe[0][0] + 0.01 && e[1][0] < pe[1][1] - 0.01 && e[1][1] > pe[1][0] + 0.01 && e[2][0] < pe[2][1]) pe[2][1] = Math.min(pe[2][1], Math.max(pe[2][0], e[2][0])); });
     if (pe[2][1] - pe[2][0] > 1) out.push({ e:pe, fill:COL.front, plinth:true });
   }
+  if (o.fit) { var cb = out.filter(function (b) { return b.p && !b.front; }); if (o.fronts === false && !cb.length) cb = cabBoxes(r, { fronts:false, legs:false, plinth:false });
+    fittingBoxes(r, o.c, cb.length ? cb : cabBoxes(r, { fronts:false, legs:false, plinth:false })).forEach(function (f) { if (o.fronts === false && !f.plate && !f.arm && f.fit === 'hinge') return; out.push(f); }); }
+  return out;
+}
+/* ---------------------------------------------------------------- fittings, drawn as simple solids
+   hinges (cup, arm, mounting plate) from the doors, drawer boxes and runners behind the drawer fronts,
+   shelf supports at the pin holes. att: the part a fitting moves with in the exploded view */
+var METAL = '#cfd4d7', METAL2 = '#b4bbbf';
+function fittingBoxes(r, c, carc) {
+  var out = [], t = (r.dims && r.dims.t) || 18;
+  var vert = carc.filter(function (b) { return b.p && (b.e[0][1] - b.e[0][0]) < Math.min(b.e[1][1] - b.e[1][0], b.e[2][1] - b.e[2][0]); });
+  var faceAt = function (x, z, y, left) {   // the side / partition face next to x (on the left or the right) at height z
+    var best = null; vert.forEach(function (b) { if (z < b.e[2][0] || z > b.e[2][1] || y < b.e[1][0] || y > b.e[1][1]) return;
+      if (left && b.e[0][1] <= x + 1 && (!best || b.e[0][1] > best.x)) best = { x:b.e[0][1], b:b };
+      if (!left && b.e[0][0] >= x - 1 && (!best || b.e[0][0] < best.x)) best = { x:b.e[0][0], b:b }; }); return best; };
+  var doorBox = function (d) { return (r.panels || []).filter(function (p) { if (p.role !== 'DURYS' || !p.place) return false; var e = pbox(p); return Math.abs(e[0][0] - d.x) < 0.6 && Math.abs(e[2][0] - d.z) < 0.6; })[0]; };
+  var cuts = function (a, b) { return [0, 1, 2].every(function (k) { return Math.min(a[k][1], b[k][1]) - Math.max(a[k][0], b[k][0]) > 0.01; }); };
+  var add = function (e, fill, fit, att, extra) {   // a fitting that would sit in a part or another fitting (a clash the warnings report) is left out of the picture
+    if (e.some(function (q) { return q[1] - q[0] < 0.2; })) return;
+    if (carc.some(function (b) { return b.p && cuts(b.e, e); }) || out.some(function (f) { return cuts(f.e, e); })) return;
+    out.push(Object.assign({ e:e, fill:fill, fit:fit, att:att }, extra || {})); };
+  /* hinges */
+  ((r.visual && r.visual.doors) || []).forEach(function (d) {
+    if (d.hinged === false || !d.ys) return; var dp = doorBox(d); if (!dp) return;
+    var cx = d.hingeLeft ? d.x + 22.5 : d.x + d.w - 22.5;
+    d.ys.forEach(function (yy) {
+      var cz = d.z + yy, f = faceAt(cx, cz, 37, d.hingeLeft); if (!f || Math.abs(cx - f.x) > 60) return;   // no side or partition next to the hinge edge: nothing to mount on
+      var sg = d.hingeLeft ? 1 : -1, px = f.x, ex = function (a1, a2) { return [Math.min(px + sg * a1, px + sg * a2), Math.max(px + sg * a1, px + sg * a2)]; };
+      add([ex(0, 8), [18, 62], [cz - 22, cz + 22]], METAL2, 'hinge', f.b.p.name, { plate:true });                      // mounting plate on the side's inner face
+      add([ex(0, 16), [2, 18], [cz - 10, cz + 10]], METAL, 'hinge', dp.name, { arm:true, side:f.b.p.name });           // hinge arm towards the door (its cup sits in the door)
+    });
+  });
+  /* drawers */
+  var secsOf = function (col) { return ((c && c.sections) || []).filter(function (s2) { return Math.max(0, Math.floor(+s2.col || 0)) === col; }); };
+  var backY = function (x, z) { var y = Infinity; carc.forEach(function (b) { if (!b.p) return; var ty = b.e[1][1] - b.e[1][0]; if (ty > Math.min(b.e[0][1] - b.e[0][0], b.e[2][1] - b.e[2][0])) return;
+      if (b.e[1][0] > 60 && x > b.e[0][0] && x < b.e[0][1] && z > b.e[2][0] && z < b.e[2][1]) y = Math.min(y, b.e[1][0]); }); return y; };
+  ((r.visual && r.visual.drawers) || []).forEach(function (f) {
+    var fp = (r.panels || []).filter(function (p) { if (p.role !== 'FASADAS' || !p.place) return false; var e = pbox(p); return Math.abs(e[0][0] - f.x) < 0.6 && Math.abs(e[2][0] - f.bottom) < 0.6; })[0]; if (!fp) return;
+    var xc = f.x + f.w / 2, zc = f.bottom + f.h / 2, Lf = faceAt(xc, zc, 100, true), Rf = faceAt(xc, zc, 100, false); if (!Lf || !Rf) return;
+    var L0 = Lf.x, R0 = Rf.x, s2 = secsOf(f.col || 0)[f.sec] || {}, rail = +s2.rail || 500, by = backY(xc, zc);
+    var dep = Math.min(rail, (isFinite(by) ? by : (r.dims ? r.dims.D : 560)) - 4); if (dep < 150 || R0 - L0 < 60) return;
+    var tb = /TANDEMBOX/i.test(f.hw || s2.hw || ''), zb = f.bottom + 24, room = f.h - 44; if (room < 40) return;
+    var sh = tb ? (f.h >= 250 ? Math.min(room, 180) : Math.min(room, 83)) : Math.min(room, 150), nmF = fp.name;
+    if (tb) {
+      add([[L0 + 3, L0 + 16], [4, dep], [zb, zb + sh]], METAL, 'drawer', nmF, { dside:true }); add([[R0 - 16, R0 - 3], [4, dep], [zb, zb + sh]], METAL, 'drawer', nmF, { dside:true });
+      add([[L0 + 16, R0 - 16], [4, dep - 2], [zb, zb + 16]], COL.carc, 'drawer', nmF); add([[L0 + 16, R0 - 16], [dep - 18, dep - 2], [zb + 16, zb + sh - 4]], COL.carc, 'drawer', nmF);
+    } else {
+      add([[L0 + 1, L0 + 12], [4, dep], [zb - 13, zb - 2]], METAL, 'drawer', nmF, { runner:true }); add([[R0 - 12, R0 - 1], [4, dep], [zb - 13, zb - 2]], METAL, 'drawer', nmF, { runner:true });
+      add([[L0 + 8, L0 + 24], [4, dep - 2], [zb, zb + sh]], COL.carc, 'drawer', nmF, { dside:true }); add([[R0 - 24, R0 - 8], [4, dep - 2], [zb, zb + sh]], COL.carc, 'drawer', nmF, { dside:true });
+      add([[L0 + 24, R0 - 24], [4, dep - 2], [zb, zb + 16]], COL.carc, 'drawer', nmF); add([[L0 + 24, R0 - 24], [dep - 18, dep - 2], [zb + 16, zb + sh]], COL.carc, 'drawer', nmF);
+      add([[L0 + 24, R0 - 24], [4, 20], [zb + 16, zb + sh]], COL.carc, 'drawer', nmF);
+    }
+  });
+  /* shelf supports at the pin holes */
+  (r.panels || []).forEach(function (p) {
+    if (!p.place || isFront(p)) return; var q = p.place;
+    p.holes.forEach(function (h) { if (h.op !== 'pin') return;
+      var nrm = h.face === 'A' ? q.n : q.n.map(function (v) { return -v; }), c0 = [0, 1, 2].map(function (i) { return q.o[i] + h.x * q.u[i] + h.y * q.v[i] - (h.face === 'A' ? 0 : p.T) * q.n[i]; });
+      var e = [0, 1, 2].map(function (i) { var a = c0[i], b = c0[i] + nrm[i] * 10; return Math.abs(nrm[i]) > 0.5 ? [Math.min(a, b), Math.max(a, b)] : [a - 3, a + 3]; });
+      add(e, METAL2, 'pin', p.name, { half:true }); });
+  });
   return out;
 }
 function boundsOf(boxes) { var b = [[Infinity, -Infinity], [Infinity, -Infinity], [Infinity, -Infinity]];
@@ -4760,6 +4821,11 @@ function titleBlock(o) {
   return s;
 }
 function viewTitle(x, y, label, scale) { return txt(x, y, label, 3.2, { bold:true }) + (scale ? txt(x + tw(label, 3.2) + 3, y, scale, 2.6, { fill:'#55605a' }) : '') + line([x, y + 1.2], [x + tw(label, 3.2), y + 1.2], 0.3); }
+function LETTER(i) { return i < 26 ? String.fromCharCode(65 + i) : 'A' + String.fromCharCode(65 + i - 26); }
+function hwKind(item) { item = String(item || '');
+  if (/LANKST|TIP-ON|hinge/i.test(item)) return 'hinge'; if (/TANDEM|bėgel|runner|stalči/i.test(item)) return 'drawer'; if (/kojel|pėdut|legs?\b|feet/i.test(item)) return 'leg';
+  if (/laikikl|support/i.test(item)) return 'pin'; if (/konfirmat|confirmat/i.test(item)) return 'conf'; if (/kaišč|dowel/i.test(item)) return 'dowel'; if (/ekscentrik|cam/i.test(item)) return 'cam'; return null; }
+function fitBalloon(c, n, r) { return '<rect x="' + f2(c[0] - r) + '" y="' + f2(c[1] - r) + '" width="' + f2(2 * r) + '" height="' + f2(2 * r) + '" rx="1.2" fill="#fff6e6" stroke="#7a4d12" stroke-width="0.3"/>' + txt(c[0], c[1] + r * 0.37, String(n), r * 0.95, { anchor:'middle', bold:true, fill:'#7a4d12' }); }
 function balloon(c, n, r) { r = r || 3.4; return '<circle cx="' + f2(c[0]) + '" cy="' + f2(c[1]) + '" r="' + f2(r) + '" fill="#ffffff" stroke="' + COL.line + '" stroke-width="0.3"/>' + txt(c[0], c[1] + r * 0.37, String(n), r * 0.95, { anchor:'middle', bold:true }); }
 function table(x, y, cols, rows, o) {   // cols: [{ w, label, align }], rows: arrays of strings
   o = o || {}; var rh = o.rh || 4.4, fs = o.fs || 2.4, W = cols.reduce(function (a, c) { return a + c.w; }, 0), s = '';
@@ -4880,6 +4946,7 @@ function explode(r, boxes) {   // outer parts move away from the carcass along t
   var E = Math.max(70, Math.min(260, 0.2 * Math.max(bb[0][1] - bb[0][0], bb[1][1] - bb[1][0], bb[2][1] - bb[2][0])));
   boxes.forEach(function (b) {
     b.disp = [0, 0, 0];
+    if (b.att) return;
     if (b.front) { b.disp[1] = -1.7 * E; return; }
     if (b.leg) { b.disp[2] = bb[2][0] >= -0.5 && b.e[2][1] <= bb[2][0] + 0.5 ? -E : 0; return; }
     if (!b.p) return;
@@ -4888,10 +4955,14 @@ function explode(r, boxes) {   // outer parts move away from the carcass along t
   });
   boxes.forEach(function (b) { if (b.leg && b.disp[2] === 0) { /* legs under a bottom that moved down go with it */
     var under = carc.filter(function (q) { return q.disp[2] < 0 && q.e[2][0] <= 0.5 && q.e[0][0] <= b.e[0][0] && q.e[0][1] >= b.e[0][1]; })[0]; if (under) b.disp = under.disp.slice(); } });
+  var byName = {}; boxes.forEach(function (b) { if (b.p) byName[b.p.name] = b; });
+  boxes.forEach(function (b) { if (b.att && byName[b.att]) b.disp = byName[b.att].disp.slice();
+    if (b.side && b.att) { var sd = byName[b.side] ? byName[b.side].disp : [0, 0, 0]; b.disp = b.disp.map(function (v, k) { return Math.abs(sd[k]) > 0.01 ? sd[k] : v / 2; }); }   // a hinge: out with its side, halfway forward to its door, so it shows
+    if (b.half) b.disp = b.disp.map(function (v) { return v / 2; }); });   // shelf supports: halfway out of their side, so they show   // a hinge floats between its door and its side
   boxes.forEach(function (b) { b.e = b.e.map(function (r2, k) { return [r2[0] + b.disp[k], r2[1] + b.disp[k]]; }); });
   return E;
 }
-function connectorLines(r, boxes, V, m, order) {   // every edge bore: a dashed line between where it sits on its part and on the part it goes into; keyed by the later of the two parts in the drawing order
+function connectorLines(r, boxes, V, m, order, anchors) {   // every edge bore: a dashed line between where it sits on its part and on the part it goes into; keyed by the later of the two parts in the drawing order
   var s = {}, byP = {}; boxes.forEach(function (b) { if (b.p) byP[b.p.name] = b; });
   var assembled = boxes.filter(function (b) { return b.p && !b.front; }).map(function (b) { return { b:b, e:b.e.map(function (r2, k) { return [r2[0] - b.disp[k], r2[1] - b.disp[k]]; }) }; });
   (r.panels || []).forEach(function (p) {
@@ -4902,15 +4973,16 @@ function connectorLines(r, boxes, V, m, order) {   // every edge bore: a dashed 
       var pt = [0, 1, 2].map(function (i) { return q.o[i] + a * q.u[i] + b2 * q.v[i] - p.T / 2 * q.n[i]; }), pin = [0, 1, 2].map(function (i) { return pt[i] + out[i] * 1.2; });
       var Q = assembled.filter(function (x) { return x.b !== B && x.e.every(function (r2, k) { return pin[k] > r2[0] + 0.01 && pin[k] < r2[1] - 0.01; }); })[0];
       if (!Q) return; var dq = Q.b.disp, dp = B.disp; if (Math.hypot(dq[0] - dp[0], dq[1] - dp[1], dq[2] - dp[2]) < 1) return;
-      var col = e.d === 5 ? COL.conf : (Math.abs(e.depth - 27) < 0.5 ? COL.dowel : COL.cam);
+      var kind = e.d === 5 ? 'conf' : (Math.abs(e.depth - 27) < 0.5 ? 'dowel' : 'cam'), col = COL[kind];
       var A = m(V.pr([pt[0] + dp[0], pt[1] + dp[1], pt[2] + dp[2]])), Bq = m(V.pr([pt[0] + dq[0], pt[1] + dq[1], pt[2] + dq[2]]));
-      var k = Math.max(order.indexOf(B), order.indexOf(Q.b)); s[k] = (s[k] || '') + line(A, Bq, 0.16, col, '1.4 0.9') + '<circle cx="' + f2(A[0]) + '" cy="' + f2(A[1]) + '" r="0.45" fill="' + col + '"/>';
+      var k = Math.max(order.indexOf(B), order.indexOf(Q.b)), ll = Math.hypot(Bq[0] - A[0], Bq[1] - A[1]);
+      if (anchors) (anchors[kind] = anchors[kind] || []).push({ l:ll, k:k, mid:V.pr([pt[0] + (dp[0] + dq[0]) / 2, pt[1] + (dp[1] + dq[1]) / 2, pt[2] + (dp[2] + dq[2]) / 2]) }); s[k] = (s[k] || '') + line(A, Bq, 0.16, col, '1.4 0.9') + '<circle cx="' + f2(A[0]) + '" cy="' + f2(A[1]) + '" r="0.45" fill="' + col + '"/>';
     });
   });
   return s;
 }
 /* a point on the part that no nearer part covers in the picture: where the balloon's leader starts */
-function anchorOf(b, order) {
+function anchorOf(b, order, strict) {
   var idx = order.indexOf(b), nearer = order.slice(idx + 1).filter(function (x) { return x.bb[0] < b.bb[1] && x.bb[1] > b.bb[0] && x.bb[2] < b.bb[3] && x.bb[3] > b.bb[2]; });
   var faces = b.faces.slice().sort(function (p, q) { return q.area - p.area; });
   var inPoly = function (pt, poly) { var c = false; for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) { var a = poly[i], d = poly[j]; if (((a[1] > pt[1]) !== (d[1] > pt[1])) && (pt[0] < (d[0] - a[0]) * (pt[1] - a[1]) / (d[1] - a[1]) + a[0])) c = !c; } return c; };
@@ -4920,6 +4992,7 @@ function anchorOf(b, order) {
       var u = G[i], v = G[j], P0 = f.pts[0], P1 = f.pts[1], P2 = f.pts[2], P3 = f.pts[3];
       var pt = [(1 - u) * (1 - v) * P0[0] + u * (1 - v) * P1[0] + u * v * P2[0] + (1 - u) * v * P3[0], (1 - u) * (1 - v) * P0[1] + u * (1 - v) * P1[1] + u * v * P2[1] + (1 - u) * v * P3[1]];
       if (!nearer.some(function (x) { return x.faces.some(function (g) { return inPoly(pt, g.pts); }); })) return pt; } }
+  if (strict) return null;
   var f0 = faces[0]; return f0 ? [(f0.pts[0][0] + f0.pts[2][0]) / 2, (f0.pts[0][1] + f0.pts[2][1]) / 2] : [(b.bb[0] + b.bb[1]) / 2, (b.bb[2] + b.bb[3]) / 2];
 }
 function placeBalloons(items, area, R0) {   // items: { a:[x,y] sheet, n }; balloons round the picture, sorted by angle, kept apart
@@ -4984,7 +5057,7 @@ function sheetAssembly(c, r, nr, meta) {
 /* ---------------------------------------------------------------- one cabinet on one sheet
    left: front, without fronts and left views (dimensioned), parts and hardware lists under them;
    right: the exploded assembly with part numbers and connector lines */
-function viewsBlock(r, s, x0, y0, two) {   // two: front | left on the first row, without fronts under the front
+function viewsBlock(r, s, x0, y0, two, c) {   // two: front | left on the first row, without fronts under the front
   var all = cabBoxes(r, {}), carc = cabBoxes(r, { fronts:false });
   var b3 = boundsOf(all), W = b3[0][1] - b3[0][0], Ht = b3[2][1] - b3[2][0], Dt = b3[1][1] - b3[1][0], zMin = b3[2][0];
   var hasInner = carc.some(function (b) { return b.p; }), svg = '', V, rowH = Ht * s + 40, lab = '1:' + Math.round(1 / s);
@@ -5002,7 +5075,7 @@ function viewsBlock(r, s, x0, y0, two) {   // two: front | left on the first row
   if (hasInner) {
     var xi = two ? x0 : xR, yi = two ? yB + 28 + 14 + Ht * s : yB;
     if (two) svg += viewTitle(x0, yB + 28, L.inner, lab);
-    V = viewOrtho('front'); var oI = solve(cabBoxes(r, { fronts:false, plinth:false }), V), mI = M(s, xi - b3[0][0] * s, yi + zMin * s);
+    V = viewOrtho('front'); var oI = solve(cabBoxes(r, { fronts:false, plinth:false, fit:true, c:c }), V), mI = M(s, xi - b3[0][0] * s, yi + zMin * s);
     if (!two) svg += viewTitle(xi, y0, L.inner, lab);
     svg += drawBoxes(oI, mI, { lw:0.28 }) + openingDims(oI, function (q) { return mI(q); }, V, { topZ:b3[2][1] });
     if (!two) xR = xi + W * s + 10;
@@ -5029,7 +5102,7 @@ function sheetCabinet(c, r, nr, meta) {
   parts.forEach(function (p, i) { posOf[p.name] = i + 1; });
   var LX = FR + 8, LW = 196, top = FR + 12, bottomY = SH - FR - 4;
   /* lists */
-  var hwRows = (r.hardware || []).map(function (h) { return [h.item, String(h.qty), h.unit]; });
+  var hwList = r.hardware || [], hwRows = hwList.map(function (h, i) { return [LETTER(i), h.item, String(h.qty), h.unit]; });
   var extras = (c.extras || []).filter(function (x) { return x && +x.L > 0 && +x.W > 0; });
   var rows = parts.map(function (p, i) { var eb = p.eb || {}; return [String(i + 1), p.short || p.role, nm(p.L) + ' × ' + nm(p.W) + ' × ' + nm(p.T), p.mat || L.none,
     [eb.y0 ? 'L1' : '', eb.y1 ? 'L2' : '', eb.x0 ? 'W1' : '', eb.x1 ? 'W2' : ''].filter(Boolean).join(' ') || L.none, '1']; });
@@ -5040,24 +5113,42 @@ function sheetCabinet(c, r, nr, meta) {
   [false, true].forEach(function (two) { for (var i = 0; i < DEN.length; i++) { var s = 1 / DEN[i], sz = viewsSize(r, s, two);
     if (sz[0] <= LW && sz[1] <= bottomY - top - listNeed) { if (!best || s > best.s + 1e-9) best = { s:s, two:two }; break; } } });
   if (!best) best = { s:1 / 50, two:true };
-  var vb = viewsBlock(r, best.s, LX + 2, top, best.two); svg += vb.svg;
+  var vb = viewsBlock(r, best.s, LX + 2, top, best.two, c); svg += vb.svg;
   /* parts and hardware under the views */
   var yT = vb.bottom + 8, rh = Math.max(2.7, Math.min(4.2, (bottomY - yT - 8) / nRows)), fs = Math.min(2.3, rh * 0.6);
   svg += txt(LX, yT - 1.8, L.parts, 3, { bold:true });
   var tp = table(LX, yT, [{ w:9, label:L.pos }, { w:30, label:L.part }, { w:36, label:L.size }, { w:72, label:L.mat }, { w:34, label:L.edge }, { w:15, label:L.qty, align:'end' }], rows, { rh:rh, fs:fs });
   svg += tp.svg;
   if (hwRows.length) { var yH = yT + tp.h + rh + 4; svg += txt(LX, yH - 1.8, L.hw, 3, { bold:true });
-    svg += table(LX, yH, [{ w:146, label:L.name }, { w:25, label:L.qty, align:'end' }, { w:25, label:L.unit }], hwRows, { rh:rh, fs:fs }).svg; }
+    svg += table(LX, yH, [{ w:9, label:L.pos }, { w:137, label:L.name }, { w:25, label:L.qty, align:'end' }, { w:25, label:L.unit }], hwRows, { rh:rh, fs:fs }).svg; }
   /* exploded assembly on the right */
   var AX = LX + LW + 10, area = [AX + 10, SW - FR - 10, FR + 26, SH - FR - TB.h - 10];
   svg += line([AX - 4, FR + 4], [AX - 4, SH - FR - 4], 0.15, '#c3c8c5');
-  var V = viewIso(ISO_D), boxes = cabBoxes(r, { plinth:false }); explode(r, boxes);
+  var V = viewIso(ISO_D), boxes = cabBoxes(r, { plinth:false, fit:true, c:c }); explode(r, boxes);
   var order = solve(boxes, V), fp = fitPic(order, area[0] + 4, area[2] + 4, area[1] - area[0] - 8, area[3] - area[2] - 8);
   svg += viewTitle(AX, top, L.expl, L.nts);
-  svg += drawBoxes(order, fp.m, { lw:0.26, shade:true, after:connectorLines(r, boxes, V, function (q) { return fp.m(q); }, order) });
+  var anchors = {};
+  svg += drawBoxes(order, fp.m, { lw:0.26, shade:true, after:connectorLines(r, boxes, V, function (q) { return fp.m(q); }, order, anchors) });
   var items = order.filter(function (b) { return b.p && posOf[b.p.name]; }).map(function (b) { return { a:fp.m(anchorOf(b, order)), n:posOf[b.p.name] }; });
+  /* fittings: one lettered balloon per line of the fittings list, on one of its pieces */
+  var pickFit = function (test) { var cands = order.filter(test); cands.sort(function (a, b) { return (b.e[2][1] - a.e[2][1]) || (a.e[0][0] - b.e[0][0]); });
+    for (var i = 0; i < cands.length; i++) { var a = anchorOf(cands[i], order, true); if (a) return fp.m(a); }
+    return null; };
+  var pickAny = function (fit, pref) { return pickFit(function (b) { return b.fit === fit && pref(b); }) || pickFit(function (b) { return b.fit === fit; }) ||
+    (function () { var c0 = order.filter(function (b) { return b.fit === fit; }).pop(); return c0 ? fp.m(anchorOf(c0, order)) : null; })(); };
+  hwList.forEach(function (h, i) {
+    var k = hwKind(h.item), a = null;
+    if (k === 'hinge') a = pickAny('hinge', function (b) { return b.arm; });
+    else if (k === 'drawer') a = pickAny('drawer', function (b) { return b.dside; });
+    else if (k === 'leg') a = pickAny('leg', function () { return true; });
+    else if (k === 'pin') a = pickAny('pin', function () { return true; });
+    else if (k && anchors[k]) { var inPoly = function (pt, poly) { var c2 = false; for (var q = 0, j = poly.length - 1; q < poly.length; j = q++) { var u = poly[q], w = poly[j]; if (((u[1] > pt[1]) !== (w[1] > pt[1])) && (pt[0] < (w[0] - u[0]) * (pt[1] - u[1]) / (w[1] - u[1]) + u[0])) c2 = !c2; } return c2; };
+      var vis = anchors[k].filter(function (x) { return x.l > 6 && !order.slice(x.k + 1).some(function (b) { return b.faces.some(function (g) { return inPoly(x.mid, g.pts); }); }); }).sort(function (x, y) { return y.l - x.l; })[0];
+      if (vis) a = fp.m(vis.mid); }
+    if (a) items.push({ a:a, n:LETTER(i), fit:true });
+  });
   var pbS = [fp.m([fp.pb[0], fp.pb[3]]), fp.m([fp.pb[1], fp.pb[2]])], ring = [Math.max(AX + 4, pbS[0][0] - 8), Math.min(SW - FR - 5, pbS[1][0] + 8), Math.max(FR + 20, pbS[0][1] - 8), Math.min(SH - FR - TB.h - 5, pbS[1][1] + 8)];
-  placeBalloons(items, ring, 3.1).forEach(function (it) { svg += line(it.a, it.p, 0.18, '#3a423e') + '<circle cx="' + f2(it.a[0]) + '" cy="' + f2(it.a[1]) + '" r="0.55" fill="#3a423e"/>' + balloon(it.p, it.n, 3.1); });
+  placeBalloons(items, ring, 3.1).forEach(function (it) { svg += line(it.a, it.p, 0.18, it.fit ? '#7a4d12' : '#3a423e') + '<circle cx="' + f2(it.a[0]) + '" cy="' + f2(it.a[1]) + '" r="0.55" fill="' + (it.fit ? '#7a4d12' : '#3a423e') + '"/>' + (it.fit ? fitBalloon(it.p, it.n, 3.1) : balloon(it.p, it.n, 3.1)); });
   var lg = FR + 16.5, lx = AX;
   svg += txt(lx, lg, L.conn, 2.1, { fill:'#55605a' }); lx += tw(L.conn, 2.1) + 3;
   [[COL.conf, L.cConf], [COL.cam, L.cCam], [COL.dowel, L.cDowel]].forEach(function (k) { svg += line([lx, lg - 0.7], [lx + 6, lg - 0.7], 0.3, k[0], '1.4 0.9') + txt(lx + 7.5, lg, k[1], 2.1, { fill:'#55605a' }); lx += 10 + tw(k[1], 2.1) + 4; });
@@ -5269,7 +5360,7 @@ function pdf(list, o) {
   return next();
 }
 
-var api = { overlap2:overlap2, sheets:sheets, sheetViews:sheetViews, sheetAssembly:sheetAssembly, pdf:pdf, pdfBytes:pdfBytes, solve:solve, viewIso:viewIso, viewOrtho:viewOrtho, cabBoxes:cabBoxes, pbox:pbox, explode:explode, partOrder:partOrder, TX:TX };
+var api = { hwKind:hwKind, fittingBoxes:fittingBoxes, overlap2:overlap2, sheets:sheets, sheetViews:sheetViews, sheetAssembly:sheetAssembly, pdf:pdf, pdfBytes:pdfBytes, solve:solve, viewIso:viewIso, viewOrtho:viewOrtho, cabBoxes:cabBoxes, pbox:pbox, explode:explode, partOrder:partOrder, TX:TX };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.DBDraw = api;
 })(typeof window !== 'undefined' ? window : this);
 </script>
