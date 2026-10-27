@@ -949,8 +949,8 @@ button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(
 .drwctl .f>div,.drwctl .f{flex-direction:row}.drwctl .f:has(select){flex-direction:column}.drwctl .btn.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .drwgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
 .drwcard{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
-.drwthumb{display:block;padding:8px;border:0;background:#f4f5f3;cursor:zoom-in;width:100%}.drwthumb svg{display:block;width:100%;height:auto;box-shadow:0 1px 4px #0002;background:#fff}
-.drwthumb:hover svg,.drwthumb:focus-visible svg{outline:2px solid var(--accent)}
+.drwthumb{display:block;padding:8px;border:0;background:#f4f5f3;cursor:zoom-in;width:100%}.drwthumb svg,.drwthumb img{display:block;width:100%;height:auto;box-shadow:0 1px 4px #0002;background:#fff}
+.drwthumb:hover svg,.drwthumb:focus-visible svg,.drwthumb:hover img,.drwthumb:focus-visible img{outline:2px solid var(--accent)}
 .drwcard figcaption{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;font-size:13px;border-top:1px solid var(--line)}.drwcard figcaption .btn{min-height:32px;padding:5px 10px}
 .drwover{position:fixed;inset:0;z-index:60;background:rgba(10,14,12,.6);display:flex;align-items:center;justify-content:center;padding:14px}
 .drwbox{background:var(--panel);border-radius:12px;max-width:min(1500px,100%);width:100%;max-height:100%;display:flex;flex-direction:column;overflow:hidden}
@@ -3435,12 +3435,13 @@ const V={px:0,py:0,yaw:.52,pitch:.32,zoom:1,open:.65,mode:'assembly',hardware:tr
 const J={cab:null,key:null,side:'L',scope:'side',index:null};
 const BX={cab:null,sel:null};   // 3D construction: the selected board
 const COARSE=!!(window.matchMedia&&window.matchMedia('(pointer: coarse)').matches);   // a touch screen: the hints speak of fingers
-let FRAME=null;   // the last rasterised picture (pixels + depth + pick buffers) — a re-render of the same view reuses it
+let FRAME=null,liveUntil=0;   // the last rasterised picture (pixels + depth + pick buffers) — a re-render of the same view reuses it
 let observer;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const add=(a,b)=>a.map((v,i)=>v+b[i]), sub=(a,b)=>a.map((v,i)=>v-b[i]), mul=(a,s)=>a.map(v=>v*s), dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0), cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]], unit=a=>mul(a,1/(Math.hypot(...a)||1));
 function mount(el,c,r,lang,hooks={}){
  if(observer)observer.disconnect();
+ if(hooks.live)liveUntil=performance.now()+300;   // typing in a field: a quick half-resolution picture now, the sharp one when typing pauses
  const en=lang==='en', L=(lt,enText)=>en?enText:lt;
  const isBox=c.kind==='box'&&!!r.box;if(!isBox)V.boards=false;
  if(hooks.select&&hooks.select.key&&(r.joints||[]).some(j=>j.key===hooks.select.key)){V.edit=true;V.boards=false;J.cab=c.id;J.key=hooks.select.key;J.side=hooks.select.side||'L';J.index=null;J.seam=null;}   // "edit in 3D" from a joint rowif(BX.cab!==c.id){BX.cab=c.id;BX.sel=null;}if(isBox&&BX.sel&&!r.box.boards.some(b=>b.id===BX.sel))BX.sel=null;
@@ -3729,7 +3730,7 @@ function mount(el,c,r,lang,hooks={}){
  });
  }
  function path(points){ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();}
- function draw(){raf=0;if(!el.isConnected)return;const bounds=canvas.getBoundingClientRect();width=bounds.width;height=bounds.height;if(!width||!height)return;const moving=!!(drag||pinch)||performance.now()-lastWheel<180,ratio=moving?1:2;canvas.width=width*ratio;canvas.height=height*ratio;ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,width,height);scale=Math.min((width-65)/(d.W+d.D*.55+Math.min(d.W*.3,180)),(height-75)/(d.H+leg+d.D*.38))*V.zoom;
+ function draw(){raf=0;if(!el.isConnected||!canvas.isConnected)return;const bounds=canvas.getBoundingClientRect();width=bounds.width;height=bounds.height;if(!width||!height)return;const typing=performance.now()<liveUntil,moving=!!(drag||pinch)||performance.now()-lastWheel<180||typing,ratio=moving?1:2;if(typing){clearTimeout(sharpT);sharpT=setTimeout(schedule,liveUntil-performance.now()+20);}canvas.width=width*ratio;canvas.height=height*ratio;ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,width,height);scale=Math.min((width-65)/(d.W+d.D*.55+Math.min(d.W*.3,180)),(height-75)/(d.H+leg+d.D*.38))*V.zoom;
  scene();
  scale=1;panX=0;panY=0;
  const projected=faces.flatMap(f=>f.p.map(projection));
@@ -3758,6 +3759,7 @@ function mount(el,c,r,lang,hooks={}){
  const nE=pts.length,EX=new Float64Array(nE),EY=new Float64Array(nE),EDX=new Float64Array(nE),EDY=new Float64Array(nE),EI=new Float64Array(nE),EM=new Float64Array(nE);
  let cy=0;for(let i=0;i<nE;i++)cy+=pts[i][1];cy/=nE;
  for(let i=0;i<nE;i++){const p=pts[i],q=pts[(i+1)%nE],dx=q[0]-p[0],dy=q[1]-p[1];EX[i]=p[0];EY[i]=p[1];EDX[i]=dx;EDY[i]=dy;EI[i]=1/(Math.hypot(dx,dy)||1);EM[i]=(p[1]+q[1])/2;}
+ const NEAR0=new Float64Array(nE),NEAR1=new Float64Array(nE);
  for(let k=1;k<nE-1;k++){
  const a=pts[0],b=pts[k],cc=pts[k+1],den=(b[1]-cc[1])*(a[0]-cc[0])+(cc[0]-b[0])*(a[1]-cc[1]);if(Math.abs(den)<.0001)continue;
  const xmin=Math.max(0,Math.floor(Math.min(a[0],b[0],cc[0]))),xmax=Math.min(pixelW-1,Math.ceil(Math.max(a[0],b[0],cc[0]))),ymin=Math.max(0,Math.floor(Math.min(a[1],b[1],cc[1]))),ymax=Math.min(pixelH-1,Math.ceil(Math.max(a[1],b[1],cc[1])));
@@ -3771,6 +3773,12 @@ function mount(el,c,r,lang,hooks={}){
  const clip=(c0,dc)=>{if(Math.abs(dc)<1e-12){if(c0<-EPS)hi=lo-1;return;}const xc=(-EPS-c0)/dc;if(dc>0){const l=xmin+Math.ceil(xc-1e-9);if(l>lo)lo=l;}else{const h=xmin+Math.floor(xc+1e-9);if(h<hi)hi=h;}};
  clip(u0,du);clip(v0,dv);clip(w0,dw);
  if(lo>hi)continue;lo=Math.max(xmin,lo-1);hi=Math.min(xmax,hi+1);
+ // where along this row a polygon edge is close enough for the bevel shading: only there is the exact distance worked out
+ let nNear=0;for(let i=0;i<nE;i++){const C=EDX[i]*(py-EY[i])+EDY[i]*EX[i],T=thr/EI[i]+1e-6;let s0,s1;
+ if(Math.abs(EDY[i])<1e-9){if(Math.abs(C)>=T)continue;s0=-1e9;s1=1e9;}else{const cx=C/EDY[i],hw=T/Math.abs(EDY[i]);s0=Math.floor(cx-hw-1.5);s1=Math.ceil(cx+hw+.5);}
+ NEAR0[nNear]=s0;NEAR1[nNear]=s1;nNear++;}
+ for(let i=1;i<nNear;i++){const a0=NEAR0[i],a1=NEAR1[i];let j=i-1;while(j>=0&&NEAR0[j]>a0){NEAR0[j+1]=NEAR0[j];NEAR1[j+1]=NEAR1[j];j--;}NEAR0[j+1]=a0;NEAR1[j+1]=a1;}
+ let nj=0;
  for(let x=lo;x<=hi;x++){
  const t=x-xmin,u=u0+du*t,v=v0+dv*t,w=1-u-v;if(u<-EPS||v<-EPS||w<-EPS)continue;
  const z=u*a[2]+v*b[2]+w*cc[2],idx=y*pixelW+x;if(z>=depths[idx])continue;depths[idx]=z;idbuf[idx]=bid;
@@ -3778,7 +3786,8 @@ function mount(el,c,r,lang,hooks={}){
  if(metal){const wy=u*WA[1]+v*WB[1]+w*WC[1],wz=u*WA[2]+v*WB[2]+w*WC[2];factor+=.10*Math.sin(wy*.017+wz*.008);}
  if(wood){const wx=u*WA[0]+v*WB[0]+w*WC[0],wy=u*WA[1]+v*WB[1]+w*WC[1],wz=u*WA[2]+v*WB[2]+w*WC[2];factor+=.025*Math.sin(wx*.65+wy*.12+Math.sin(wz*.016)*.9);}
  const px=x+.5;let edgeDistance=Infinity,upper=false;
- for(let i=0;i<nE;i++){let dist=EDX[i]*(py-EY[i])-EDY[i]*(px-EX[i]);if(dist<0)dist=-dist;dist*=EI[i];if(dist<edgeDistance){edgeDistance=dist;upper=EM[i]<cy;}}
+ while(nj<nNear&&NEAR1[nj]<x)nj++;let near=false;for(let q=nj;q<nNear;q++){if(NEAR0[q]>x)break;if(NEAR1[q]>=x){near=true;break;}}
+ if(near)for(let i=0;i<nE;i++){let dist=EDX[i]*(py-EY[i])-EDY[i]*(px-EX[i]);if(dist<0)dist=-dist;dist*=EI[i];if(dist<edgeDistance){edgeDistance=dist;upper=EM[i]<cy;}}
  // Subpixel bevel highlights reveal genuine gaps even on dark fronts; geometry stays unchanged.
  if(edgeDistance<thr){if(front){factor*=upper?1:.58;highlight=upper?22:0;}else factor*=.9;}
  const o=idx*4;pixels[o]=R0*factor+highlight;pixels[o+1]=G0*factor+highlight;pixels[o+2]=B0*factor+highlight;pixels[o+3]=255;
@@ -7571,10 +7580,15 @@ function drwSheets(only) {
   if (only === undefined) drwOnlyFix();
   var o = only === undefined ? S.drwOnly : only, oi = only === undefined ? drwOnlyIdx() : (o === 'all' || o === 'furn' ? null : +o);
   if (RM && RM.ensure(S.proj)) save();   // never opened in Baldai: place the cabinets the way the Baldai tab does, so the furniture is drawn
-  var list = DR.sheets(S.proj, S._info || [], { lang:S.lang, project:S.proj.name || projName(), date:new Date().toISOString().slice(0, 10), paper:S.drwPaper, only:o === 'all' || o === 'furn' ? null : oi, RM:RM });
+  var day = new Date().toISOString().slice(0, 10), key = JSON.stringify([S.proj, S.settings, S.lang, S.drwPaper, o, oi, day]);
+  if (DRW_CACHE && DRW_CACHE.key === key) return DRW_CACHE.list;   // the same project and options: the sheets are not drawn again
+  var list = DR.sheets(S.proj, S._info || [], { lang:S.lang, project:S.proj.name || projName(), date:day, paper:S.drwPaper, only:o === 'all' || o === 'furn' ? null : oi, RM:RM });
   if (o === 'furn') { list = list.filter(function (x) { return x.cab == null; }); list.forEach(function (x, k) { x.svg = x.svg.replace(/>\d+ \/ \d+</, '>' + (k + 1) + ' / ' + list.length + '<'); }); }
+  DRW_CACHE = { key:key, list:list };
   return list;
 }
+var DRW_CACHE = null;
+function thumbSrc(x) { if (!x._uri) x._uri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(x.svg); return x._uri; }   // thumbnails as pictures: far less page to build than inline drawings
 function viewDrw() {
   if (!DR) return '<div class="card empty">drawings.js</div>';
   if (!S.proj.cabinets.length) return '<div class="card empty">' + t('drwNone') + '</div>';
@@ -7585,7 +7599,7 @@ function viewDrw() {
     '<div class="f"><span>' + t('drwPaper') + '</span>' + ['A3', 'A4'].map(function (pp) { return '<button type="button" class="btn' + (S.drwPaper === pp ? ' on' : '') + '" data-act="drwpaper" data-v="' + pp + '" aria-pressed="' + (S.drwPaper === pp) + '">' + pp + '</button>'; }).join('') + '</div>' +
     '<button class="btn pri big" data-act="drwpdf"' + (list.length ? '' : ' disabled') + '>' + t('drwPdf').replace('{n}', list.length) + '</button></div><p class="note" style="margin:0">' + t('drwZip') + '</p></div>';
   h += '<div class="drwgrid">' + list.map(function (x, i) {
-    return '<figure class="drwcard"><button type="button" class="drwthumb" data-act="drwopen" data-i="' + i + '" aria-label="' + esc(t('drwView') + ': ' + x.title) + '">' + x.svg.replace(/width="[\d.]+mm" height="[\d.]+mm"/, 'width="100%" aria-hidden="true"') + '</button>' +
+    return '<figure class="drwcard"><button type="button" class="drwthumb" data-act="drwopen" data-i="' + i + '" aria-label="' + esc(t('drwView') + ': ' + x.title) + '"><img src="' + thumbSrc(x) + '" alt="" loading="lazy" decoding="async"></button>' +
       '<figcaption><span><b>' + (i + 1) + '</b> · ' + esc(x.title) + '</span><button type="button" class="btn ghost" data-act="drwpdf1" data-i="' + i + '">' + t('drwOne') + '</button></figcaption></figure>';
   }).join('') + '</div></div>';
   if (S.drwOpen != null && list[S.drwOpen]) { var x = list[S.drwOpen];
@@ -7822,7 +7836,7 @@ function refreshLive() {
   var inf = buildOne(S.sel); S._info[S.sel] = inf;
   var sk = document.getElementById('sketch'); if (sk) sk.innerHTML = sketchOf(cur());
   var xs = document.getElementById('xsec'); if (xs) xs.innerHTML = sectionSVG(cur(), inf.r, S.xside === 'R' ? 'R' : 'L');
-  mountIso(); mountAssembly();
+  mountIso(); mountAssembly(true);
   var wr = document.getElementById('warns'); if (wr) wr.innerHTML = inf.warnings.map(function (x) { var lv = level(x); return '<div class="w ' + lv + '"><span class="tag">' + t(lv === 'bad' ? 'errTag' : lv === 'warn' ? 'warnTag' : 'infoTag') + '</span><span>' + esc(wTxt(x)) + '</span></div>'; }).join('');
   var tb = document.querySelector('.paper .tb'); var c = cur();
   if (tb) tb.innerHTML = '<b>' + (S.sel + 1) + ' · ' + esc(c.name || typeName(c)) + '</b><span>' + fmt(c.dishwasher ? c.dishWidth : c.W) + '×' + fmt(c.H) + '×' + fmt(c.D) + '</span>';
@@ -7864,9 +7878,9 @@ function syncXsec() {
   var cap = document.getElementById('xcap'); if (cap) cap.textContent = t('xsec') + ' · ' + t(S.xside === 'R' ? 'xSideR' : 'xSideL');
   document.querySelectorAll('[data-act=xside]').forEach(function (b) { var on = b.getAttribute('data-v') === (S.xside === 'R' ? 'R' : 'L'); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
 }
-function mountAssembly() {
+function mountAssembly(live) {
  var el=document.getElementById('assembly-preview'); if(el && cur() && S._info && S._info[S.sel]) { setTimeout(function(){ S.isoFocus=false; },0); } if(el && cur() && S._info && S._info[S.sel]) window.DBAssembly.mount(el,cur(),S._info[S.sel].r,S.lang,{
- t:tJ,canUndo:canUndo(),select:S.isoFocus?S.iso:null,
+ t:tJ,canUndo:canUndo(),select:S.isoFocus?S.iso:null,live:!!live,
  onCommit:function(key,patch,selection){pushUndo();setJoint(cur(),key,patch);S.iso=selection;save();render();},
  onReset:function(key,side){pushUndo();if(side)setJoint(cur(),key,{side:side,pos:null});else if(cur().cnc.joints)delete cur().cnc.joints[key];S.iso={key:key,side:side,idx:null};save();render();},
  onUndo:function(){undoJoints();},
