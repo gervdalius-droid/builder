@@ -43,7 +43,9 @@ for(const o of opts) for(const ss of secsets) for(const [W,H,D] of dims){
         const isSide=/KAIRE|DESINE/.test(p.name);
         // standing rails are now joined with cams (bolt Ø8 in the long edge) instead of confirmats needing a Ø5 long-edge pilot
         const standing=o.top==='rails' && /DUGNAS|JUOSTA_GALAS_H|JUOSTA_GALAS_V|JUOSTA_APACIA_V/.test(p.name) && missing.every(l=>/D=8/.test(l));
-        if((bugfix && isSide) || newOld || standing){ fixed++; return; }
+        // a runner mark the reference put outside the panel (runner longer than the side) is now left out on purpose, with a warning
+        const offPanel=missing.every(l=>{ const m=/X=([-\d.]+) Y=([-\d.]+) .*N="L"/.exec(l); return m && (+m[1]<0 || +m[2]<0 || +m[1]>p.L || +m[2]>p.W); });
+        if((bugfix && isSide) || newOld || standing || offPanel){ fixed++; return; }
         fails++; if(fails<6) console.log('DIFF',JSON.stringify(o),W,H,D,p.name,'missing',missing.slice(0,3)); }
       else if(nf && nf.text.split('\r\n')[0]!==rf.head){ if(newOld||bugfix){fixed++;return;} fails++; if(fails<6) console.log('HEAD',p.name,rf.head,'|',nf.text.split('\r\n')[0]); }
       else if(nl.length!==rl.length) allSame=false;

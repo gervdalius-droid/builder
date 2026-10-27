@@ -23,7 +23,7 @@ function cabinet(k) {
   const cols = pick([1, 1, 2, 3]), H = pick([720, 720, 2100, 330 + 390]), W = pick([400, 600, 900, 1200]);
   const secs = []; for (let c = 0; c < cols; c++) {
     const kind = pick(['drawers', 'doors', 'open', 'doors']);
-    secs.push(Object.assign(E.newSection(kind), { col:c, fill:true, nDrawers:pick([1, 2, 3, 4]), nDoors:pick([1, 2]), shelves:pick([0, 1, 2]), hingeSide:pick(['auto', 'left', 'right']) }));
+    secs.push(Object.assign(E.newSection(kind), { col:c, fill:true, hw:pick(['BLUM TANDEMBOX', 'BLUM TANDEM', 'GTV KULKINIAI H45', 'DTC KULKINIAI H45']), rail:pick([300, 400, 450, 500]), hingeN:pick(['', '', 3, 4]), nDrawers:pick([1, 2, 3, 4]), nDoors:pick([1, 2]), shelves:pick([0, 1, 2]), hingeSide:pick(['auto', 'left', 'right']) }));
     if (H > 1500) secs.push(Object.assign(E.newSection('drawers'), { col:c, fill:false, height:500, nDrawers:2 }));
   }
   return { id:'c' + k, name:'C' + k, W, H, D:pick([330, 560, 580]), thick:18, cols, legH:100,
@@ -77,7 +77,7 @@ for (let run = 0; run < 60; run++) {
         if (sh.id[0] === 'c') (r.hardware || []).forEach((h, hi) => { const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
           if (!sh.svg.includes('>' + esc(h.item) + '<') && !sh.svg.includes('>' + esc(h.item).slice(0, 20))) B('FITTING NOT LISTED ' + h.item);
           const k = DR.hwKind(h.item), letter = String.fromCharCode(65 + hi);
-          if ((k === 'drawer' || k === 'leg') && !sh.svg.includes('fill="#7a4d12">' + letter + '<')) B('FITTING WITHOUT BALLOON ' + h.item); });
+          if ((k === 'drawer' || k === 'leg') && !(k === 'drawer' && r.warnings.some(w => /ilgesnis nei telpa|netelpa šone|per žemas arba skyrius per siauras/.test(w))) && !sh.svg.includes('fill="#7a4d12">' + letter + '<')) B('FITTING WITHOUT BALLOON ' + h.item); });
         if (sh.id[0] === 'c') { const b = DR.cabBoxes(r, {}), e = [0, 1, 2].map(k2 => [Math.min(...b.map(x => x.e[k2][0])), Math.max(...b.map(x => x.e[k2][1]))]);
           [e[0][1] - e[0][0], e[1][1] - e[1][0]].forEach(v => { if (!sh.svg.includes('>' + nm(v) + '<')) B('DIM MISSING ' + sh.id + ' ' + nm(v)); }); }
       }
