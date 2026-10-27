@@ -852,6 +852,7 @@ button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(
 </style>
 <style>:root{--bg:#f2f3f5;--accent:#315c50;--accent-soft:#e8f0ec;--accent-ink:#fff;--r:12px;--f-display:"IBM Plex Sans",system-ui,sans-serif}
 .wrap{max-width:1840px}.top .wrap{padding-block:12px}.brand h1{font-size:19px;letter-spacing:-.6px}.logo{background:#315c50;border-radius:10px}.brand .sub{font-size:11px;margin-top:4px}.card{box-shadow:0 2px 6px #15251d03;padding:20px}.step h3{font-size:18px;letter-spacing:-.4px}.step .no{font-size:19px;color:var(--accent);background:var(--accent-soft);border-radius:8px;padding:6px 0;align-self:start}.step{gap:12px;grid-template-columns:30px minmax(0,1fr)}.step .lead{line-height:1.55;margin-top:5px}.btn{border-radius:8px;min-height:36px}.f input,.f select{min-height:39px;background:var(--sunk)}.cab{padding:13px 10px;border-radius:10px}.cab.on{background:var(--accent-soft)}.stepnav{border-radius:10px}.stepnav .sl{font-size:11px}.sheet{gap:10px}.technical-preview,.preview-warnings{border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}summary{cursor:pointer;padding:12px 16px;font-weight:600;font-size:12px}summary span{float:right;background:var(--sunk);border-radius:6px;padding:0 6px}.technical-preview .paper{border:0;border-top:1px solid var(--line);border-radius:0}.preview-warnings .warns{padding:0 12px 12px;max-height:240px;overflow:auto}
+@media (max-width:820px){.step{grid-template-columns:minmax(0,1fr)}.step .no{display:none}}   /* phones: the step number is hidden, the body takes the full width */
 @media(min-width:1250px){.ws{grid-template-columns:176px minmax(420px,.9fr) minmax(450px,1.2fr);gap:16px}.constr{grid-template-columns:1fr}.xsec{justify-self:start}.sheet{top:88px}.rail{top:88px}.stepnav{top:82px}.choices{grid-template-columns:1fr}.projname{flex-basis:180px}}
 .av{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 8px 28px #15251d09}.av-head{padding:16px 18px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px}.av-head b{font-size:16px;letter-spacing:-.4px}.av-head small{display:block;color:var(--muted);font:11px var(--f-mono);margin-top:4px}.av-live{font-size:10px;color:var(--accent);background:var(--accent-soft);padding:5px 8px;border-radius:20px;white-space:nowrap}.av-tools{display:flex;gap:5px;padding:0 18px 12px;flex-wrap:wrap}.av button{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:7px 10px;font-size:12px;cursor:pointer;min-height:34px}.av button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}.av-stage{position:relative;height:clamp(330px,48vh,560px);background:radial-gradient(ellipse at 48% 30%,#fff,#eef0ee 85%);overflow:hidden}.av-stage canvas{width:100%;height:100%;touch-action:none;display:block;cursor:grab}.av-stage canvas:active{cursor:grabbing}.av-hint{position:absolute;bottom:12px;left:0;right:0;text-align:center;font-size:10px;color:#78837d;pointer-events:none}.av-camera{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:5px}.av-camera button{background:#ffffffeb;color:#34463d;border-color:#dce1dd;font-size:15px;width:34px;padding:4px}.av-footer{padding:14px 18px;display:grid;gap:12px}.av-range{display:grid;grid-template-columns:95px minmax(0,1fr) 38px;gap:10px;align-items:center;font-size:12px}.av-range input{width:100%;accent-color:var(--accent)}.av-range output{text-align:right;font:11px var(--f-mono)}.av-settings{display:flex;align-items:center;gap:15px;flex-wrap:wrap;font-size:12px}.av-settings label{display:flex;gap:5px;align-items:center}.av-settings input{accent-color:var(--accent)}.av-note{font-size:10px;color:var(--muted);line-height:1.45;border-top:1px solid var(--line);padding-top:10px}.av.full{position:fixed;inset:16px;z-index:999;display:flex;flex-direction:column;box-shadow:0 0 0 30px #13221bcc}.av.full .av-stage{flex:1;height:auto}.av.full .av-footer{max-width:800px;width:100%;margin:auto}.av.full .av-head{padding:16px 24px}.av.full .av-tools{padding-left:24px}
 @media(max-width:1249px) and (min-width:901px){.ws{grid-template-columns:155px minmax(0,1fr)}.sheet{grid-column:2;grid-row:1;position:static}.editor{grid-column:2;grid-row:2}.rail{grid-row:1 / span 2}.av-stage{height:420px}}
@@ -5959,7 +5960,7 @@ lt:{
  s3:'Konstrukcija', s3l:'Kaip sujungiamas karkasas.',
  jConf:'Konfirmatai', jConfD:'Ø8 kiaurai + Ø5×32 krašte. Juostos ir dugnas per konfirmatus.', jCam:'Ekscentrikai + kaiščiai', jCamD:'Ø15 ekscentrikai šone, Ø8 varžtai ir kaiščiai. Surenkama be klijų.',
  top:'Viršus', topRails:'Juostos', topFull:'Pilnas viršus', topOver:'Viršus dengia fasadus',
- back:'Nugara (18 mm)', bNone:'Nėra', bTop:'Ant galo (prisukama)', bIn:'Viduje',
+ back:'Nugara (18 mm)', bNone:'Nėra', bTop:'Išorėje — ant galo', bIn:'Viduje — tarp šonų',
  jTitle:'Jungtys pagal detales', jLead:'Kiekvienai jungčiai galima parinkti savo tvirtinimą. Kiekis — jungčių vienoje pusėje; nuo krašto — kraštinių jungčių atstumas nuo detalės krašto. Tuščia — standartas.',
  jtConf:'Konfirmatai', jtCam:'Ekscentrikai', jtDowel:'Kaiščiai', jN:'Kiekis', jE:'Nuo krašto', jAuto:'standartas', jMain:'Pagrindinis jungimas', jMainL:'Taikomas visoms jungtims, kurių nekeitėte.',
  jk_bottom:'Dugnas ↔ šonai', jk_top:'Viršus ↔ šonai', jk_railF:'Priekinė juosta', jk_railB:'Galinė juosta', jk_railV:'Stati galinė juosta', jk_railBottom:'Apatinė juosta', jk_railVH:'Stati juosta ↔ gulsčia', jk_railBotB:'Apatinė juosta ↔ dugnas', jk_back:'Nugara', jk_shelf:'Fiksuotos lentynos', jk_oven:'Orkaitės atramos',
@@ -6040,8 +6041,8 @@ lt:{
  rmMiss:'Paleiskite ant sienos', rmNo3dDrop:'Įtempti galima vaizduose „Iš priekio“ arba „Planas“', rmPlanLeg:'Planas iš viršaus · stora linija — spintelės priekis · punktyras — pakabinamos',
  rm3Leg:'3D · tempkite — sukasi · ratukas — mastelis ties pele · dukart spustelėkite — visas vaizdas · spustelėkite baldą — pažymite', rmUnplaced1:'Nuimta nuo sienos', rmAdded:'Pridėta spintelė {n}', rmDeleted:'Spintelė ištrinta',
  parts2:'Pertvaros', part0:'Nėra', part1:'1 pertvara', part2:'2 pertvaros', colWl:'plotis', colWnote:'Plotis — iki pertvaros vidurio. Paskutinė kolona gauna, kas lieka iki spintelės pločio.',
- colOne:'Spintelė', colL:'Kairė', colM:'Vidurinė', colR:'Dešinė', backOf:'Nugara', bHdf:'Plaušas', bSolid:'Kieta 18 mm', backMountL:'Kieta nugara montuojama',
- cmHint:'Paspauskite koloną, kad ją redaguotumėte.', cmEmpty:'tuščia', cmNoBack:'be nugaros', secRemoved:'Sekcija pašalinta', undoBtn:'Atšaukti', colEdit:'Redaguojama kolona', bTopOnlyAll:'„Ant galo“ — kai visose kolonose kieta nugara; kitaip kieta nugara montuojama kolonos viduje.', bPerCol:'Nugara pasirenkama kiekvienai kolonai (2 žingsnis „Sekcijos“).', jk_part:'Pertvara ↔ dugnas/viršus',
+ colOne:'Spintelė', colL:'Kairė', colM:'Vidurinė', colR:'Dešinė', backOf:'Nugara', bHdf:'Plaušas', bSolid:'Kieta 18 mm', backMountL:'Kieta nugara', bHdfNote:'Plaušas visada kalamas iš išorės, ant galo.', mainL:'Nugara ir stalviršis',
+ cmHint:'Paspauskite koloną, kad ją redaguotumėte.', cmEmpty:'tuščia', cmNoBack:'be nugaros', secRemoved:'Sekcija pašalinta', undoBtn:'Atšaukti', colEdit:'Redaguojama kolona', bTopOnlyAll:'„Išorėje“ galima tik kai visose kolonose kieta nugara — dabar kieta nugara eina kolonos viduje.', bPerCol:'Nugara pasirenkama kiekvienai kolonai (2 žingsnis „Sekcijos“).', jk_part:'Pertvara ↔ dugnas/viršus',
  n1:'Matmenys', n2:'Sekcijos', n3:'Konstrukcija', n4:'Operacijos', n5:'Medžiagos', n6:'Papildomos',
  toHome:'Visi projektai', prNew2:'Naujas projektas', autosaved:'išsaugota', autosaveT:'Viskas išsaugoma automatiškai šioje naršyklėje',
  npLead:'Įrašykite pavadinimą — jis bus CNC programų ir sąrašo failų pavadinimuose. Toliau pasirinksite pirmą spintelę.', npName:'Projekto pavadinimas', npPh:'pvz. VIRTUVE_JONAITIS', npCreate:'Sukurti projektą',
@@ -6077,7 +6078,7 @@ en:{
  s3:'Construction', s3l:'How the carcass is joined.',
  jConf:'Confirmats', jConfD:'Ø8 through + Ø5×32 in the edge. Rails and bottom fixed with confirmats.', jCam:'Cams + dowels', jCamD:'Ø15 cams in the side, Ø8 bolts and dowels. Assembled without glue.',
  top:'Top', topRails:'Rails', topFull:'Full top', topOver:'Top covers the fronts',
- back:'Back (18 mm)', bNone:'None', bTop:'On the back (screwed)', bIn:'Inside',
+ back:'Back (18 mm)', bNone:'None', bTop:'Outside — on the back edges', bIn:'Inside — between the sides',
  jTitle:'Joints by part', jLead:'Each joint can have its own connector. Count — connectors along one end; from edge — distance of the outer ones from the part edge. Empty — standard.',
  jtConf:'Confirmats', jtCam:'Cams', jtDowel:'Dowels', jN:'Count', jE:'From edge', jAuto:'standard', jMain:'Main joinery', jMainL:'Used for every joint you have not changed.',
  jk_bottom:'Bottom ↔ sides', jk_top:'Top ↔ sides', jk_railF:'Front rail', jk_railB:'Back rail', jk_railV:'Standing back rail', jk_railBottom:'Bottom rail', jk_railVH:'Standing rail ↔ flat rail', jk_railBotB:'Bottom rail ↔ bottom', jk_back:'Back', jk_shelf:'Fixed shelves', jk_oven:'Oven supports',
@@ -6158,8 +6159,8 @@ en:{
  rmMiss:'Release on a wall', rmNo3dDrop:'Drop in the Front or Plan view', rmPlanLeg:'Plan from above · thick line — cabinet front · dashed — wall cabinets',
  rm3Leg:'3D · drag to turn · wheel to zoom at the pointer · double-click for the whole room · click a piece to select it', rmUnplaced1:'Taken off the wall', rmAdded:'Cabinet {n} added', rmDeleted:'Cabinet deleted',
  parts2:'Partitions', part0:'None', part1:'1 partition', part2:'2 partitions', colWl:'width', colWnote:'Width — to the middle of the partition. The last column takes what is left of the cabinet width.',
- colOne:'Cabinet', colL:'Left', colM:'Middle', colR:'Right', backOf:'Back', bHdf:'Fibreboard', bSolid:'Solid 18 mm', backMountL:'Solid back mounted',
- cmHint:'Click a column to edit it.', cmEmpty:'empty', cmNoBack:'no back', secRemoved:'Section removed', undoBtn:'Undo', colEdit:'Editing column', bTopOnlyAll:'“On the back” — when every column has a solid back; otherwise a solid back goes inside its column.', bPerCol:'The back is chosen per column (step 2 “Sections”).', jk_part:'Partition ↔ bottom/top',
+ colOne:'Cabinet', colL:'Left', colM:'Middle', colR:'Right', backOf:'Back', bHdf:'Fibreboard', bSolid:'Solid 18 mm', backMountL:'Solid back', bHdfNote:'Fibreboard is always nailed on from the outside.', mainL:'Back and worktop',
+ cmHint:'Click a column to edit it.', cmEmpty:'empty', cmNoBack:'no back', secRemoved:'Section removed', undoBtn:'Undo', colEdit:'Editing column', bTopOnlyAll:'“Outside” only works when every column has a solid back — now a solid back goes inside its column.', bPerCol:'The back is chosen per column (step 2 “Sections”).', jk_part:'Partition ↔ bottom/top',
  n1:'Size', n2:'Sections', n3:'Construction', n4:'Operations', n5:'Materials', n6:'Extras',
  toHome:'All projects', prNew2:'New project', autosaved:'saved', autosaveT:'Everything is saved automatically in this browser',
  npLead:'Type a name — it goes into the CNC program and list file names. Next you pick the first cabinet.', npName:'Project name', npPh:'e.g. KITCHEN_SMITH', npCreate:'Create project',
@@ -6606,7 +6607,8 @@ function viewEditor(c) {
     '<div class="row" style="margin-top:10px">' +
     (c.dishwasher ? fN(t('dishW'), b + 'dishWidth', c.dishWidth) : fN(t('W'), b + 'W', c.W)) + fN(t('H'), b + 'H', c.H) + fN(t('D'), b + 'D', c.D) +
     fN(t('thick'), b + 'thick', c.thick, 's') + fN(t('facT'), b + 'cnc.facadeT', o.facadeT, 's') +
-    '<span class="row" style="margin-left:auto;gap:6px"><button class="btn ghost" data-act="dup">' + t('dup') + '</button><button class="btn ghost danger" data-act="del">' + (S.confirm === 'del' ? t('delSure') : t('del')) + '</button></span></div>';
+    '<span class="row" style="margin-left:auto;gap:6px"><button class="btn ghost" data-act="dup">' + t('dup') + '</button><button class="btn ghost danger" data-act="del">' + (S.confirm === 'del' ? t('delSure') : t('del')) + '</button></span></div>' +
+    '<div class="mainset">' + (c.dishwasher ? '' : backBlock(c)) + worktopBlock(c) + '</div>';
   h += step(1, t('s1'), t('s1l'), dims, 'dims');
   if (c.dishwasher) { h += step(2, t('s5'), t('s5l'), matsBlock(c), 'mats'); return h; }
   /* 2 — sections, by column (pertvaros), each column with its own back */
@@ -6621,7 +6623,6 @@ function viewEditor(c) {
     if (nC > 1 && k !== ac) continue;   // one column at a time, at full width; the map above shows them all
     var z = zoneInfo(c, k), bk = (c.cnc.backs || [])[k] || 'none';
     secs += '<div class="colblk" role="tabpanel">' + (nC > 1 ? '<div class="colh"><span class="unit">' + t('colEdit') + '</span><b>' + colName(nC, k) + '</b><span class="unit">' + fmt(cw[k]) + ' mm</span></div>' : '') +
-      '<div class="backsel"><span>' + t('backOf') + '</span>' + seg(b + 'cnc.backs.' + k, bk, [['none', t('bNone')], ['hdf', t('bHdf')], ['solid', t('bSolid')]]) + '</div>' +
       '<div class="zone" data-col="' + k + '">' + zoneHtml(z) + '</div><div class="secs">';
     for (var i = c.sections.length - 1; i >= 0; i--) if (colOf(c, c.sections[i]) === k) secs += viewSection(c, c.sections[i], i, z);
     secs += '</div><div class="addsec"><span class="unit" style="align-self:center">' + t('add') + ':</span>' +
@@ -6636,9 +6637,6 @@ function viewEditor(c) {
     '<div><div class="lbl">' + t('top') + '</div><div class="row">' + seg(b + 'cnc.top', o.top, [['rails', t('topRails')], ['full', t('topFull')]]) +
       (o.top === 'full' ? chk(b + 'cnc.topOverFacade', o.topOverFacade, t('topOver')) : '') + '</div></div>' +
     (o.top === 'rails' ? railsEditor(c) : '') +
-    (function () { var bs = o.backs || [], anyS = bs.indexOf('solid') >= 0, allS = bs.length && bs.every(function (x) { return x === 'solid'; });
-      return '<div><div class="lbl">' + t('backMountL') + '</div>' + (anyS ? seg(b + 'cnc.backMount', o.backMount || 'top', [['top', t('bTop')], ['inside', t('bIn')]]) +
-        (o.backMount !== 'inside' && !allS ? '<p class="note" style="margin:4px 0 0">' + t('bTopOnlyAll') + '</p>' : '') : '<p class="note" style="margin:0">' + t('bPerCol') + '</p>') + '</div>'; })() +
     '</div>';
   secs += '<details class="construction-settings" id="st-constr"><summary>'+(S.lang==='lt'?'Konstrukcijos nustatymai · viršus, juostos, nugara':'Construction settings · top, rails, back')+'</summary><div>'+jo+'</div></details>';
   h += step(2, t('s2'), t('s2l'), secs, 'secs');
@@ -6690,7 +6688,7 @@ function boxEditor(c) {
   var dims = '<div class="row">' + fT(t('name'), b + 'name', c.name, null, 'grow') + '</div><div class="row" style="margin-top:10px">' +
     fN(t('W'), b + 'W', c.W) + fN(t('H'), b + 'H', c.H) + fN(t('D'), b + 'D', c.D) + fN(t('thick'), b + 'thick', c.thick, 's') +
     '<span class="row" style="margin-left:auto;gap:6px"><button class="btn ghost" data-act="dup">' + t('dup') + '</button><button class="btn ghost danger" data-act="del">' + (S.confirm === 'del' ? t('delSure') : t('del')) + '</button></span></div>' +
-    '<div class="row" style="margin-top:10px"><button type="button" class="btn" data-act="box3d">' + t('bx3d') + '</button></div>';
+    '<div class="row" style="margin-top:10px"><button type="button" class="btn" data-act="box3d">' + t('bx3d') + '</button></div>' + worktopBlock(c);
   h += step(1, t('s1'), t('bxS1l'), dims, 'dims');
   /* 2 — the six outer boards and their corners */
   var rows = '<div class="bxrows">' + E.BOX_IDS.map(function (id) { var s0 = bx.boards[id], bb = b + 'box.boards.' + id + '.';
@@ -6845,11 +6843,32 @@ function matsBlock(c) {
   var b = 'c.', hasFront = c.dishwasher || c.sections.some(function (s) { return s.kind === 'drawers' || s.kind === 'doors'; });
   var req = function (html, val) { return html.replace('<span>', '<span>').replace('</span>', ' <i class="req" aria-hidden="true">*</i></span>').replace('type="text"', 'type="text" required' + (val ? '' : ' aria-invalid="true"')); };
   return '<p class="note reqnote"><i class="req">*</i> ' + t('reqNote') + '</p><div class="row">' + (c.dishwasher ? fT(t('mCarc'), b + 'mat.carc', c.mat.carc, 'dl-mat') : req(fT(t('mCarc'), b + 'mat.carc', c.mat.carc, 'dl-mat'), c.mat.carc)) + (hasFront ? req(fT(t('mFac'), b + 'mat.facade', c.mat.facade, 'dl-mat'), c.mat.facade) : fT(t('mFac'), b + 'mat.facade', c.mat.facade, 'dl-mat')) + (c.dishwasher ? '' : fT(t('mBack'), b + 'mat.back', c.mat.back, 'dl-mat')) + '</div>' +
-    '<div class="row" style="margin-top:10px">' + fT(t('eCarc'), b + 'edge.carc', c.edge.carc, 'dl-edge') + fT(t('eFac'), b + 'edge.facade', c.edge.facade, 'dl-edge') + '</div>' + worktopBlock(c, req);
+    '<div class="row" style="margin-top:10px">' + fT(t('eCarc'), b + 'edge.carc', c.edge.carc, 'dl-edge') + fT(t('eFac'), b + 'edge.facade', c.edge.facade, 'dl-edge') + '</div>';
 }
 /* the cabinet's own worktop: yes / no, material, thickness, overhangs */
+function reqF(html, val) { return html.replace('</span>', ' <i class="req" aria-hidden="true">*</i></span>').replace('type="text"', 'type="text" required' + (val ? '' : ' aria-invalid="true"')); }
+/* the cabinet's back(s): none / fibreboard / solid per column, and whether a solid back sits outside (on the back edges) or inside */
+function backBlock(c) {
+  var o = c.cnc, b = 'c.cnc.', nC = colsOf(c), bs = (o.backs || []).slice(0, nC), anyS = bs.indexOf('solid') >= 0, allS = bs.length === nC && bs.every(function (x) { return x === 'solid'; });
+  var mount = allS && o.backMount !== 'inside' ? 'top' : 'inside', h = '<div class="lbl" style="margin-top:14px">' + t('backOf') + '</div><div class="row bottomrow">';
+  for (var k = 0; k < nC; k++) h += '<div class="f">' + (nC > 1 ? '<span>' + colName(nC, k) + '</span>' : '') + seg(b + 'backs.' + k, bs[k] || 'none', [['none', t('bNone')], ['hdf', t('bHdf')], ['solid', t('bSolid')]]) + '</div>';
+  if (anyS) h += '<div class="f"><span>' + t('backMountL') + '</span>' + seg(b + 'backMount', allS ? (o.backMount === 'inside' ? 'inside' : 'top') : 'inside', [['top', t('bTop')], ['inside', t('bIn')]]) + '</div>';
+  var kind = anyS ? (mount === 'top' ? 'out' : 'in') : bs.indexOf('hdf') >= 0 ? 'hdf' : 'none';
+  h += '<figure class="botpic" aria-hidden="true">' + backPic(kind) + '</figure></div>';
+  if (anyS && !allS && o.backMount !== 'inside') h += '<p class="note" style="margin:4px 0 0">' + t('bTopOnlyAll') + '</p>';
+  if (bs.indexOf('hdf') >= 0) h += '<p class="note" style="margin:4px 0 0">' + t('bHdfNote') + '</p>';
+  return h;
+}
+function backPic(kind) {   // tiny plan from above: sides, and where the back sits (front at the bottom)
+  var s = '<svg viewBox="0 0 64 40" width="64" height="40"><g fill="#c9cfc8" stroke="#56635b" stroke-width="1">', bl = ' fill="#2448c9" fill-opacity=".35" stroke="#2448c9"';
+  if (kind === 'out') s += '<rect x="4" y="10" width="6" height="28"/><rect x="54" y="10" width="6" height="28"/><rect x="4" y="4" width="56" height="6"' + bl + '/>';
+  else if (kind === 'in') s += '<rect x="4" y="4" width="6" height="34"/><rect x="54" y="4" width="6" height="34"/><rect x="10" y="6" width="44" height="6"' + bl + '/>';
+  else if (kind === 'hdf') s += '<rect x="4" y="7" width="6" height="31"/><rect x="54" y="7" width="6" height="31"/><rect x="4" y="4" width="56" height="2.5"' + bl + '/>';
+  else s += '<rect x="4" y="4" width="6" height="34"/><rect x="54" y="4" width="6" height="34"/>';
+  return s + '<text x="32" y="37" font-size="7" text-anchor="middle" fill="#56635b" stroke="none">▼</text></g></svg>';
+}
 function worktopBlock(c, req) {
-  var w = c.worktop || wtDefault(), b = 'c.worktop.', wt = E.worktopOf(c);
+  req = req || reqF; var w = c.worktop || wtDefault(), b = 'c.worktop.', wt = E.worktopOf(c);
   var nE = function (label, k, val) { var id = 'f-wt-' + k; return '<label class="f n s" for="' + id + '"><span>' + label + '</span><input id="' + id + '" inputmode="decimal" type="text" data-bind="' + b + k + '" data-num="1" data-empty="1" value="' + esc(val == null ? '' : val) + '" placeholder="' + esc(E.num(E.WT_DEF[k])) + '" autocomplete="off"></label>'; };
   var h = '<div class="wtblk"><div class="lbl" style="margin-top:14px">' + t('wtL') + '</div><div class="row" style="align-items:center">' + seg(b + 'on', !!w.on, [['false', t('wtNo')], ['true', t('wtYes')]]) +
     (wt ? '<span class="h">' + t('wtSize') + ' <b>' + fmt(wt.L) + ' × ' + fmt(wt.W) + ' × ' + fmt(wt.T) + '</b> mm</span>' : '') + '</div>';
