@@ -6429,7 +6429,7 @@ lt:{
  rmMiss:'Paleiskite ant sienos', rmNo3dDrop:'Įtempti galima vaizduose „Iš priekio“ arba „Planas“', rmPlanLeg:'Planas iš viršaus · stora linija — spintelės priekis · punktyras — pakabinamos',
  rm3Leg:'3D · tempkite — sukasi · ratukas — mastelis ties pele · dukart spustelėkite — visas vaizdas · spustelėkite baldą — pažymite', rmUnplaced1:'Nuimta nuo sienos', rmAdded:'Pridėta spintelė {n}', rmDeleted:'Spintelė ištrinta',
  parts2:'Pertvaros', part0:'Nėra', part1:'1 pertvara', part2:'2 pertvaros', colWl:'plotis', colWnote:'Plotis — iki pertvaros vidurio. Paskutinė kolona gauna, kas lieka iki spintelės pločio.',
- colOne:'Spintelė', colL:'Kairė', colM:'Vidurinė', colR:'Dešinė', backOf:'Nugara', bHdf:'Plaušas', bSolid:'Kieta 18 mm', backMountL:'Kieta nugara', bHdfNote:'Plaušas visada kalamas iš išorės, ant galo.', mainL:'Nugara ir stalviršis',
+ colOne:'Spintelė', colL:'Kairė', colM:'Vidurinė', colR:'Dešinė', backOf:'Nugara', bHdf:'Plaušas', bSolid:'Kieta 18 mm', backMountL:'Kieta nugara', bFixL:'Tvirtinimas', bFix_top_confirmat:'Konfirmatų galvutės matysis nugaros išorėje. Kad iš galo nieko nesimatytų — ekscentrikai (jie šonų vidinėje pusėje) arba kaiščiai (klijuojama).', bFix_top_cam:'Ekscentrikai šonų vidinėje pusėje, varžtai nugaroje — iš galo nieko nesimato.', bFix_dowel:'Tik kaiščiai — nugara klijuojama, iš išorės nieko nesimato.', bFix_inside_confirmat:'Konfirmatų galvutės matysis šonų išorėje, prie galo.', bFix_inside_cam:'Ekscentrikai nugaros išorinėje (sienos) pusėje.', bHdfNote:'Plaušas visada kalamas iš išorės, ant galo.', mainL:'Nugara ir stalviršis',
  cmHint:'Paspauskite koloną, kad ją redaguotumėte.', cmEmpty:'tuščia', cmNoBack:'be nugaros', secRemoved:'Sekcija pašalinta', xRemoved:'Detalė pašalinta', cabRemoved:'Spintelė „{n}“ pašalinta', undoBtn:'Atšaukti', colEdit:'Redaguojama kolona', bTopOnlyAll:'„Išorėje“ galima tik kai visose kolonose kieta nugara — dabar kieta nugara eina kolonos viduje.', bPerCol:'Nugara pasirenkama kiekvienai kolonai (2 žingsnis „Sekcijos“).', jk_part:'Pertvara ↔ dugnas/viršus',
  n1:'Matmenys', n2:'Sekcijos', n3:'Konstrukcija', n4:'Operacijos', n5:'Medžiagos', n6:'Papildomos',
  toHome:'Visi projektai', prNew2:'Naujas projektas', autosaved:'išsaugota', autosaveT:'Viskas išsaugoma automatiškai šioje naršyklėje',
@@ -6547,7 +6547,7 @@ en:{
  rmMiss:'Release on a wall', rmNo3dDrop:'Drop in the Front or Plan view', rmPlanLeg:'Plan from above · thick line — cabinet front · dashed — wall cabinets',
  rm3Leg:'3D · drag to turn · wheel to zoom at the pointer · double-click for the whole room · click a piece to select it', rmUnplaced1:'Taken off the wall', rmAdded:'Cabinet {n} added', rmDeleted:'Cabinet deleted',
  parts2:'Partitions', part0:'None', part1:'1 partition', part2:'2 partitions', colWl:'width', colWnote:'Width — to the middle of the partition. The last column takes what is left of the cabinet width.',
- colOne:'Cabinet', colL:'Left', colM:'Middle', colR:'Right', backOf:'Back', bHdf:'Fibreboard', bSolid:'Solid 18 mm', backMountL:'Solid back', bHdfNote:'Fibreboard is always nailed on from the outside.', mainL:'Back and worktop',
+ colOne:'Cabinet', colL:'Left', colM:'Middle', colR:'Right', backOf:'Back', bHdf:'Fibreboard', bSolid:'Solid 18 mm', backMountL:'Solid back', bFixL:'Fixing', bFix_top_confirmat:'Confirmat heads will show on the outside of the back. For nothing to show from behind, choose cams (they sit on the inner faces of the sides) or dowels (glued).', bFix_top_cam:'Cams on the inner faces of the sides, bolts in the back — nothing shows from behind.', bFix_dowel:'Dowels only — the back is glued; nothing shows from outside.', bFix_inside_confirmat:'Confirmat heads will show on the outside of the sides, near the back.', bFix_inside_cam:'Cams on the outer (wall) face of the back.', bHdfNote:'Fibreboard is always nailed on from the outside.', mainL:'Back and worktop',
  cmHint:'Click a column to edit it.', cmEmpty:'empty', cmNoBack:'no back', secRemoved:'Section removed', xRemoved:'Part removed', cabRemoved:'Cabinet “{n}” removed', undoBtn:'Undo', colEdit:'Editing column', bTopOnlyAll:'“Outside” only works when every column has a solid back — now a solid back goes inside its column.', bPerCol:'The back is chosen per column (step 2 “Sections”).', jk_part:'Partition ↔ bottom/top',
  n1:'Size', n2:'Sections', n3:'Construction', n4:'Operations', n5:'Materials', n6:'Extras',
  toHome:'All projects', prNew2:'New project', autosaved:'saved', autosaveT:'Everything is saved automatically in this browser',
@@ -7314,9 +7314,13 @@ function backBlock(c) {
   var mount = allS && o.backMount !== 'inside' ? 'top' : 'inside', h = '<div class="lbl" style="margin-top:14px">' + t('backOf') + '</div><div class="row bottomrow">';
   for (var k = 0; k < nC; k++) h += '<div class="f">' + (nC > 1 ? '<span>' + colName(nC, k) + '</span>' : '') + seg(b + 'backs.' + k, bs[k] || 'none', [['none', t('bNone')], ['hdf', t('bHdf')], ['solid', t('bSolid')]]) + '</div>';
   if (anyS) h += '<div class="f"><span>' + t('backMountL') + '</span>' + seg(b + 'backMount', allS ? (o.backMount === 'inside' ? 'inside' : 'top') : 'inside', [['top', t('bTop')], ['inside', t('bIn')]]) + '</div>';
+  var inf1 = S._info && S._info[S.sel], jb = cur() === c && inf1 && inf1.r ? (inf1.r.joints || []).filter(function (j) { return j.key === 'back'; })[0] : null;
+  var bfix = jb ? (jb.split ? 'mixed' : jb.type) : (mount === 'top' && o.backFix === 'cam' ? 'cam' : 'confirmat');   // how the solid back is fixed, as the engine has it
+  if (anyS) h += '<div class="f"><span>' + t('bFixL') + '</span>' + seg(b + 'backJoint', bfix, [['confirmat', t('jtConf')], ['cam', t('jtCam')], ['dowel', t('jtDowel')]]) + '</div>';
   var kind = anyS ? (mount === 'top' ? 'out' : 'in') : bs.indexOf('hdf') >= 0 ? 'hdf' : 'none';
   h += '<figure class="botpic" aria-hidden="true">' + backPic(kind) + '</figure></div>';
   if (anyS && !allS && o.backMount !== 'inside') h += '<p class="note" style="margin:4px 0 0">' + t('bTopOnlyAll') + '</p>';
+  if (anyS && bfix !== 'mixed') h += '<p class="note" style="margin:4px 0 0">' + t('bFix_' + (bfix === 'dowel' ? 'dowel' : mount + '_' + bfix)) + '</p>';
   if (bs.indexOf('hdf') >= 0) h += '<p class="note" style="margin:4px 0 0">' + t('bHdfNote') + '</p>';
   return h;
 }
@@ -8068,6 +8072,8 @@ function assign(bind, raw) {
   if (/^c\.box\.fronts\.\d+\.hingeN$/.test(bind)) { setPath(tg.obj, tg.path, v === 'auto' ? '' : +v); return; }
   if (/^c\.box\.fronts\.\d+\.(col|cell|span|nDoors|rail)$/.test(bind)) { setPath(tg.obj, tg.path, +v || 0); var bf2 = tg.obj.box.fronts[+bind.split('.')[3]]; if (/\.col$/.test(bind)) { bf2.cell = 0; bf2.span = 1; } if (/\.cell$/.test(bind)) bf2.span = 1; if (!(bf2.span >= 1)) bf2.span = 1; return; }
   if (/^c\.sections\.\d+\.hingeN$/.test(bind)) { setPath(tg.obj, tg.path, v === 'auto' ? '' : +v); return; }
+  if (bind === 'c.cnc.backJoint') { var bc0 = tg.obj, infB = S._info && S._info[S.sel], keysB = infB && infB.r ? (infB.r.joints || []).map(function (j) { return j.key; }).filter(function (k) { return /^back(P\d)?$/.test(k); }) : ['back'];
+    if (keysB.indexOf('back') < 0) keysB.push('back'); keysB.forEach(function (k) { setJoint(bc0, k, { type:v }); }); return; }   // the back's fixing: one choice for the back and its partitions
   if (bind === 'c.cnc.support') { tg.obj.cnc.legs = v !== 'none'; tg.obj.cnc.feet = v === 'feet'; return; }
   if (bind === 'c.cols') { if (+v === colsOf(tg.obj)) return; tg.obj.cols = +v; tg.obj.colW = []; fixCols(tg.obj); return; }
   if (/^c\.sections\.\d+\.(shelves|rail)$/.test(bind) && typeof v === 'string' && /^\d+$/.test(v)) v = +v;
