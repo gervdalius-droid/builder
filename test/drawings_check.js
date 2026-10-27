@@ -29,7 +29,8 @@ function cabinet(k) {
   return { id:'c' + k, name:'C' + k, W, H, D:pick([330, 560, 580]), thick:18, cols, legH:100,
            cnc:{ joinery:pick(['confirmat', 'cam']), top:pick(['rails', 'full']), legs:rnd() < 0.8, feet:rnd() < 0.3, bottom:rnd() < 0.3 ? 'inside' : 'under', bottomZ:pick([0, 100]),
                  backs:Array.from({ length:cols }, () => pick(['none', 'hdf', 'solid'])), hinges:true, pins:'shelf' },
-           sections:secs, mat:{ carc:'LMDP balta 18', facade:'LMDP antracitas 18' }, edge:{ carc:'ABS 0.8' }, extras:rnd() < 0.3 ? [{ name:'Cokolis', kind:'plinth', L:W, W:100, T:18, qty:1 }] : [] };
+           sections:secs, mat:{ carc:'LMDP balta 18', facade:'LMDP antracitas 18' }, edge:{ carc:'ABS 0.8' },
+           worktop:H < 1500 && rnd() < 0.5 ? { on:true, mat:pick(['Stalviršis Egger F244 38', 'Kompaktinė plokštė 12', '']), T:pick([38, 12, '']), over:pick([20, '', 0, 40]), left:pick([0, 0, 30]), right:pick([0, 50]), edge:pick(['', 'ABS 2']) } : undefined, extras:rnd() < 0.3 ? [{ name:'Cokolis', kind:'plinth', L:W, W:100, T:18, qty:1 }] : [] };
 }
 function orderOk(order, V, tag) {   // every overlapping pair whose order an axis decides is drawn in that order
   const eps = 0.01;
@@ -78,8 +79,10 @@ for (let run = 0; run < 60; run++) {
           if (!sh.svg.includes('>' + esc(h.item) + '<') && !sh.svg.includes('>' + esc(h.item).slice(0, 20))) B('FITTING NOT LISTED ' + h.item);
           const k = DR.hwKind(h.item), letter = String.fromCharCode(65 + hi);
           if ((k === 'drawer' || k === 'leg') && !(k === 'drawer' && r.warnings.some(w => /ilgesnis nei telpa|netelpa šone|per žemas arba skyrius per siauras/.test(w))) && !sh.svg.includes('fill="#7a4d12">' + letter + '<')) B('FITTING WITHOUT BALLOON ' + h.item); });
-        if (sh.id[0] === 'c') { const b = DR.cabBoxes(r, {}), e = [0, 1, 2].map(k2 => [Math.min(...b.map(x => x.e[k2][0])), Math.max(...b.map(x => x.e[k2][1]))]);
-          [e[0][1] - e[0][0], e[1][1] - e[1][0]].forEach(v => { if (!sh.svg.includes('>' + nm(v) + '<')) B('DIM MISSING ' + sh.id + ' ' + nm(v)); }); }
+        if (sh.id[0] === 'c') { const b = DR.cabBoxes(r, {}), bw = DR.cabBoxes(r, { worktop:true }), ex = q => [0, 1, 2].map(k2 => [Math.min(...q.map(x => x.e[k2][0])), Math.max(...q.map(x => x.e[k2][1]))]), e = ex(b), ew = ex(bw);
+          [e[0][1] - e[0][0], ew[1][1] - ew[1][0], ew[2][1] - ew[2][0]].forEach(v => { if (!sh.svg.includes('>' + nm(v) + '<')) B('DIM MISSING ' + sh.id + ' ' + nm(v)); });
+          if (r.worktop) { const w = r.worktop; if (!sh.svg.includes('>' + nm(w.L) + ' × ' + nm(w.W) + ' × ' + nm(w.T) + '<')) B('WORKTOP NOT LISTED ' + sh.id);
+            if (!bw.some(x => x.worktop)) B('WORKTOP NOT DRAWN ' + sh.id); } }
       }
     });
     const placed = proj.layout ? RM.placed(proj) : [];

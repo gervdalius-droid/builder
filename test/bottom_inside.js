@@ -2,7 +2,7 @@
 //  every edge bore meets a face hole of the right size and every face connector hole meets an edge bore,
 //  no two parts take the same space, fronts stay inside the cabinet and do not overlap,
 //  holes on one face do not touch unless the engine says so, blind holes from both faces of a partition do not meet unless warned.
-const E=require('../src/engine.js');
+const E=require(process.argv[2]||'../src/engine.js');
 const P=(p,a,b,c)=>{const q=p.place;return [0,1,2].map(i=>q.o[i]+a*q.u[i]+b*q.v[i]-c*q.n[i]);};
 const dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]);
 const K={}; let bad=0,cabs=0,nb=0,parts=0; const B=m=>{bad++; if(bad<12) console.log(m); K[m.split(" ").slice(0,5).join(" ").replace(/a=.*/,"")]=(K[m.split(" ").slice(0,5).join(" ").replace(/a=.*/,"")]||0)+1;};
