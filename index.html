@@ -881,6 +881,8 @@ button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(
 
 /* v9: bottom choice, feet, smaller screens */
 .bottomrow{align-items:flex-end}
+.bxfronts{display:grid;gap:10px}.bxfront{border:1px solid var(--line);border-left:4px solid var(--line2);border-radius:var(--r);background:var(--sunk);padding:10px 12px}
+.bxfront.k-doors{border-left-color:#c77b2a}.bxfront.k-drawers{border-left-color:#3553c9}.bxfhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.bxfhead .kind{font:600 13px var(--f-mono);letter-spacing:.06em;text-transform:uppercase}
 .botpic{margin:0 0 2px;line-height:0}
 @media(min-width:1250px){
   .sheet{max-height:calc(100vh - 96px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding-right:2px}
@@ -1030,7 +1032,7 @@ var R = {
      first screw 37 mm from the front edge, the others on the 32 mm row; inner cabinet depth ≥ NL + 3) */
   under: { up:37, marks:'37, 165, 229', clearBelow:14, recess:13, shorter:10, ded:'', topGap:10, boxT:0, depthPlus:3, perLen:'', lengths:[250, 300, 350, 400, 450, 500, 550, 600] },
   ball: { up:37, front:35, rear:30, midFrom:450, clear:12.7, boxBelow:22, topGap:10, boxT:0, perLen:'', drawerMarks:true, lengths:[300, 400, 450, 500, 550] },
-  facade: { sideGap:3, gap:3, zoneGapRails:2 },   // facade clearances (zone = H - t under a covering top, H - 2 with rails)
+  facade: { sideGap:3, gap:3, zoneGapRails:2, insetGap:2 },   // insetGap: round an inset front (3D construction)   // facade clearances (zone = H - t under a covering top, H - 2 with rails)
   shelf:  { clearW:2, setback:20 },               // drawn shelves: 1 mm each side, 20 mm back from the front edge
   /* ---- operations added for the cabinet creator (Oct 2026). Blum catalogue values, NOT yet
           verified against a SWOOD model of the shop — editable in the app's settings. */
@@ -2003,7 +2005,7 @@ function boxDefaults(c) {
   var b = c.box = c.box || {};
   b.boards = b.boards || {};
   BOX_IDS.forEach(function (id) { b.boards[id] = Object.assign({ on:id !== 'front', inset:0, T:'' }, b.boards[id] || {}); });
-  b.cover = b.cover || {}; b.inner = Array.isArray(b.inner) ? b.inner : [];
+  b.cover = b.cover || {}; b.inner = Array.isArray(b.inner) ? b.inner : []; b.fronts = Array.isArray(b.fronts) ? b.fronts : [];
   return b;
 }
 function boxPair(a, b) { return [a, b].sort().join('_'); }
@@ -2264,7 +2266,155 @@ function buildBox(c, idx, projName) {
   });
   if (!eCarc && boards.some(function (bd) { return ['x0', 'x1', 'y0', 'y1'].some(function (k) { return bd.p.eb[k]; }); })) warnOnce('krašto medžiaga nenurodyta — kraštai pažymėti „KRAŠTAS“');
 
+  /* ---- doors and drawers on the openings (c.box.fronts): an opening is a compartment between the vertical boards, from one
+     fixed horizontal board (bottom, fixed shelf) to the next (fixed shelf, top), 'span' openings high. Overlay fronts cover the
+     board edges (full at an outer board, half at a partition / shelf, as on the cabinets); inset fronts sit inside the opening
+     flush with the front edges. Hinge plates and runners are marked on the vertical boards (Ø5 × 2), set back by the front
+     thickness for inset fronts; GTV / DTC ball and DTC undermount drawers get their board box as on the cabinets. */
+  var fT = +o.facadeT || 18, mFac = mat.facade || mCarc, eFac = ed.facade || '', gapF = R.facade.gap, sideGapF = R.facade.sideGap, inGap = R.facade.insetGap || 2;
+  var vDoors = [], vDrawers = [], openings = [], nFas = 0, nDur = 0, nBoxF = 0, unverF = [];
+  var yF = cav[1][0];
+  var levelsOf = function (k) {   // horizontal boards across compartment k, bottom up
+    var cx = comp[k], hs = boards.filter(function (bd) { return bd.ax === 2 && !(bd.kind === 'shelf' && (bd.adj || bd.col !== k)) && bd.ext[0][0] <= cx[0] + 0.5 && bd.ext[0][1] >= cx[1] - 0.5; })
+      .sort(function (a, b) { return a.ext[2][0] - b.ext[2][0]; });
+    var lv = []; if (!hs.length || hs[0].ext[2][0] > cav[2][0] + 0.5) lv.push({ z0:cav[2][0], z1:cav[2][0], bd:null });
+    hs.forEach(function (bd) { lv.push({ z0:bd.ext[2][0], z1:bd.ext[2][1], bd:bd }); });
+    if (lv[lv.length - 1].z1 < cav[2][1] - 0.5) lv.push({ z0:cav[2][1], z1:cav[2][1], bd:null });
+    return lv;
+  };
+  var vertAt = function (x, hiSide, z0, z1) {   // the vertical board whose face is at x (on the left: its right face)
+    return boards.filter(function (bd) { return bd.ax === 0 && Math.abs((hiSide ? bd.ext[0][0] : bd.ext[0][1]) - x) < 0.5 && bd.ext[2][0] <= z0 + 0.5 && bd.ext[2][1] >= z1 - 0.5; })[0] || null; };
+  comp.forEach(function (cx, k) { var lv = levelsOf(k); for (var i = 0; i + 1 < lv.length; i++) openings.push({ col:k, cell:i, x0:cx[0], x1:cx[1], z0:lv[i].z1, z1:lv[i + 1].z0, lo:lv[i].bd ? lv[i].bd.lt : '', hi:lv[i + 1].bd ? lv[i + 1].bd.lt : '' }); });
+  var markOn = function (bd, x, y, z, what) {   // a Ø5 × 2 marking on a vertical board's face at world (x, y, z)
+    var face = faceAt(bd, x), l = loc(bd, [x, y, z]);
+    if (l.x < 5 || l.y < 5 || l.x > bd.p.L - 5 || l.y > bd.p.W - 5) { warnOnce(cap(bd.lt) + ': ' + what + ' žymė už plokštės ribų — praleista'); return false; }
+    var fp = fpFace(bd, face, l.x, l.y, R.post.markD, R.post.markDepth, false, null);
+    if (clashes(bd, fp)) { warnOnce(cap(bd.lt) + ': ' + what + ' žymė kliūna už kitos skylės (' + num(z) + ' mm aukštyje) — praleista, patikrinkite'); return false; }
+    hole(bd.p, face, l.x, l.y, R.post.markD, R.post.markDepth, { mark:true, op:what === 'lanksto' ? 'hinge' : undefined }); bd.occ.push(fp); return true; };
+  (bx.fronts || []).forEach(function (fr0, fi) {
+    var lbl = 'fasadai ' + (fi + 1), col = Math.min(comp.length - 1, Math.max(0, Math.floor(+fr0.col || 0))), lv = levelsOf(col);
+    var cell = Math.max(0, Math.floor(+fr0.cell || 0)), span = Math.max(1, Math.floor(+fr0.span || 1));
+    if (B.front) { warnOnce(lbl + ': priekio plokštė uždaro konstrukciją — išjunkite „priekis“, kad būtų angos durims / stalčiams'); return; }
+    if (cell + span >= lv.length) { warnOnce(lbl + ': tokios angos nėra (' + (comp.length > 1 ? (col + 1) + ' skyriuje ' : '') + (lv.length - 1) + ' ang.) — praleista'); return; }
+    var lo = lv[cell], hiL = lv[cell + span], zlo = lo.z1, zhi = hiL.z0, cx = comp[col], inset = !!fr0.inset;
+    var Lb = vertAt(cx[0], false, zlo, zhi), Rb = vertAt(cx[1], true, zlo, zhi);
+    var x0, x1, z0, z1;
+    if (inset) { x0 = cx[0] + inGap; x1 = cx[1] - inGap; z0 = zlo + inGap; z1 = zhi - inGap; }
+    else {
+      x0 = Lb ? (Lb.outer ? Lb.ext[0][0] + sideGapF : (Lb.ext[0][0] + Lb.ext[0][1]) / 2 + gapF / 2) : cx[0] + gapF / 2;
+      x1 = Rb ? (Rb.outer ? Rb.ext[0][1] - sideGapF : (Rb.ext[0][0] + Rb.ext[0][1]) / 2 - gapF / 2) : cx[1] - gapF / 2;
+      z0 = lo.bd ? (lo.bd.outer ? lo.bd.ext[2][0] : (lo.bd.ext[2][0] + lo.bd.ext[2][1]) / 2 + gapF / 2) : zlo + gapF / 2;
+      z1 = hiL.bd ? (hiL.bd.outer ? hiL.bd.ext[2][1] - gapF : (hiL.bd.ext[2][0] + hiL.bd.ext[2][1]) / 2 - gapF / 2) : zhi - gapF / 2;
+    }
+    var FW = x1 - x0, FH = z1 - z0, yFace = inset ? yF + fT : yF, back = inset ? fT : 0;   // marks and boxes move back by the front for inset fronts
+    if (FW < 60 || FH < 60) { warnOnce(lbl + ': anga per maža fasadui (' + num(FW) + ' × ' + num(FH) + ') — praleista'); return; }
+    var mkFront = function (role, w, h, x, z, name) { var p = panel(nm(name), role, w, h, fT, 'galinė (vidinė) pusė viršuje, apatinis kraštas Y=0');
+      place(p, [x, yFace, z], X, Z, Y); p.mat = mFac; p.eb = { y0:eFac, y1:eFac, x0:eFac, x1:eFac }; p.frontOf = fi; return p; };
+    if (fr0.kind === 'drawers') {
+      boards.forEach(function (sh) { if (sh.kind === 'shelf' && sh.adj && sh.col === col && sh.ext[2][0] < zhi && sh.ext[2][1] > zlo) warnOnce(lbl + ': reguliuojama ' + sh.lt + ' kertasi su stalčiais — pašalinkite ją arba padarykite nekilnojamą'); });
+      var n = Math.max(1, Math.min(8, Math.round(+fr0.nDrawers || 1))), hwN = fr0.hw || 'BLUM TANDEMBOX', rail = +fr0.rail || 500, rt = R.runner[hwN];
+      var hD = (FH - (n - 1) * gapF) / n; if (hD < 60) { warnOnce(lbl + ': ' + n + ' stalčiai netelpa į ' + num(FH) + ' mm — praleista'); return; }
+      if (!rt) warnOnce(lbl + ': bėgeliams „' + hwN + '“ skylių šablono nėra — žymės nepridėtos');
+      var roomD = (B.back ? innerFace(B.back) : cav[1][1]) - yF - back;
+      for (var j = 0; j < n; j++) {
+        var fb = z0 + j * (hD + gapF), p = mkFront('FASADAS', FW, hD, x0, fb, 'FASADAS' + (++nFas));
+        if (rt && rt.facade && o.tbFront !== 'off') { var fc = rt.facade, mk = o.tbFront === 'mark';
+          [fc.fromSide, FW - fc.fromSide].forEach(function (x) { fc.ys.concat(hD >= 250 ? [fc.yGallery] : []).forEach(function (y) { if (y > hD - 1) return; if (mk) hole(p, 'A', x, y, R.legs.markD, R.legs.markDepth, { mark:true }); else hole(p, 'A', x, y, fc.d, fc.depth); }); }); }
+        out.push(p);
+        var f = { w:FW, h:hD, bottom:fb, x:x0, hw:hwN, rail:rail, col:col, sec:fi, idx:j, pname:p.name, box:true, ox0:cx[0], ox1:cx[1], inset:inset };
+        vDrawers.push(f); hw.push({ item:hwN + ' L=' + rail, qty:1, unit:'kompl.' });
+        if (!rt) continue;
+        var up = runnerUp(rt), axis = Math.max(zlo + up, fb + up), mks = runnerMarks(rt, rail);
+        if (rail > roomD + 0.01) warnOnce(lbl + ': bėgelis ' + rail + ' mm ilgesnis nei telpa (' + num(roomD) + ' mm) — rinkitės trumpesnį');
+        if (o.runnerMarks !== false) [[Lb, cx[0]], [Rb, cx[1]]].forEach(function (q) { if (!q[0]) { warnOnce(lbl + ': šone nėra plokštės bėgeliui — žymės nepridėtos'); return; }
+          mks.forEach(function (m) { if (m + back > roomD - 5) return; markOn(q[0], q[1], yF + back + m, axis, 'bėgelio'); }); });
+        /* board boxes for GTV / DTC ball and DTC undermount runners */
+        var ctx = { x0:cx[0], x1:cx[1], y0:yF + back, axis:axis, top:Math.min(fb + hD - (rt.ball ? +R.ball.topGap : rt.under ? +R.under.topGap : 0), zhi - 3), room:roomD, lbl:lbl + '.' + (j + 1), pname:p.name };
+        if (rt.ball || rt.under) { var parts2 = (rt.ball ? ballBoxParts : underBoxParts)(ctx, rail, ++nBoxF); if (parts2) { parts2.forEach(function (q) { out.push(q); }); if (unverF.indexOf(hwN) < 0) unverF.push(hwN); } }
+      }
+    } else {
+      var nd = Math.max(1, Math.min(2, Math.round(+fr0.nDoors || 1))), hs = fr0.hingeSide || 'auto', hinge = fr0.hinge || 'BLUM LANKSTAI', hinged = hinge !== 'BE FURNITŪROS';
+      var dw = (FW - (nd - 1) * gapF) / nd, hr = R.hinge, clr = hr.plateSpacing / 2 + hr.plateD / 2 + 3, nH = +fr0.hingeN >= 2 ? Math.min(6, Math.round(+fr0.hingeN)) : 0;
+      for (var d = 0; d < nd; d++) {
+        var dx = x0 + d * (dw + gapF), hl = nd === 2 ? d === 0 : hs === 'right' ? false : hs === 'left' ? true : !(Lb && !Lb.outer && Rb && Rb.outer) ;
+        var pd = mkFront('DURYS', dw, FH, dx, z0, 'DURYS' + (++nDur)), ys = hingeYs(FH, nH).map(function (y) { return Math.max(zlo + clr - z0, Math.min(zhi - clr - z0, y)); });
+        var fits = hinged && hingesFit(FH, o.hingeFix === 'press', nH) && ys.every(function (y, q) { return q === 0 || ys[q] - ys[q - 1] >= hr.cupD + 3; });
+        var hb = hl ? Lb : Rb, hx = hl ? cx[0] : cx[1];
+        if (hinged && o.hinges && !fits) warnOnce(lbl + ': durys ' + num(dw) + '×' + num(FH) + ' per žemos lankstams — skylės nepridėtos');
+        if (hinged && o.hinges && fits && !hb) warnOnce(lbl + ': lankstų pusėje nėra plokštės — plokštelių žymės nepridėtos');
+        if (hinged && o.hinges && fits) {
+          var xc = hl ? hr.cupFromEdge : dw - hr.cupFromEdge, dir = hl ? 1 : -1;
+          ys.forEach(function (y) { hole(pd, 'A', xc, y, hr.cupD, hr.cupDepth, { op:'hinge' });
+            if (o.hingeFix === 'press') [-1, 1].forEach(function (sg) { hole(pd, 'A', xc + dir * hr.dowelOffset, y + sg * hr.dowelSpacing / 2, hr.dowelD, hr.dowelDepth, { op:'hinge' }); });
+            else [-1, 1].forEach(function (sg) { hole(pd, 'A', xc + dir * hr.dowelOffset, y + sg * hr.dowelSpacing / 2, R.post.markD, R.post.markDepth, { op:'hinge', mark:true }); });
+            if (hb) [-1, 1].forEach(function (sg) { markOn(hb, hx, yF + back + hr.plateFromFront, z0 + y + sg * hr.plateSpacing / 2, 'lanksto'); }); });
+          pd.warnings.push('lankstų puodelių skylės pagal Blum katalogą — NEPATIKRINTA su SWOOD modeliu');
+          if (inset) pd.warnings.push('įleistos durys: reikia įleistų durų lankstų; plokštelės žymės ' + num(hr.plateFromFront + fT) + ' mm nuo priekio — NEPATIKRINTA');
+        }
+        pd.hingeLeft = hl; out.push(pd);
+        vDoors.push({ w:dw, h:FH, x:dx, z:z0, hingeLeft:hl, hinged:hinged && fits && !!hb, ys:ys, col:col, sec:fi, hx:hx, inset:inset });
+        if (hinged) hw.push({ item:hinge, qty:nH || hingesPerDoor(FH), unit:'vnt.' });
+      }
+    }
+  });
+  if (unverF.length) warnOnce('naujos jungtys, dar nepatikrintos su SWOOD modeliu: ' + unverF.map(function (h) { return h + ' (dėžė ir skylės)'; }).join(', ') + ' — patikrinkite pirmą gaminį');
+  /* GTV / DTC ball box: sides, sub-front and back with confirmats through the sides, HDF bottom, 12.7 mm clear each side */
+  function ballBoxParts(ctx, rail, nb) {
+    var bb = R.ball, bt = +bb.boxT > 0 ? +bb.boxT : t, cl = +bb.clear, bx0 = ctx.x0 + cl, BW = ctx.x1 - ctx.x0 - 2 * cl, BD = rail, zB = ctx.axis - +bb.boxBelow, HB = Math.floor(ctx.top - zB);
+    if (BD > ctx.room - 2 + 0.01) return null;
+    if (HB < 60 || BW - 2 * bt < 80) { warnOnce(ctx.lbl + ': fasadas per žemas arba anga per siaura stalčiaus dėžei — dėžė nepridėta'); return null; }
+    var res = [], base2 = 'STALC' + nb + '_', conf = HB >= 200 ? [32, HB / 2, HB - 32] : HB >= 100 ? [32, HB - 32] : [HB / 2], marks = runnerMarks(R.runner['GTV KULKINIAI H45'], rail), mz = ctx.axis - zB;
+    [false, true].forEach(function (right) {
+      var p = panel(nm(base2 + (right ? 'SONAS_D' : 'SONAS_K')), 'STALC_SONAS', BD, HB, bt, ctx.lbl + ', vidinė pusė viršuje, priekis X=0, apačia Y=0');
+      [bt / 2, BD - bt / 2].forEach(function (u) { conf.forEach(function (v) { hole(p, 'A', u, v, cf.d, 0, { through:true }); }); });
+      if (bb.drawerMarks !== false) marks.forEach(function (u) { if (u < BD - 5) hole(p, 'B', u, mz, R.legs.markD, R.legs.markDepth, { mark:true }); });
+      place(p, right ? [bx0 + BW - bt, ctx.y0, zB] : [bx0 + bt, ctx.y0, zB], Y, Z, right ? neg(X) : X); p.mat = mCarc; p.eb.y1 = eCarc; p.drawerOf = ctx.pname; res.push(p);
+    });
+    [['PRIEKIS', 'STALC_PRIEKIS', bt, Y], ['GALAS', 'STALC_GALAS', BD - bt, neg(Y)]].forEach(function (q) {
+      var p = panel(nm(base2 + q[0]), q[1], BW - 2 * bt, HB, bt, ctx.lbl + ', vidinė pusė viršuje, apačia Y=0');
+      conf.forEach(function (v) { edge(p, 'x0', v, cf.pilot.d, cf.pilot.depth); edge(p, 'x1', v, cf.pilot.d, cf.pilot.depth); });
+      place(p, [bx0 + bt, ctx.y0 + q[2], zB], X, Z, q[3]); p.mat = mCarc; p.eb.y1 = eCarc; p.drawerOf = ctx.pname; res.push(p);
+    });
+    var pb = panel(nm(base2 + 'DUGNAS'), 'STALC_DUGNAS', BW, BD, +R.hdf.t || 3, ctx.lbl + ', kalamas iš apačios');
+    place(pb, [bx0, ctx.y0, zB], X, Y, Z); pb.mat = R.hdf.mat || 'HDF 3 mm'; pb.drawerOf = ctx.pname; res.push(pb);
+    return res;
+  }
+  /* DTC undermount box: as on the cabinets (inside width = opening − deduction, length = runner − 10, bottom set in 13 mm) */
+  function underBoxParts(ctx, rail, nb) {
+    var ub = R.under, bt = +ub.boxT > 0 ? +ub.boxT : t, LW = ctx.x1 - ctx.x0, SKW = LW - underDeduct(bt), OW = SKW + 2 * bt, bx0 = ctx.x0 + (LW - OW) / 2, BD = rail - +ub.shorter;
+    var zB = ctx.axis - +ub.up + +ub.clearBelow, rc = +ub.recess, HB = Math.floor(ctx.top - zB), backH = HB - rc - bt;
+    if (rail + +ub.depthPlus > ctx.room + 0.01) { warnOnce(ctx.lbl + ': bėgeliui ' + rail + ' mm reikia ' + num(rail + +ub.depthPlus) + ' mm gylio, yra ' + num(ctx.room) + ' — rinkitės trumpesnį'); return null; }
+    if (backH < 50 || SKW < 100) { warnOnce(ctx.lbl + ': fasadas per žemas arba anga per siaura stalčiaus dėžei — dėžė nepridėta'); return null; }
+    var res = [], base2 = 'STALC' + nb + '_', y0 = ctx.y0;
+    var rows = function (h0) { return h0 >= 200 ? [32, h0 / 2, h0 - 32] : h0 >= 100 ? [32, h0 - 32] : [h0 / 2]; };
+    var confF = rows(HB).map(function (v) { return Math.max(v, rc + bt + 16); }).filter(function (v, i, a) { return a.indexOf(v) === i && v <= HB - 16; });
+    var confB = rows(backH).map(function (v) { return rc + bt + v; }), bz = rc + bt / 2, BDb = BD - bt;
+    var alongB = BDb >= 350 ? [50, BDb / 2, BDb - 50] : [Math.min(50, BDb / 4), BDb - Math.min(50, BDb / 4)], acrossB = SKW >= 350 ? [50, SKW / 2, SKW - 50] : [Math.min(50, SKW / 4), SKW - Math.min(50, SKW / 4)];
+    [false, true].forEach(function (right) {
+      var p = panel(nm(base2 + (right ? 'SONAS_D' : 'SONAS_K')), 'STALC_SONAS', BD, HB, bt, ctx.lbl + ', vidinė pusė viršuje, priekis X=0, apačia Y=0; dugnas ' + num(rc) + ' mm nuo apačios');
+      confF.forEach(function (v) { hole(p, 'A', bt / 2, v, cf.d, 0, { through:true }); });
+      confB.forEach(function (v) { hole(p, 'A', BD - bt / 2, v, cf.d, 0, { through:true }); });
+      alongB.forEach(function (u) { hole(p, 'A', bt + u, bz, cf.d, 0, { through:true }); });
+      place(p, right ? [bx0 + OW - bt, y0, zB] : [bx0 + bt, y0, zB], Y, Z, right ? neg(X) : X); p.mat = mCarc; p.eb.y1 = eCarc; p.drawerOf = ctx.pname; res.push(p);
+    });
+    var pf = panel(nm(base2 + 'PRIEKIS'), 'STALC_PRIEKIS', SKW, HB, bt, ctx.lbl + ', vidinė pusė viršuje, apačia Y=0');
+    confF.forEach(function (v) { edge(pf, 'x0', v, cf.pilot.d, cf.pilot.depth); edge(pf, 'x1', v, cf.pilot.d, cf.pilot.depth); });
+    acrossB.forEach(function (x) { hole(pf, 'A', x, bz, cf.d, 0, { through:true }); });
+    place(pf, [bx0 + bt, y0 + bt, zB], X, Z, Y); pf.mat = mCarc; pf.eb.y1 = eCarc; pf.drawerOf = ctx.pname; res.push(pf);
+    var pg = panel(nm(base2 + 'GALAS'), 'STALC_GALAS', SKW, backH, bt, ctx.lbl + ', stovi ant dugno, apačia Y=0');
+    confB.forEach(function (v) { edge(pg, 'x0', v - rc - bt, cf.pilot.d, cf.pilot.depth); edge(pg, 'x1', v - rc - bt, cf.pilot.d, cf.pilot.depth); });
+    acrossB.forEach(function (x) { edge(pg, 'y0', x, cf.pilot.d, cf.pilot.depth); });
+    place(pg, [bx0 + bt, y0 + BD - bt, zB + rc + bt], X, Z, neg(Y)); pg.mat = mCarc; pg.eb.y1 = eCarc; pg.drawerOf = ctx.pname; res.push(pg);
+    var pb = panel(nm(base2 + 'DUGNAS'), 'STALC_DUGNAS', SKW, BDb, bt, ctx.lbl + ', įleistas ' + num(rc) + ' mm, vidinė pusė viršuje, priekis Y=0');
+    alongB.forEach(function (u) { edge(pb, 'x0', u, cf.pilot.d, cf.pilot.depth); edge(pb, 'x1', u, cf.pilot.d, cf.pilot.depth); });
+    acrossB.forEach(function (x) { edge(pb, 'y0', x, cf.pilot.d, cf.pilot.depth); hole(pb, 'A', x, BDb - bt / 2, cf.d, 0, { through:true }); });
+    place(pb, [bx0 + bt, y0 + bt, zB + rc + bt], X, Y, Z); pb.mat = mCarc; pb.drawerOf = ctx.pname; res.push(pb);
+    return res;
+  }
+
+  var frontParts = out.splice(0, out.length);
   boards.forEach(function (bd) { out.push(bd.p); });
+  frontParts.forEach(function (p) { out.push(p); });
   out.forEach(orient);
   out.forEach(rightHanded);
   /* position note for the machine programs: which face is up, where the part's edges are */
@@ -2279,13 +2429,13 @@ function buildBox(c, idx, projName) {
     ['y0', 'y1', 'x0', 'x1'].forEach(function (e) { if (ov[e] === true) p.eb[e] = p.eb[e] || eCarc || 'KRAŠTAS'; else if (ov[e] === false) p.eb[e] = ''; });
     p.ebManual = true;
   });
-  out.forEach(function (p) { p.cab = idx + 1; p.short = (idx + 1) + '-' + p.role.replace(/_/g, '-') + (/\d$/.test(p.name) ? p.name.match(/\d+$/)[0] : ''); });
+  out.forEach(function (p) { p.cab = idx + 1; p.short = (idx + 1) + '-' + (p.drawerOf ? p.name.slice(base.length + 1).replace(/_/g, '-') : p.role.replace(/_/g, '-') + (/\d$/.test(p.name) ? p.name.match(/\d+$/)[0] : '')); });
   if (nJ) warnOnce('3D konstrukcija: jungtys gręžiamos pagal spintelių taisykles, bet šis surinkimas naujas — patikrinkite pirmą gaminį');
   hardwareFromHoles(out, o, hw);
   /* for the 3-D editor: every board's box, the absent outer boards as ghosts, the corners */
   var ghosts = BOX_IDS.filter(function (id) { return !B[id]; }).map(function (id) { var df = BOX_DEF[id], ext = [[0, W], [0, D], [0, H]]; ext[df.ax] = df.hi ? [S3[df.ax] - t, S3[df.ax]] : [0, t]; return { id:id, ext:ext, lt:df.lt }; });
-  return { panels:out, warnings:warn, hardware:mergeHw(hw), legs:[], joints:jointsInfo, seams:seams, visual:{ doors:[], drawers:[], plinth:null, hb:0 }, dims:{ W:W, H:H, D:D, t:t },
-           box:{ boards:boards.map(function (bd) { return { id:bd.id, name:bd.p.name, short:bd.p.short, role:bd.role, kind:bd.kind || 'outer', ext:bd.ext, T:bd.T, ins:bd.ins || 0, lt:bd.lt, adj:!!bd.adj, col:bd.col, inner:bd.inner ? bd.inner.id : null }; }),
+  return { panels:out, warnings:warn, hardware:mergeHw(hw), legs:[], joints:jointsInfo, seams:seams, visual:{ doors:vDoors, drawers:vDrawers, plinth:null, hb:0 }, dims:{ W:W, H:H, D:D, t:t },
+           box:{ openings:openings, boards:boards.map(function (bd) { return { id:bd.id, name:bd.p.name, short:bd.p.short, role:bd.role, kind:bd.kind || 'outer', ext:bd.ext, T:bd.T, ins:bd.ins || 0, lt:bd.lt, adj:!!bd.adj, col:bd.col, inner:bd.inner ? bd.inner.id : null }; }),
                  ghosts:ghosts, covers:covers, cavity:cav, comps:comp } };
 }
 function cap(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -3445,7 +3595,7 @@ function mount(el,c,r,lang,hooks={}){
  let door=p.role==='DURYS',m=door?meta.doors[di++]:meta.drawers[fi++];
  if(!m){let corners=[[0,0],[p.L,0],[0,p.W],[p.L,p.W]].map(([a,b])=>add(p.place.o,add(mul(p.place.u,a),mul(p.place.v,b))));m={x:Math.min(...corners.map(q=>q[0])),z:Math.min(...corners.map(q=>q[2])),bottom:0,w:Math.max(...corners.map(q=>q[0]))-Math.min(...corners.map(q=>q[0])),h:Math.max(...corners.map(q=>q[2]))-Math.min(...corners.map(q=>q[2])),hingeLeft:p.hingeLeft,ys:[]};}
  const x=m.x,z=door?m.z:m.bottom,w=m.w,h=m.h,t=p.T;
- const section=(c.sections||[]).filter(s=>(+s.col||0)===(m.col||0))[m.sec]||{};
+ const section=m.box?{hw:m.hw,rail:m.rail}:(c.sections||[]).filter(s=>(+s.col||0)===(m.col||0))[m.sec]||{};
  const travel=Math.min(+section.rail||500,d.D-45)*.8*V.open;
  const angle=(m.hinged===false?0:V.open)*Math.PI*.55,hinge=m.hingeLeft?x:x+w,sign=m.hingeLeft?-1:1;
  const tf=door?q=>{let xx=q[0]-hinge;return [hinge+xx*Math.cos(angle)-q[1]*Math.sin(sign*angle),xx*Math.sin(sign*angle)+q[1]*Math.cos(angle),q[2]];}:q=>[q[0],q[1]-travel,q[2]];
@@ -4819,7 +4969,7 @@ function fittingBoxes(r, c, carc) {
   ((r.visual && r.visual.drawers) || []).forEach(function (f) {
     var fp = (r.panels || []).filter(function (p) { if (p.role !== 'FASADAS' || !p.place) return false; var e = pbox(p); return Math.abs(e[0][0] - f.x) < 0.6 && Math.abs(e[2][0] - f.bottom) < 0.6; })[0]; if (!fp) return;
     var xc = f.x + f.w / 2, zc = f.bottom + f.h / 2, Lf = faceAt(xc, zc, 100, true), Rf = faceAt(xc, zc, 100, false); if (!Lf || !Rf) return;
-    var L0 = Lf.x, R0 = Rf.x, s2 = secsOf(f.col || 0)[f.sec] || {}, rail = +s2.rail || 500, by = backY(xc, zc);
+    var L0 = Lf.x, R0 = Rf.x, s2 = f.box ? { hw:f.hw, rail:f.rail } : secsOf(f.col || 0)[f.sec] || {}, rail = +s2.rail || 500, by = backY(xc, zc);
     var dep = Math.min(rail, (isFinite(by) ? by : (r.dims ? r.dims.D : 560)) - 4); if (dep < 150 || R0 - L0 < 60) return;
     if (/KULKINIAI/i.test(f.hw || s2.hw || '')) {   // GTV / DTC: the box is among the parts; draw the two runners on the side faces
       var ER = (root.DBEngine && root.DBEngine.R) || null, upB = ER ? +ER.ball.up : 37, tt = (r.dims && r.dims.t) || 18, ax = Math.max(tt + upB, f.bottom + upB), cl = ER ? +ER.ball.clear : 12.7;
@@ -5948,7 +6098,7 @@ lt:{
  pDrawers:'Stalčių spintelė', pDoors:'Durų spintelė', pDrDoors:'Stalčius + durys', pWall:'Pakabinama', pTall:'Aukšta su orkaite', pDish:'Indaplovės fasadas', pEmpty:'Tuščia (lentynos)', pBox:'3D konstrukcija',
  bxS1l:'Išoriniai matmenys. Plokštes dėliokite modelyje (▣ Plokštės) arba žemiau.', bxS2:'Plokštės', bxS2l:'Kurios plokštės yra, kiek įleistos ir kuri kurią dengia kampuose.', bxS3:'Vidus', bxS3l:'Pertvaros — per visą aukštį tarp apačios ir viršaus; lentynos — skyriuje tarp pertvarų.', bxS4:'Jungtys', bxS4l:'Kiekvienas galas, atsiremiantis į kitos plokštės plokštumą, sujungiamas — rūšis, kiekis ir vietos kiekvienam mazgui.',
  bx_bottom:'Apačia', bx_top:'Viršus', bx_left:'Kairė', bx_right:'Dešinė', bx_back:'Nugara', bx_front:'Priekis', bxInset:'Įleista', bxT:'Storis', bxCorners:'Kampai — kuri plokštė dengia kurią', bxCovers:'dengia', bxForced:'įleista plokštė visada viduje', bxWith:'su',
- bxAddShelf:'＋ Lentyna', bxAddPart:'＋ Pertvara', bxShelf:'Lentyna', bxPart:'Pertvara', bxZ:'Aukštis (apačia)', bxX:'Nuo kairės (centras)', bxCol:'Skyrius', bxAdj:'Ant laikiklių', bxFixed:'Fiksuota', bxRm:'Pašalinti', bxPinRow:'Laikiklių eilė (po 2 skyles aukščiau ir žemiau)', bxNoInner:'Vidinių plokščių nėra.', bxDefJ:'Numatyta jungtis', bxTph:'kaip korpusas', bx3d:'▣ Dėlioti modelyje',
+ bxS5:'Durys ir stalčiai', bxS5l:'Angos tarp plokščių: pasirinkite skyrių ir angą, durys ar stalčiai. Užeinantis fasadas dengia plokščių kraštus, įleistas — anga viduje.', bxAddDoors:'＋ Durys', bxAddDrawers:'＋ Stalčiai', bxFCol:'Skyrius', bxFCell:'Anga (iš apačios)', bxFSpan:'Angų aukštyn', bxFFit:'Fasadas', bxOverlay:'Užeinantis', bxInset:'Įleistas', bxNoFronts:'Durų ir stalčių nėra — konstrukcija atvira.', bxNoOpen:'Angų nėra: įjungus priekio plokštę konstrukcija uždara.', bxFrontOff:'priekio plokštė išjungta — vietoj jos durys / stalčiai', bxAddShelf:'＋ Lentyna', bxAddPart:'＋ Pertvara', bxShelf:'Lentyna', bxPart:'Pertvara', bxZ:'Aukštis (apačia)', bxX:'Nuo kairės (centras)', bxCol:'Skyrius', bxAdj:'Ant laikiklių', bxFixed:'Fiksuota', bxRm:'Pašalinti', bxPinRow:'Laikiklių eilė (po 2 skyles aukščiau ir žemiau)', bxNoInner:'Vidinių plokščių nėra.', bxDefJ:'Numatyta jungtis', bxTph:'kaip korpusas', bx3d:'▣ Dėlioti modelyje',
  s1:'Matmenys', s1l:'Karkaso išoriniai matmenys milimetrais, be kojelių. Galima rašyti 600-18.',
  name:'Pavadinimas', type:'Tipas', tBase:'Pastatoma', tWall:'Pakabinama', tTall:'Aukšta', W:'Plotis', H:'Aukštis', D:'Gylis', thick:'Plokštė', facT:'Fasadas', dishW:'Indaplovės plotis',
  s2:'Sekcijos', s2l:'Viršus sąrašo viršuje. „Likęs“ — užima likusį aukštį.',
@@ -6066,7 +6216,7 @@ en:{
  pDrawers:'Drawer cabinet', pDoors:'Door cabinet', pDrDoors:'Drawer + doors', pWall:'Wall cabinet', pTall:'Tall with oven', pDish:'Dishwasher front', pEmpty:'Empty (shelves)', pBox:'3D construction',
  bxS1l:'Outer size. Place the boards in the model (▣ Boards) or below.', bxS2:'Boards', bxS2l:'Which boards there are, how far they are set in, and which covers which at the corners.', bxS3:'Inside', bxS3l:'Partitions run the full height between bottom and top; shelves sit in one compartment.', bxS4:'Joints', bxS4l:'Every end that meets another board\'s face is joined — type, count and positions per joint.',
  bx_bottom:'Bottom', bx_top:'Top', bx_left:'Left', bx_right:'Right', bx_back:'Back', bx_front:'Front', bxInset:'Set in', bxT:'Thickness', bxCorners:'Corners — which board covers which', bxCovers:'covers', bxForced:'a set-in board always sits inside', bxWith:'with',
- bxAddShelf:'＋ Shelf', bxAddPart:'＋ Partition', bxShelf:'Shelf', bxPart:'Partition', bxZ:'Height (underside)', bxX:'From the left (centre)', bxCol:'Compartment', bxAdj:'On pins', bxFixed:'Fixed', bxRm:'Remove', bxPinRow:'Pin row (2 more holes above and below)', bxNoInner:'No inner boards.', bxDefJ:'Default joint', bxTph:'as carcass', bx3d:'▣ Place in the model',
+ bxS5:'Doors and drawers', bxS5l:'Openings between boards: pick the compartment and the opening, doors or drawers. An overlay front covers the board edges, an inset one sits inside the opening.', bxAddDoors:'＋ Doors', bxAddDrawers:'＋ Drawers', bxFCol:'Compartment', bxFCell:'Opening (from the bottom)', bxFSpan:'Openings high', bxFFit:'Front', bxOverlay:'Overlay', bxInset:'Inset', bxNoFronts:'No doors or drawers — the construction is open.', bxNoOpen:'No openings: with the front board on, the construction is closed.', bxFrontOff:'front board switched off — doors / drawers instead', bxAddShelf:'＋ Shelf', bxAddPart:'＋ Partition', bxShelf:'Shelf', bxPart:'Partition', bxZ:'Height (underside)', bxX:'From the left (centre)', bxCol:'Compartment', bxAdj:'On pins', bxFixed:'Fixed', bxRm:'Remove', bxPinRow:'Pin row (2 more holes above and below)', bxNoInner:'No inner boards.', bxDefJ:'Default joint', bxTph:'as carcass', bx3d:'▣ Place in the model',
  s1:'Dimensions', s1l:'Outer carcass size in millimetres, without legs. You can type 600-18.',
  name:'Name', type:'Type', tBase:'Base', tWall:'Wall', tTall:'Tall', W:'Width', H:'Height', D:'Depth', thick:'Board', facT:'Front', dishW:'Dishwasher width',
  s2:'Sections', s2l:'Top of the list is the top of the cabinet. “Fill” takes the remaining height.',
@@ -6515,10 +6665,10 @@ function viewCab(info) {
   return '<div class="ws">' + rail + '<section class="editor">' + stepNav(c, inf) + viewEditor(c) + '</section>' + viewSheet(c, inf) + '</div>';
 }
 /* where am I / what is left: the steps of this cabinet, with a mark where something needs attention */
-function needsMats(c) { if (c.worktop && c.worktop.on && !c.worktop.mat) return true; if (c.dishwasher) return !c.mat.facade; if (c.kind === 'box') return !c.mat.carc; return !c.mat.carc || (c.sections.some(function (s) { return s.kind === 'drawers' || s.kind === 'doors'; }) && !c.mat.facade); }
+function needsMats(c) { if (c.worktop && c.worktop.on && !c.worktop.mat) return true; if (c.dishwasher) return !c.mat.facade; if (c.kind === 'box') return !c.mat.carc || (c.box && c.box.fronts && c.box.fronts.length > 0 && !c.mat.facade); return !c.mat.carc || (c.sections.some(function (s) { return s.kind === 'drawers' || s.kind === 'doors'; }) && !c.mat.facade); }
 function stepNav(c, inf) {
   var z = c.dishwasher ? null : zoneInfo(c), bad = inf.warnings.some(function (w) { return level(w) === 'bad'; });
-  var st = c.kind === 'box' ? [['dims', 1, t('n1')], ['boards', 2, t('bxS2'), !inf.r.panels.length], ['inner', 3, t('bxS3')], ['joints', 4, t('bxS4'), bad], ['mats', 5, t('n5'), needsMats(c)], ['extra', 6, t('n6')]] : c.dishwasher ? [['dims', 1, t('n1')], ['mats', 2, t('n5'), needsMats(c)]]
+  var st = c.kind === 'box' ? [['dims', 1, t('n1')], ['boards', 2, t('bxS2'), !inf.r.panels.length], ['inner', 3, t('bxS3')], ['fronts', 4, t('bxS5')], ['joints', 5, t('bxS4'), bad], ['mats', 6, t('n5'), needsMats(c)], ['extra', 7, t('n6')]] : c.dishwasher ? [['dims', 1, t('n1')], ['mats', 2, t('n5'), needsMats(c)]]
     : [['dims', 1, t('n1')], ['secs', 2, t('n2'), z.over || !c.sections.length], ['ops', 3, t('n4'), bad], ['mats', 4, t('n5'), needsMats(c)], ['extra', 5, t('n6')]];
   return '<nav class="stepnav" aria-label="' + t('stepsNav') + '">' + st.map(function (x, i) {
     return '<button type="button" class="' + (i === 0 ? 'on' : '') + (x[3] ? ' need' : '') + '" data-act="goto" data-v="st-' + x[0] + '"' + (x[3] ? ' title="' + t('stepNeed') + '"' : '') + '><span class="sn">' + x[1] + '</span><span class="sl">' + esc(x[2]) + '</span>' + (x[3] ? '<i class="sdot" aria-label="' + t('stepNeed') + '"></i>' : '') + '</button>';
@@ -6682,6 +6832,33 @@ function cap1(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.sli
 function boxLabel(s) { if (S.lang !== 'en') return cap1(s); var m = { 'apačia':'bottom', 'viršus':'top', 'kairė':'left', 'dešinė':'right', 'nugara':'back', 'priekis':'front', 'pertvara':'partition', 'lentyna':'shelf' };
   return cap1(String(s || '').replace(/[a-ząčęėįšųūž]+/gi, function (w) { var k = w.toLowerCase(); return m[k] || w; })); }
 function tJ(k) { if (/^jk_b_/.test(k)) { var r = S._info && S._info[S.sel] && S._info[S.sel].r, j = r && (r.joints || []).filter(function (x) { return 'jk_' + x.key === k; })[0]; return j ? boxLabel(j.label) : k; } return t(k); }
+/* doors and drawers of a 3D construction: one row per front group, on an opening the engine found */
+function boxFrontsBlock(c, rb) {
+  var fr = c.box.fronts || [], ops = rb.openings || [], nCol = (rb.comps || [[0, 0]]).length, lt0 = S.lang === 'lt';
+  var rows = fr.map(function (f, i) {
+    var b = 'c.box.fronts.' + i + '.', col = Math.min(nCol - 1, Math.max(0, +f.col || 0)), mine = ops.filter(function (o) { return o.col === col; });
+    var cellOpts = mine.map(function (o) { return [o.cell, (o.cell + 1) + ' · ' + fmt(Math.round(o.z0)) + '–' + fmt(Math.round(o.z1)) + ' mm']; });
+    var h = '<div class="bxfront k-' + (f.kind === 'drawers' ? 'drawers' : 'doors') + '"><div class="bxfhead"><span class="kind">' + t(f.kind === 'drawers' ? 'kDrawers' : 'kDoors') + '</span>' +
+      '<button class="btn ghost danger" data-act="boxfrm" data-i="' + i + '">' + t('bxRm') + '</button></div><div class="row">' +
+      (nCol > 1 ? fS(t('bxFCol'), b + 'col', col, Array.from({ length:nCol }, function (_, k) { return [k, String(k + 1)]; })) : '') +
+      (cellOpts.length ? fS(t('bxFCell'), b + 'cell', +f.cell || 0, cellOpts) : '<span class="note">' + t('bxNoOpen') + '</span>') +
+      (mine.length > 1 ? fS(t('bxFSpan'), b + 'span', +f.span || 1, mine.slice(+f.cell || 0).map(function (o, k) { return [k + 1, String(k + 1)]; })) : '') +
+      '<div class="f"><span>' + t('bxFFit') + '</span>' + seg(b + 'inset', !!f.inset, [['false', t('bxOverlay')], ['true', t('bxInset')]]) + '</div></div><div class="row" style="margin-top:8px">';
+    if (f.kind === 'drawers') {
+      var hwOpts = [['BLUM TANDEMBOX', 'Blum TANDEMBOX'], ['BLUM TANDEM', 'Blum TANDEM'], ['GTV KULKINIAI H45', t('rGtv')], ['DTC KULKINIAI H45', t('rDtc')], ['DTC PASLĖPTI', t('rDtcU')]];
+      h += fN(t('nDr'), b + 'nDrawers', f.nDrawers || 1, 's') + fS(t('runner'), b + 'hw', f.hw, hwOpts) +
+        fS(t('rail'), b + 'rail', f.rail, railLengths(f.hw).concat(railLengths(f.hw).indexOf(num(f.rail)) < 0 ? [num(f.rail)] : []).map(function (v) { return [v, v + ' mm']; }));
+    } else {
+      h += '<div class="f"><span>' + t('nDoors') + '</span>' + seg(b + 'nDoors', String(+f.nDoors === 2 ? 2 : 1), [['1', '1'], ['2', '2']]) + '</div>' +
+        fS(t('hinge'), b + 'hinge', f.hinge || 'BLUM LANKSTAI', E.DOOR_HW.map(function (v) { return [v, v]; })) +
+        (+f.nDoors === 2 ? '' : '<div class="f"><span>' + t('hside') + '</span>' + seg(b + 'hingeSide', f.hingeSide || 'auto', [['auto', t('hsAuto')], ['left', t('hsL')], ['right', t('hsR')]]) + '</div>') +
+        (f.hinge === 'BE FURNITŪROS' ? '' : '<div class="f"><span>' + t('hingeN') + '</span>' + seg(b + 'hingeN', +f.hingeN >= 2 ? String(Math.round(+f.hingeN)) : 'auto', [['auto', t('hsAuto')], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5']]) + '</div>');
+    }
+    return h + '</div></div>';
+  }).join('');
+  return '<div class="bxfronts">' + (rows || '<p class="note" style="margin:0">' + t('bxNoFronts') + '</p>') + '</div>' +
+    '<div class="addsec" style="margin-top:10px"><button class="btn addk k-doors" data-act="boxfadd" data-v="doors"><i class="kdot" aria-hidden="true"></i>' + t('bxAddDoors') + '</button><button class="btn addk k-drawers" data-act="boxfadd" data-v="drawers"><i class="kdot" aria-hidden="true"></i>' + t('bxAddDrawers') + '</button></div>';
+}
 function boxEditor(c) {
   var b = 'c.', bx = c.box, inf = S._info && S._info[S.sel] ? S._info[S.sel] : null, r = inf ? inf.r : null, rb = r && r.box ? r.box : { boards:[], covers:[], comps:[[0, 0]] }, h = '';
   var tPh = function (bind, val) { var id = 'f-' + bind.replace(/\./g, '-'); return '<label class="f n s" for="' + id + '"><span>' + t('bxT') + '</span><input id="' + id + '" inputmode="decimal" type="text" data-bind="' + bind + '" data-num="1" data-empty="1" value="' + esc(val || '') + '" placeholder="' + esc(fmt(num(c.thick) || 18)) + '" autocomplete="off"></label>'; };
@@ -6715,9 +6892,10 @@ function boxEditor(c) {
   /* 4 — joints */
   var jo = '<div class="lbl">' + t('bxDefJ') + '</div><div class="choices">' + choice(b + 'cnc.joinery', c.cnc.joinery, 'confirmat', artOf('confirmat'), t('jConf'), t('jConfD')) +
     choice(b + 'cnc.joinery', c.cnc.joinery, 'cam', artOf('cam'), t('jCam'), t('jCamD')) + '</div>' + (r ? '<div style="margin-top:14px">' + jointsBlock(c, r) + '</div>' : '');
-  h += step(4, t('bxS4'), t('bxS4l'), jo, 'joints');
-  h += step(5, t('s5'), t('s5l'), matsBlock(c), 'mats');
-  h += step(6, t('s6'), t('s6l'), extrasBlock(c), 'extra');
+  h += step(4, t('bxS5'), t('bxS5l'), boxFrontsBlock(c, rb), 'fronts');
+  h += step(5, t('bxS4'), t('bxS4l'), jo, 'joints');
+  h += step(6, t('s5'), t('s5l'), matsBlock(c), 'mats');
+  h += step(7, t('s6'), t('s6l'), extrasBlock(c), 'extra');
   return h;
 }
 function railsEditor(c) {
@@ -6840,7 +7018,7 @@ function opRow(bind, on, title, desc, verified, applies, more) {
     '<span class="badge ' + (verified ? 'ok' : 'warn') + '">' + (verified ? t('verified') : t('unverified')) + '</span></div>';
 }
 function matsBlock(c) {
-  var b = 'c.', hasFront = c.dishwasher || c.sections.some(function (s) { return s.kind === 'drawers' || s.kind === 'doors'; });
+  var b = 'c.', hasFront = c.dishwasher || c.sections.some(function (s) { return s.kind === 'drawers' || s.kind === 'doors'; }) || !!(c.kind === 'box' && c.box && c.box.fronts && c.box.fronts.length);
   var req = function (html, val) { return html.replace('<span>', '<span>').replace('</span>', ' <i class="req" aria-hidden="true">*</i></span>').replace('type="text"', 'type="text" required' + (val ? '' : ' aria-invalid="true"')); };
   return '<p class="note reqnote"><i class="req">*</i> ' + t('reqNote') + '</p><div class="row">' + (c.dishwasher ? fT(t('mCarc'), b + 'mat.carc', c.mat.carc, 'dl-mat') : req(fT(t('mCarc'), b + 'mat.carc', c.mat.carc, 'dl-mat'), c.mat.carc)) + (hasFront ? req(fT(t('mFac'), b + 'mat.facade', c.mat.facade, 'dl-mat'), c.mat.facade) : fT(t('mFac'), b + 'mat.facade', c.mat.facade, 'dl-mat')) + (c.dishwasher ? '' : fT(t('mBack'), b + 'mat.back', c.mat.back, 'dl-mat')) + '</div>' +
     '<div class="row" style="margin-top:10px">' + fT(t('eCarc'), b + 'edge.carc', c.edge.carc, 'dl-edge') + fT(t('eFac'), b + 'edge.facade', c.edge.facade, 'dl-edge') + '</div>';
@@ -7037,7 +7215,7 @@ function priceCabinet(c, r) {
       var xc = f.x + f.w / 2, zc = f.bottom + f.h / 2, lo = -Infinity, hi = Infinity;
       vert.forEach(function (e) { if (zc < e[2][0] || zc > e[2][1]) return; if (e[0][1] <= xc + 1) lo = Math.max(lo, e[0][1]); if (e[0][0] >= xc - 1) hi = Math.min(hi, e[0][0]); });
       var openIn = isFinite(lo) && isFinite(hi) ? hi - lo : f.w - 2 * t_;
-      var secs = (c.sections || []).filter(function (s2) { return Math.max(0, Math.floor(num(s2.col) || 0)) === (f.col || 0); }), s2 = secs[f.sec] || {};
+      var secs = (c.sections || []).filter(function (s2) { return Math.max(0, Math.floor(num(s2.col) || 0)) === (f.col || 0); }), s2 = f.box ? { hw:f.hw, rail:f.rail } : secs[f.sec] || {};
       var db = offerDrawerBox(openIn, f.h + 3, f.hw || s2.hw, s2.rail), mp = matPrice(mats.carc || '', 'carc');
       out.drawers.n++; out.drawers.m2 += db.m2; out.drawers.cost += db.m2 * mp.p + db.perim / 1000 * num(PR.cut) + db.band / 1000 * num(PR.edge);
       out.basisM2 += db.m2; out.cutM += db.perim / 1000; out.edgeM += db.band / 1000;
@@ -7533,6 +7711,10 @@ function assign(bind, raw) {
     tg.obj.cnc.backs = tg.obj.cnc.backs.map(function () { return legacyBack(ty); }); tg.obj.cnc.backMount = ty.back === 'inside' ? 'inside' : 'top'; return; }
   if (/^c\.sections\.\d+\.hw$/.test(bind)) { setPath(tg.obj, tg.path, v); var sec0 = tg.obj.sections[+bind.split('.')[2]], ls = railLengths(v);
     if (sec0 && ls.indexOf(num(sec0.rail)) < 0) sec0.rail = ls.reduce(function (a, l) { return Math.abs(l - num(sec0.rail)) < Math.abs(a - num(sec0.rail)) ? l : a; }, ls[0]); return; }
+  if (/^c\.box\.fronts\.\d+\.hw$/.test(bind)) { setPath(tg.obj, tg.path, v); var bf = tg.obj.box.fronts[+bind.split('.')[3]], ls2 = railLengths(v);
+    if (bf && ls2.indexOf(num(bf.rail)) < 0) bf.rail = ls2.reduce(function (a, l) { return Math.abs(l - num(bf.rail)) < Math.abs(a - num(bf.rail)) ? l : a; }, ls2[0]); return; }
+  if (/^c\.box\.fronts\.\d+\.hingeN$/.test(bind)) { setPath(tg.obj, tg.path, v === 'auto' ? '' : +v); return; }
+  if (/^c\.box\.fronts\.\d+\.(col|cell|span|nDoors|rail)$/.test(bind)) { setPath(tg.obj, tg.path, +v || 0); var bf2 = tg.obj.box.fronts[+bind.split('.')[3]]; if (/\.col$/.test(bind)) { bf2.cell = 0; bf2.span = 1; } if (/\.cell$/.test(bind)) bf2.span = 1; if (!(bf2.span >= 1)) bf2.span = 1; return; }
   if (/^c\.sections\.\d+\.hingeN$/.test(bind)) { setPath(tg.obj, tg.path, v === 'auto' ? '' : +v); return; }
   if (bind === 'c.cnc.support') { tg.obj.cnc.legs = v !== 'none'; tg.obj.cnc.feet = v === 'feet'; return; }
   if (bind === 'c.cols') { tg.obj.cols = +v; tg.obj.colW = []; fixCols(tg.obj); return; }
@@ -7627,6 +7809,14 @@ app.addEventListener('click', function (e) {
         bc.box.inner.push({ id:nid, kind:'shelf', z:Math.round((best[0] + best[1]) / 2 - tt / 2), col:0, adj:false }); }
       save(); break; }
     case 'boxrm': pushUndo(); cur().box.inner.splice(i, 1); save(); break;
+    case 'boxfadd': { pushUndo(); var fc0 = cur(), fb0 = fc0.box, ops0 = (S._info[S.sel].r.box || {}).openings || [], nid0 = Math.max.apply(null, [0].concat(fb0.fronts.map(function (q) { return +q.id || 0; }))) + 1;
+      if (fb0.boards.front && fb0.boards.front.on) { fb0.boards.front.on = false; toast(t('bxFrontOff')); }
+      var used = {}; fb0.fronts.forEach(function (q) { for (var k = 0; k < (+q.span || 1); k++) used[(+q.col || 0) + ':' + ((+q.cell || 0) + k)] = 1; });
+      var free = ops0.filter(function (o) { return !used[o.col + ':' + o.cell]; })[0] || ops0[0] || { col:0, cell:0 };
+      fb0.fronts.push(v === 'drawers' ? { id:nid0, kind:'drawers', col:free.col, cell:free.cell, span:1, inset:false, nDrawers:2, hw:'BLUM TANDEMBOX', rail:500 }
+        : { id:nid0, kind:'doors', col:free.col, cell:free.cell, span:1, inset:false, nDoors:(free.x1 - free.x0) > 600 ? 2 : 1, hinge:'BLUM LANKSTAI', hingeSide:'auto', hingeN:'' });
+      fc0.cnc.hinges = fc0.cnc.hinges !== false; save(); break; }
+    case 'boxfrm': pushUndo(); cur().box.fronts.splice(i, 1); save(); break;
     case 'boxcover': pushUndo(); cur().box.cover[v] = el.getAttribute('data-w'); save(); break;
     case 'box3d': if (window.DBAssembly.setBoards) window.DBAssembly.setBoards(true); mountAssembly(); { var ap = document.getElementById('assembly-preview'); if (ap) ap.scrollIntoView({ behavior:'smooth', block:'center' }); } return;
     case 'mv': { var cc0 = cur(), a = cc0.sections, cl = colOf(cc0, a[i]), idx = a.map(function (s, q) { return q; }).filter(function (q) { return colOf(cc0, a[q]) === cl; }), p0 = idx.indexOf(i), j = idx[p0 + (+v)];

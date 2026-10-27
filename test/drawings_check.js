@@ -17,7 +17,9 @@ function cabinet(k) {
   if (k % 7 === 6) {   // a 3D construction
     const boards = {}; E.BOX_IDS.forEach(id => { boards[id] = { on:rnd() < 0.85, inset:0, T:'' }; }); boards.bottom.on = true; boards.left.on = true;
     const inner = []; if (rnd() < 0.6) inner.push({ id:1, kind:'part', x:300 }); if (rnd() < 0.7) inner.push({ id:2, kind:'shelf', z:300, col:0, adj:rnd() < 0.5 });
-    return { id:'b' + k, kind:'box', name:'Box' + k, W:600, H:pick([400, 720]), D:pick([350, 560]), thick:18, cnc:{ joinery:pick(['confirmat', 'cam']) }, box:{ boards, cover:{}, inner }, mat:{ carc:'M' }, edge:{ carc:'E' } };
+    boards.front.on = false;
+    const fronts = rnd() < 0.7 ? [{ id:9, kind:pick(['doors', 'drawers']), col:0, cell:0, span:1, inset:rnd() < 0.4, nDoors:pick([1, 2]), nDrawers:pick([1, 2]), hw:pick(['BLUM TANDEMBOX', 'GTV KULKINIAI H45', 'DTC PASLĖPTI']), rail:300, hinge:'BLUM LANKSTAI' }] : [];
+    return { id:'b' + k, kind:'box', name:'Box' + k, W:600, H:pick([400, 720]), D:pick([350, 560]), thick:18, cnc:{ joinery:pick(['confirmat', 'cam']), hinges:true }, box:{ boards, cover:{}, inner, fronts }, mat:{ carc:'M', facade:'F' }, edge:{ carc:'E' } };
   }
   if (k % 11 === 10) return { id:'d' + k, name:'Indaplovė', W:600, H:720, D:560, dishwasher:true, dishWidth:600, legH:100, cnc:{}, sections:[] };
   const cols = pick([1, 1, 2, 3]), H = pick([720, 720, 2100, 330 + 390]), W = pick([400, 600, 900, 1200]);
