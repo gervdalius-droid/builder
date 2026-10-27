@@ -78,11 +78,11 @@ for (let run = 0; run < 60; run++) {
           if (!sh.svg.includes('>' + (p.short || p.role) + '<') && !sh.svg.includes('>' + (p.short || p.role).slice(0, 10))) B('PART MISSING ' + p.name);
           if (!sh.svg.includes('>' + want + '<')) B('PART SIZE ' + p.name + ' ' + want); });
         if (sh.id[0] === 'c') (r.hardware || []).forEach((h, hi) => { const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-          if (!sh.svg.includes('>' + esc(h.item) + '<') && !sh.svg.includes('>' + esc(h.item).slice(0, 20))) B('FITTING NOT LISTED ' + h.item);
+          const hn = esc(DR.hwText(h.item)); if (!sh.svg.includes('>' + hn + '<') && !sh.svg.includes('>' + hn.slice(0, 20))) B('FITTING NOT LISTED ' + h.item + ' / ' + hn);
           const k = DR.hwKind(h.item), letter = String.fromCharCode(65 + hi);
           if ((k === 'drawer' || k === 'leg') && !(k === 'drawer' && r.warnings.some(w => /ilgesnis nei telpa|netelpa šone|per žemas arba skyrius per siauras/.test(w))) && !sh.svg.includes('fill="#7a4d12">' + letter + '<')) B('FITTING WITHOUT BALLOON ' + h.item); });
         if (sh.id[0] === 'c') { const b = DR.cabBoxes(r, {}), bw = DR.cabBoxes(r, { worktop:true }), ex = q => [0, 1, 2].map(k2 => [Math.min(...q.map(x => x.e[k2][0])), Math.max(...q.map(x => x.e[k2][1]))]), e = ex(b), ew = ex(bw);
-          [e[0][1] - e[0][0], ew[1][1] - ew[1][0], ew[2][1] - ew[2][0]].forEach(v => { if (!sh.svg.includes('>' + nm(v) + '<')) B('DIM MISSING ' + sh.id + ' ' + nm(v)); });
+          [e[0][1] - e[0][0], ew[1][1] - ew[1][0], proj.cabinets[sh.cab].dishwasher ? r.dims.H : ew[2][1] - ew[2][0]].forEach(v => { if (!sh.svg.includes('>' + nm(v) + '<')) B('DIM MISSING ' + sh.id + ' ' + nm(v)); });
           if (r.worktop) { const w = r.worktop; if (!sh.svg.includes('>' + nm(w.L) + ' × ' + nm(w.W) + ' × ' + nm(w.T) + '<')) B('WORKTOP NOT LISTED ' + sh.id);
             if (!bw.some(x => x.worktop)) B('WORKTOP NOT DRAWN ' + sh.id); } }
       }
