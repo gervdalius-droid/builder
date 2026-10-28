@@ -33,7 +33,7 @@ function cabinet(k) {
            cnc:{ joinery:pick(['confirmat', 'cam']), top:pick(['rails', 'full']), legs:rnd() < 0.8, feet:rnd() < 0.3, bottom:rnd() < 0.3 ? 'inside' : 'under', bottomZ:pick([0, 100]),
                  backs:Array.from({ length:cols }, () => pick(['none', 'hdf', 'solid'])), hinges:true, pins:'shelf' },
            sections:secs, mat:{ carc:'LMDP balta 18', facade:'LMDP antracitas 18' }, edge:{ carc:'ABS 0.8' },
-           worktop:H < 1500 && rnd() < 0.5 ? { on:true, mat:pick(['Stalviršis Egger F244 38', 'Kompaktinė plokštė 12', '']), T:pick([38, 12, '']), over:pick([20, '', 0, 40]), left:pick([0, 0, 30]), right:pick([0, 50]), edge:pick(['', 'ABS 2']) } : undefined, extras:rnd() < 0.3 ? [{ name:'Cokolis', kind:'plinth', L:W, W:100, T:18, qty:1 }] : [] };
+           worktop:H < 1500 && rnd() < 0.5 ? { on:true, mat:pick(['Stalviršis Egger F244 38', 'Kompaktinė plokštė 12', '']), T:pick([38, 12, '']), over:pick([20, '', 0, 40]), left:pick([0, 0, 30]), right:pick([0, 50]), edge:pick(['', 'ABS 2']) } : undefined, extras:(rnd() < 0.3 ? [{ name:'Cokolis', kind:'plinth', L:W, W:100, T:18, qty:1 }] : []).concat(rnd() < 0.35 ? [{ name:'Šoninė plokštė', kind:'side', side:pick(['L', 'R', '']), L:H + pick([0, 100]), W:pick([560, 578, 600]), T:18, qty:1, zb:pick([0, -100]), yf:18 }] : []) };   // side panels: in the room sheets
 }
 function orderOk(order, V, tag) {   // every overlapping pair whose order an axis decides is drawn in that order
   const eps = 0.01;
