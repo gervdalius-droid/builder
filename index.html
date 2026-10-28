@@ -3493,18 +3493,18 @@ function build(THREE, PT, items) {
     var size = rb.getSize(new THREE.Vector3()), ctr = rb.getCenter(new THREE.Vector3());
     var lamp = new THREE.RectAreaLight(0xfff6ea, 4, Math.max(1200, size.x * 0.7), Math.max(1200, size.z * 0.7)); lamp.position.set(ctr.x, H + 500, ctr.z); lamp.lookAt(ctr.x, 0, ctr.z); scene.add(lamp);
     var camera = new THREE.PerspectiveCamera(R.fov, 1, 30, 100000);
-    R.scene = scene; R.camera = camera; R.walls = walls; R.fc = bb.getCenter(new THREE.Vector3()); R.fr = bb.getBoundingSphere(new THREE.Sphere()).radius; R.H = H;
+    R.scene = scene; R.camera = camera; R.walls = walls; R.fc = bb.getCenter(new THREE.Vector3()); R.fr = bb.getBoundingSphere(new THREE.Sphere()).radius; R.bb = bb.clone(); R.H = H;
     /* the fronts: per cabinet its box, the side its fronts face and their size — the view is turned to where most of them show, unhidden */
     var cabs = {}; items.forEach(function (it) { var k = it.o.cab; if (k == null) return; var q = cabs[k] || (cabs[k] = { b:new THREE.Box3() });
       [[it.e[0], it.e[2], it.e[4]], [it.e[1], it.e[3], it.e[5]]].forEach(function (p) { q.b.expandByPoint(V3(it.tr(p))); }); });
     R.fronts = Object.keys(cabs).map(function (k) { var c = o.proj.cabinets[+k], it = c && L.items[c.id], g = it && G[it.wall]; if (!g) return null; var q = cabs[k], n = new THREE.Vector3(g.n[0], 0, g.n[1]), sz = q.b.getSize(new THREE.Vector3());
       var ctr = q.b.getCenter(new THREE.Vector3()), half = Math.abs(n.x) * sz.x / 2 + Math.abs(n.z) * sz.z / 2; return { b:q.b, n:n, p:ctr.clone().addScaledVector(n, half + 5), area:(Math.abs(n.x) * sz.z + Math.abs(n.z) * sz.x) * sz.y }; }).filter(Boolean);
-    R.th = bestTurn(THREE, R.th);
+    resize(); R.th = bestTurn(THREE, R.th);   // sized first: how far back the eye stands depends on the picture's shape
     var pt = new PT.WebGLPathTracer(renderer); R.pt = pt;
     pt.tiles.set(2, 2); pt.bounces = 5; pt.filterGlossyFactor = 0.5; pt.minSamples = 1; pt.renderDelay = 0; pt.fadeDuration = 250; pt.dynamicLowRes = true; pt.lowResScale = 0.3;
     if (Object.keys(texs).length) pt.textureSize.set(2048, 2048);
-    resize(); place(true);
-    R.resize = function () { if (!R) return; resize(); R.pt.updateCamera(); }; window.addEventListener('resize', R.resize);
+    place(true);
+    R.resize = function () { if (!R) return; resize(); place(); }; window.addEventListener('resize', R.resize);
     controls(stage);
     loop();
   });
@@ -3517,8 +3517,20 @@ function resize() {
 /* the camera: a person at eye height on a circle round the furniture, as far as the lens needs to take it all in
    (walls the eye stands behind are left out, as when a wall is taken away for a photo of a room) */
 function camPos(THREE, th, out) {
-  var fov = R.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(fov / 2) * (R.camera ? R.camera.aspect : 1.6)), d = R.fr / Math.sin(Math.min(fov, hf) / 2) * 0.9 * R.far;
+  var d = fitDist(THREE, th) * R.far;
   return (out || new THREE.Vector3()).set(R.fc.x + Math.sin(th) * d, Math.max(400, R.eye), R.fc.z + Math.cos(th) * d);
+}
+/* how far back the eye must stand for every corner of the furniture to be in the picture, with a small margin */
+function fitDist(THREE, th) {
+  var cam = R.fitCam || (R.fitCam = new THREE.PerspectiveCamera(R.fov, 1, 10, 1e6)), v = new THREE.Vector3(), b = R.bb, y = Math.max(400, R.eye);
+  cam.fov = R.fov; cam.aspect = R.camera ? R.camera.aspect : 1.6; cam.updateProjectionMatrix();
+  var pts = []; [b.min.x, b.max.x].forEach(function (x) { [b.min.y, b.max.y].forEach(function (yy) { [b.min.z, b.max.z].forEach(function (z) { pts.push(new THREE.Vector3(x, yy, z)); }); }); });
+  var fits = function (d) {
+    cam.position.set(R.fc.x + Math.sin(th) * d, y, R.fc.z + Math.cos(th) * d); cam.lookAt(R.fc); cam.updateMatrixWorld(); cam.matrixWorldInverse.copy(cam.matrixWorld).invert();
+    return pts.every(function (p) { v.copy(p).applyMatrix4(cam.matrixWorldInverse); if (v.z > -50) return false; v.applyMatrix4(cam.projectionMatrix); return Math.abs(v.x) <= 0.93 && Math.abs(v.y) <= 0.9; }); };
+  var lo = R.fr * 0.2, hi = R.fr * 20;
+  for (var k = 0; k < 28; k++) { var mid = (lo + hi) / 2; if (fits(mid)) hi = mid; else lo = mid; }
+  return hi;
 }
 /* which way round shows the fronts best: their size, how squarely they face the eye, and nothing standing in front of them */
 function bestTurn(THREE, th0) {
