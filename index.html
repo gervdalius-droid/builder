@@ -3552,7 +3552,7 @@ function denoiser(THREE, PT, pt) {
   pt.renderToCanvasCallback = function (target, renderer, quad) {
     var ac = renderer.autoClear, f = R && !R.noDenoise ? 1 - pt.samples / QP[Q].dn : 0; renderer.autoClear = false;
     if (f <= 0.03 || quad.material.opacity < 1) quad.render(renderer);
-    else { var u = mat.uniforms; u.map.value = target.texture; u.sigma.value = 0.8 + 2.4 * f; u.threshold.value = 0.04 + 0.08 * f; renderer.render(quadMesh, cam); }
+    else { var u = mat.uniforms; u.map.value = target.texture; u.sigma.value = 1 + 3 * f; u.threshold.value = 0.05 + 0.12 * f; renderer.render(quadMesh, cam); }
     renderer.autoClear = ac;
   };
 }
