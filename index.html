@@ -3524,15 +3524,35 @@ function resize() {
 }
 function traceScale() { var cv = R.renderer.domElement; return Math.min(1, Math.sqrt(QP[Q].px / Math.max(1, cv.width * cv.height))); }   // fewer pixels traced for a quicker picture
 function applyQ() { if (!R || !R.pt) return; R.pt.renderScale = traceScale(); R.pt.bounces = QP[Q].b; R.pt.reset(); R.k = 1; }
-/* the picture on the screen: while there are few samples an edge-keeping blur takes the grain away (BrutPitt's smart denoise,
-   shipped with the path tracer), fading out as the samples add up */
+/* the picture on the screen: while there are few samples an edge-keeping blur takes the grain away, fading out as the samples
+   add up. Neighbours are compared with the 3×3 average round the pixel, in square-root light (near how the eye sees it), so
+   bright walls are smoothed as well as dark fronts and single bright specks melt in; edges between different boards stay sharp. */
 function denoiser(THREE, PT, pt) {
-  var cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), mat = new PT.DenoiseMaterial({ blending:THREE.NoBlending, transparent:false, depthTest:false, depthWrite:false }), quadMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat);
+  var cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), mat = new THREE.ShaderMaterial({
+    uniforms:{ map:{ value:null }, sigma:{ value:2 }, kSigma:{ value:1.3 }, threshold:{ value:0.1 } },
+    vertexShader:'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+    fragmentShader:[
+      'uniform sampler2D map; uniform float sigma; uniform float kSigma; uniform float threshold; varying vec2 vUv;',
+      'vec3 rt(vec3 c) { return sqrt(max(c, vec3(0.0))); }',
+      'void main() {',
+      '  vec2 px = 1.0 / vec2(textureSize(map, 0));',
+      '  vec3 g = vec3(0.0); for (int i = -1; i <= 1; i++) for (int j = -1; j <= 1; j++) g += texture2D(map, vUv + vec2(float(i), float(j)) * px).rgb;',
+      '  g = rt(g / 9.0);',
+      '  float radius = floor(kSigma * sigma + 0.5), radQ = radius * radius, invS = 0.5 / (sigma * sigma), invT = 0.5 / (threshold * threshold), z = 0.0;',
+      '  vec3 acc = vec3(0.0);',
+      '  for (float dx = -radius; dx <= radius; dx += 1.0) { float h = floor(sqrt(radQ - dx * dx));',
+      '    for (float dy = -h; dy <= h; dy += 1.0) { vec2 d = vec2(dx, dy); vec3 c = texture2D(map, vUv + d * px).rgb, e = rt(c) - g;',
+      '      float w = exp(-dot(d, d) * invS - dot(e, e) * invT); z += w; acc += w * c; } }',
+      '  gl_FragColor = vec4(acc / max(z, 1e-6), 1.0);',
+      '  #include <tonemapping_fragment>',
+      '  #include <colorspace_fragment>',
+      '}'].join('\n'),
+    depthTest:false, depthWrite:false, blending:THREE.NoBlending, toneMapped:true }), quadMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat);
   quadMesh.frustumCulled = false; R.dn = mat;
   pt.renderToCanvasCallback = function (target, renderer, quad) {
     var ac = renderer.autoClear, f = R && !R.noDenoise ? 1 - pt.samples / QP[Q].dn : 0; renderer.autoClear = false;
     if (f <= 0.03 || quad.material.opacity < 1) quad.render(renderer);
-    else { var u = mat.uniforms; u.map.value = target.texture; u.sigma.value = 0.8 + 2.4 * f; u.kSigma.value = 1.3; u.threshold.value = 0.05 + 0.1 * f; u.opacity.value = 1; renderer.render(quadMesh, cam); }
+    else { var u = mat.uniforms; u.map.value = target.texture; u.sigma.value = 0.8 + 2.4 * f; u.threshold.value = 0.04 + 0.08 * f; renderer.render(quadMesh, cam); }
     renderer.autoClear = ac;
   };
 }
