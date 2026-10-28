@@ -63,5 +63,34 @@ for (let run = 0; run < RUNS; run++) {
   if (rooms.length) { L.roomH = +L.roomH + 100; const ch = RM.ensure(proj), low = rooms.some(([c]) => RM.z0Of(c, L.items[c.id], L) + RM.cabH(c) < +L.roomH - 0.5); if (!ch && low) B('REFIT NOCHANGE');
     rooms.forEach(([c, x]) => { const it = L.items[c.id], z0 = RM.z0Of(c, it, L); if (!near(z0 + (+x.zb) + (+x.L), Math.max(+L.roomH, z0 + RM.cabH(c)))) B('REFIT ' + x.zb + ' ' + x.L); }); }
 }
+/* loose panels (kind 'panel'): one board, any size; dropped at a row, the row moves over when it can */
+let nLoose = 0, nLooseMoved = 0;
+for (let run = 0; run < RUNS; run++) {
+  const proj = { name:'P' + run, cabinets:[], layout:{ walls:[{ len:pick([2400, 2920, 3600]) }], wallZ:800, roomH:2300, worktop:false, items:{} } };
+  const n = 2 + Math.floor(rnd() * 4); for (let k = 0; k < n; k++) proj.cabinets.push(cab(run * 10 + k));
+  RM.ensure(proj);
+  const pc = { id:'p' + run, kind:'panel', name:'', type:'PASTATOMOS', W:pick([16, 18, 25]), H:pick([800, 2300]), D:pick([560, 618, 700]), thick:18, cnc:{ legs:false }, pe:{ e1:true, e2:true, e3:false, e4:true }, mat:{ carc:'F' }, edge:{ carc:'E' }, sections:[], extras:[] };
+  const r = E.buildCabinet(pc, n, 'P'); nLoose++;
+  if (r.panels.length !== 1) { B('LOOSE PARTS ' + r.panels.length); continue; }
+  const pp = r.panels[0], L0 = Math.max(pc.H, pc.D), W0 = Math.min(pc.H, pc.D);
+  if (!near(pp.L, L0) || !near(pp.W, W0) || !near(pp.T, pc.W)) B('LOOSE SIZE ' + pp.L + 'x' + pp.W + 'x' + pp.T);
+  if (E.programs(pp).files.length) B('LOOSE PROGRAM');
+  const ex = [0, 1, 2].map(k => { const v = []; [0, pp.L].forEach(a => [0, pp.W].forEach(b => [0, pp.T].forEach(t => v.push(pp.place.o[k] + a * pp.place.u[k] + b * pp.place.v[k] - t * pp.place.n[k])))); return [Math.min(...v), Math.max(...v)]; });
+  if (!near(ex[0][0], 0) || !near(ex[0][1], pc.W) || !near(ex[1][0], 0) || !near(ex[1][1], pc.D) || !near(ex[2][0], 0) || !near(ex[2][1], pc.H)) B('LOOSE PLACE ' + JSON.stringify(ex));
+  if (pp.L === pc.H && (pp.eb.y0 !== 'E' || pp.eb.y1 !== 'E' || pp.eb.x0 !== '' || pp.eb.x1 !== 'E')) B('LOOSE EDGE ' + JSON.stringify(pp.eb));   // L1 front, L2 back, W1 bottom (off here), W2 top
+  /* dropped at a row start / end / middle */
+  const ps = RM.placed(proj).filter(o => o.it.wall === 0); if (!ps.length) continue;
+  const tgt = pick(ps), at = pick([fp(tgt.c, tgt.it)[0], fp(tgt.c, tgt.it)[1] - pc.W, fp(tgt.c, tgt.it)[0] + 5]);
+  proj.cabinets.push(pc); proj.layout.items[pc.id] = { wall:0, x:Math.max(0, at) };
+  const L = proj.layout, len = L.walls[0].len, others = () => RM.placed(proj).filter(o => o.c !== pc && o.it.wall === 0 && ov(vr(pc, L.items[pc.id], L), vr(o.c, o.it, L)));
+  const okBefore = others().every(o => !ov(fp(o.c, o.it), [-1e9, 0]) && fp(o.c, o.it)[1] <= len + 0.5);
+  const rs = ['L', 'R'].map(sd => RM.makeRoom(proj, pc, sd)); if (rs.some(x => x.moved)) nLooseMoved++;
+  if (okBefore && !rs.some(x => x.short)) {
+    const f = fp(pc, L.items[pc.id]); others().forEach(o => { if (ov(f, fp(o.c, o.it))) B('LOOSE HIT ' + f + ' ' + fp(o.c, o.it) + ' ' + JSON.stringify(rs)); });
+    others().forEach((o, k, a) => a.forEach((q, j) => { if (j > k && ov(vr(o.c, o.it, L), vr(q.c, q.it, L)) && ov(fp(o.c, o.it), fp(q.c, q.it)) && !(ov(fp(o.c, before0(o)), fp(q.c, before0(q))))) B('LOOSE PUSHED INTO ' + o.c.id + ' ' + q.c.id); }));
+  }
+}
+function before0(o) { return o.it; }
+console.log(nLoose + ' loose panels (' + nLooseMoved + ' made room)');
 console.log(RUNS + ' rooms, ' + nAdd + ' side panels added (' + nMoved + ' made room, ' + nShort + ' short), ' + bad + ' problems');
 if (bad) console.log(K);
