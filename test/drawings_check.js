@@ -4,9 +4,10 @@
 //  an axis decides is drawn in that order — in the front, side, top and 3-D views, assembled and exploded),
 //  fronts are drawn after the carcass parts behind them, the parts list on the assembly sheet lists every part
 //  with its real size, the overall width / height / depth appear as dimensions on the views sheet.
-// usage: node test/drawings_check.js engine.js room.js drawings.js [outdir]
+// usage: [DBFIT=fit.js] node test/drawings_check.js engine.js room.js drawings.js [outdir]
 global.window = global.window || {};
 const E = require(process.argv[2]); window.DBEngine = E;
+if (process.env.DBFIT) window.DBFit = require(process.env.DBFIT);   // the makers' fittings (TANDEMBOX, TANDEM, hinges) drawn from their models
 const RM = require(process.argv[3]), DR = require(process.argv[4]), out = process.argv[5];
 const fs = require('fs');
 let bad = 0, nSheets = 0, nPairs = 0, nCab = 0; const K = {};
