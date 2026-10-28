@@ -742,6 +742,7 @@ button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(
 .lk-acts{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
 .lk-acts .btn.sm{padding:4px 8px;font-size:12px}
 .lk-acts .btn.sm.on{border-color:var(--accent);color:var(--accent)}
+.look.drop{outline:2px dashed var(--accent);outline-offset:2px}
 .lk-acts .xbtn{min-width:26px;height:26px}
 .lk-col{width:30px;height:28px;padding:0 2px;border:1px solid var(--line2);border-radius:6px;background:var(--panel);cursor:pointer}
 .lk-mm{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)}
@@ -3290,31 +3291,66 @@ function load(k, l) {
   var im = new Image();
   im.onload = function () {
     if (cache[k] !== c) return;
-    var w = im.naturalWidth || im.width, h = im.naturalHeight || im.height, sc = Math.min(1, 1024 / Math.max(w, h, 1)); w = Math.max(1, Math.round(w * sc)); h = Math.max(1, Math.round(h * sc));
-    var cv = document.createElement('canvas'); cv.width = w; cv.height = h; var cx = cv.getContext('2d'); cx.drawImage(im, 0, 0, w, h);
+    var w = im.naturalWidth || im.width, h = im.naturalHeight || im.height, sc = Math.min(1, 2048 / Math.max(w, h, 1)); w = Math.max(1, Math.round(w * sc)); h = Math.max(1, Math.round(h * sc));
+    var cv = document.createElement('canvas'); cv.width = w; cv.height = h; var cx = cv.getContext('2d'); cx.imageSmoothingQuality = 'high'; cx.drawImage(im, 0, 0, w, h);
     var d = cx.getImageData(0, 0, w, h).data, r = 0, g = 0, b = 0, n = 0;
     for (var i = 0; i < d.length; i += 16) { r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; }
-    c.w = w; c.h = h; c.d = d; c.avg = '#' + [r, g, b].map(function (v) { v = Math.round(v / Math.max(1, n)); return (v < 16 ? '0' : '') + v.toString(16); }).join(''); c.ready = true; ver++;
+    c.w = w; c.h = h; c.d = d; c.levels = mips(d, w, h);
+    c.avg = '#' + [r, g, b].map(function (v) { v = Math.round(v / Math.max(1, n)); return (v < 16 ? '0' : '') + v.toString(16); }).join(''); c.ready = true; ver++;
     listeners.forEach(function (f) { try { f(k); } catch (er) {} });
   };
   im.onerror = function () { c.bad = true; };
   im.src = l.tex; return c;
 }
-/* the decoded photo: { w, h, d (RGBA), k: photo pixels per mm on the board } — null while it is loading or when there is none */
-function tex(name) { var k = key(name), l = looks[k]; if (!l || !l.tex) return null; var c = load(k, l); return c.ready ? { w:c.w, h:c.h, d:c.d, k:c.w / Math.max(20, +l.mm || 1000) } : null; }
+/* the photo at halves of its size (2 × 2 averages), down to a few pixels: far boards sample a smaller level and do not shimmer */
+function mips(d, w, h) {
+  var out = [{ w:w, h:h, d:d }];
+  while (out.length < 14 && (w > 4 || h > 4)) {
+    var w2 = Math.max(1, w >> 1), h2 = Math.max(1, h >> 1), d2 = new Uint8ClampedArray(w2 * h2 * 4);
+    for (var y = 0; y < h2; y++) for (var x = 0; x < w2; x++) {
+      var x0 = Math.min(w - 1, 2 * x), x1 = Math.min(w - 1, 2 * x + 1), y0 = Math.min(h - 1, 2 * y), y1 = Math.min(h - 1, 2 * y + 1), o = (y * w2 + x) * 4;
+      for (var ch = 0; ch < 3; ch++) d2[o + ch] = (d[(y0 * w + x0) * 4 + ch] + d[(y0 * w + x1) * 4 + ch] + d[(y1 * w + x0) * 4 + ch] + d[(y1 * w + x1) * 4 + ch] + 2) >> 2;
+      d2[o + 3] = 255; }
+    out.push({ w:w2, h:h2, d:d2 }); d = d2; w = w2; h = h2;
+  }
+  return out;
+}
+/* the decoded photo: { w, h, levels, k: photo pixels per mm when it repeats at its real size, fit: laid once over each board } — null while loading */
+function tex(name) { var k = key(name), l = looks[k]; if (!l || !l.tex) return null; var c = load(k, l); return c.ready ? { w:c.w, h:c.h, d:c.d, levels:c.levels, k:c.w / Math.max(20, +l.mm || 1000), fit:l.fit !== false } : null; }
+/* a colour lookup for one face: f(x, y, z) → 0xRRGGBB. ppm: screen pixels per mm on that face (picks the photo level, so no shimmer
+   far away and no blocks close up: bilinear). Laid once over the board ("fit", the default): the photo covers the board's length and width
+   (cropped in the middle, never repeated); at a real size (mm): it repeats, mirrored, so plain photos show no hard seams. */
+function sampler(tx, ppm) {
+  var T = tex(tx.name); if (!T) return null;
+  var O = tx.O, U = tx.U, V = tx.V, k, s0 = 0, t0 = 0, fit = T.fit && tx.Lu > 0 && tx.Lv > 0;
+  if (fit) { k = Math.max(T.w / tx.Lu, T.h / tx.Lv); s0 = (T.w - tx.Lu * k) / 2; t0 = (T.h - tx.Lv * k) / 2; } else k = T.k;
+  var tpp = k / Math.max(1e-6, ppm), lv = 0; while (tpp > 1.4 && lv < T.levels.length - 1) { tpp /= 2; lv++; }
+  var Lv = T.levels[lv], sc = Lv.w / T.w, d = Lv.d, w = Lv.w, h = Lv.h, w2 = 2 * w, h2 = 2 * h;
+  var cx = fit ? function (i) { return i < 0 ? 0 : i >= w ? w - 1 : i; } : function (i) { i %= w2; if (i < 0) i += w2; return i >= w ? w2 - 1 - i : i; };
+  var cy = fit ? function (j) { return j < 0 ? 0 : j >= h ? h - 1 : j; } : function (j) { j %= h2; if (j < 0) j += h2; return j >= h ? h2 - 1 - j : j; };
+  var U0 = U[0] * k * sc, U1 = U[1] * k * sc, U2 = U[2] * k * sc, V0 = V[0] * k * sc, V1 = V[1] * k * sc, V2 = V[2] * k * sc, S0 = s0 * sc - 0.5, T0 = t0 * sc - 0.5;
+  return function (x, y, z) {
+    x -= O[0]; y -= O[1]; z -= O[2];
+    var s = x * U0 + y * U1 + z * U2 + S0, t = x * V0 + y * V1 + z * V2 + T0, i = Math.floor(s), j = Math.floor(t), fs = s - i, ft = t - j;
+    var a = cx(i), b = cx(i + 1), r0 = cy(j) * w, r1 = cy(j + 1) * w, p00 = (r0 + a) * 4, p10 = (r0 + b) * 4, p01 = (r1 + a) * 4, p11 = (r1 + b) * 4;
+    var w00 = (1 - fs) * (1 - ft), w10 = fs * (1 - ft), w01 = (1 - fs) * ft, w11 = fs * ft;
+    return ((d[p00] * w00 + d[p10] * w10 + d[p01] * w01 + d[p11] * w11) << 16) | ((d[p00 + 1] * w00 + d[p10 + 1] * w10 + d[p01 + 1] * w01 + d[p11 + 1] * w11) << 8) | (d[p00 + 2] * w00 + d[p10 + 2] * w10 + d[p01 + 2] * w01 + d[p11 + 2] * w11);
+  };
+}
 function color(name) { var k = key(name), l = looks[k]; if (!l) return null; if (l.color) return l.color; if (l.tex) { var c = load(k, l); return c.ready ? c.avg : null; } return null; }
 function has(name) { var l = looks[key(name)]; return !!(l && l.tex); }
 /* where the photo lies on one face of a board: O its corner, U along the grain (the board's length unless turned), V across;
    axes: the board's own axes (unit vectors), g: which of them is its length, n: the face's normal */
-function frame(name, O, axes, g, n) {
+function frame(name, O, axes, g, n, ext) {
   var l = looks[key(name)]; if (!l || !l.tex) return null;
   var dt = function (a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }, inPl = [0, 1, 2].filter(function (k) { return Math.abs(dt(axes[k], n)) < 0.5; });
   if (inPl.length < 2) return null;
   var u = inPl.indexOf(g) >= 0 ? g : inPl[0], v = inPl[0] === u ? inPl[1] : inPl[0];
   if (l.rot) { var tmp = u; u = v; v = tmp; }
-  return { name:key(name), O:O.slice(), U:axes[u].slice(), V:axes[v].slice() };
+  var e = ext || [0, 0, 0], Lg = +e[g] || 0, Lw = Math.max.apply(null, [0, 1, 2].filter(function (k) { return k !== g; }).map(function (k) { return +e[k] || 0; }));   // the board's length (grain) and width
+  return { name:key(name), O:O.slice(), U:axes[u].slice(), V:axes[v].slice(), Lu:l.rot ? Lw : Lg, Lv:l.rot ? Lg : Lw };
 }
-root.DBLook = { set:set, get:get, tex:tex, color:color, has:has, frame:frame, version:function () { return ver; }, on:function (f) { listeners.push(f); } };
+root.DBLook = { set:set, get:get, tex:tex, color:color, has:has, frame:frame, sampler:sampler, version:function () { return ver; }, on:function (f) { listeners.push(f); } };
 })(typeof window !== 'undefined' ? window : this);
 </script>
 <script>
@@ -3742,7 +3778,7 @@ function mount(el,c,r,lang,hooks={}){
  function box(o,size,color,transform,wood=false,metal=false,front=false,tex=null){if(size.some(v=>v<=0))return;const [x,y,z]=size;let p=[[0,0,0],[x,0,0],[x,y,0],[0,y,0],[0,0,z],[x,0,z],[x,y,z],[0,y,z]].map(q=>{q=add(o,q);return transform?transform(q):q;});
   let TXA=null;if(tex&&tex.name&&window.DBLook&&window.DBLook.has(tex.name)){const tf=transform||(q=>q),P0=tf(o);TXA={P0,axes:[0,1,2].map(k=>{const e=[0,0,0];e[k]=1;return unit(sub(tf(add(o,e)),P0));})};}
   [[0,3,2,1],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]].forEach(f=>{let pts=f.map(i=>p[i]),center=mul(p.reduce((a,b)=>add(a,b),[0,0,0]),1/8),fc=mul(pts.reduce((a,b)=>add(a,b),[0,0,0]),1/4);if(dot(cross(sub(pts[1],pts[0]),sub(pts[2],pts[0])),sub(fc,center))<0)pts.reverse();
-   face(pts,color,wood,metal,front,TXA?window.DBLook.frame(tex.name,TXA.P0,TXA.axes,tex.g||0,unit(cross(sub(pts[1],pts[0]),sub(pts[2],pts[0])))):null);});}
+   face(pts,color,wood,metal,front,TXA?window.DBLook.frame(tex.name,TXA.P0,TXA.axes,tex.g||0,unit(cross(sub(pts[1],pts[0]),sub(pts[2],pts[0]))),size):null);});}
  function cylinder(center,axis,radius,length,color,transform){const n=unit(axis),u=unit(cross(n,Math.abs(n[2])<.9?[0,0,1]:[1,0,0])),v=cross(n,u);let a=[],b=[];for(let i=0;i<16;i++){let q=add(center,add(mul(u,radius*Math.cos(i*Math.PI/8)),mul(v,radius*Math.sin(i*Math.PI/8))));a.push(transform?transform(q):q);q=add(q,mul(n,length));b.push(transform?transform(q):q);}face(a.slice().reverse(),color,false,true);face(b,color,false,true);for(let i=0;i<16;i++)face([a[i],a[(i+1)%16],b[(i+1)%16],b[i]],color,false,true);}
  function rod(a,b,radius=4,color='#aeb5b9'){cylinder(a,sub(b,a),radius,Math.hypot(...sub(b,a)),color);}
  // A maker's part (STEP model, window.DBFit): its triangles mapped into the cabinet; mirrored parts keep their faces outward.
@@ -3994,7 +4030,7 @@ function mount(el,c,r,lang,hooks={}){
  const rgb=RGB[f.color]||(RGB[f.color]=f.color.match(/[a-f\d]{2}/gi).map(x=>parseInt(x,16))),R0=rgb[0],G0=rgb[1],B0=rgb[2],isMesh=!!f.mesh;
  const light=.68+.32*Math.max(0,dot(f.n,lightDirection)),bid=f.bid||0,metal=!!f.metal,front=!!f.front,thr=(front?.85:.35)*ratio;
  // a texture photo of the material (DBLook): mirrored repeat, so a plain photo has no hard seams
- const TT=f.tx&&window.DBLook?window.DBLook.tex(f.tx.name):null,TD=TT?TT.d:null,TW=TT?TT.w:0,TH=TT?TT.h:0,TK=TT?TT.k:0,TO=f.tx?f.tx.O:null,TU=f.tx?f.tx.U:null,TV=f.tx?f.tx.V:null,wood=!!f.wood&&!TD;
+ const SMP=f.tx&&window.DBLook?window.DBLook.sampler(f.tx,scale*ratio*Math.sqrt(Math.max(.08,Math.abs(dot(f.n,view))))):null,wood=!!f.wood&&!SMP;   // screen pixels per mm on this face (orthographic; slanted faces see the photo smaller)
  // Distance to real polygon edges, never the internal triangulation diagonal.
  const nE=pts.length,nB=isMesh?0:nE,EX=new Float64Array(nB),EY=new Float64Array(nB),EDX=new Float64Array(nB),EDY=new Float64Array(nB),EI=new Float64Array(nB),EM=new Float64Array(nB);   // maker models: no bevel lines
  let cy=0;for(let i=0;i<nE;i++)cy+=pts[i][1];cy/=nE;
@@ -4026,9 +4062,7 @@ function mount(el,c,r,lang,hooks={}){
  if(metal){const wy=u*WA[1]+v*WB[1]+w*WC[1],wz=u*WA[2]+v*WB[2]+w*WC[2];factor+=.10*Math.sin(wy*.017+wz*.008);}
  if(wood){const wx=u*WA[0]+v*WB[0]+w*WC[0],wy=u*WA[1]+v*WB[1]+w*WC[1],wz=u*WA[2]+v*WB[2]+w*WC[2];factor+=.025*Math.sin(wx*.65+wy*.12+Math.sin(wz*.016)*.9);}
  let cR=R0,cG=G0,cB=B0;
- if(TD){const wx=u*WA[0]+v*WB[0]+w*WC[0]-TO[0],wy=u*WA[1]+v*WB[1]+w*WC[1]-TO[1],wz=u*WA[2]+v*WB[2]+w*WC[2]-TO[2];
-  let si=Math.floor((wx*TU[0]+wy*TU[1]+wz*TU[2])*TK)%(2*TW),ti=Math.floor((wx*TV[0]+wy*TV[1]+wz*TV[2])*TK)%(2*TH);if(si<0)si+=2*TW;if(ti<0)ti+=2*TH;if(si>=TW)si=2*TW-1-si;if(ti>=TH)ti=2*TH-1-ti;
-  const q4=(ti*TW+si)*4;cR=TD[q4];cG=TD[q4+1];cB=TD[q4+2];}
+ if(SMP){const cv=SMP(u*WA[0]+v*WB[0]+w*WC[0],u*WA[1]+v*WB[1]+w*WC[1],u*WA[2]+v*WB[2]+w*WC[2]);cR=cv>>16&255;cG=cv>>8&255;cB=cv&255;}
  const px=x+.5;let edgeDistance=Infinity,upper=false;
  while(nj<nNear&&NEAR1[nj]<x)nj++;let near=false;for(let q=nj;q<nNear;q++){if(NEAR0[q]>x)break;if(NEAR1[q]>=x){near=true;break;}}
  if(near&&!isMesh)for(let i=0;i<nE;i++){let dist=EDX[i]*(py-EY[i])-EDY[i]*(px-EX[i]);if(dist<0)dist=-dist;dist*=EI[i];if(dist<edgeDistance){edgeDistance=dist;upper=EM[i]<cy;}}
@@ -4891,7 +4925,7 @@ function faces3d() {
       var pts = f.map(function (i) { return c[i]; }), w = f.map(function (i) { return cw[i]; });
       var fc = [0, 1, 2].map(function (k) { return (w[0][k] + w[1][k] + w[2][k] + w[3][k]) / 4; });
       if (r3dot(r3cross(r3sub(w[1], w[0]), r3sub(w[2], w[0])), r3sub(fc, ctr)) < 0) pts.reverse();
-      face(pts, color, o, tex ? LK.frame(tex.name, c[0], axes, tex.g || 0, r3unit(r3cross(r3sub(pts[1], pts[0]), r3sub(pts[2], pts[0])))) : null);
+      face(pts, color, o, tex ? LK.frame(tex.name, c[0], axes, tex.g || 0, r3unit(r3cross(r3sub(pts[1], pts[0]), r3sub(pts[2], pts[0]))), [x1 - x0, y1 - y0, z1 - z0]) : null);
     });
   };
   // walls: only those whose room side faces the viewer (a doll's house view)
@@ -4953,7 +4987,7 @@ function render3d(st) {
     var rgb = f.color.match(/[a-f\d]{2}/gi).map(function (x) { return parseInt(x, 16); });
     if (f.cab != null && badCab[f.cab]) rgb = [rgb[0] * 0.8 + 180 * 0.2, rgb[1] * 0.8 + 41 * 0.2, rgb[2] * 0.8 + 31 * 0.2];
     var lit = 0.64 + 0.36 * Math.max(0, r3dot(f.n, light));
-    var TT = f.tx && window.DBLook ? window.DBLook.tex(f.tx.name) : null, TD = TT ? TT.d : null, TW = TT ? TT.w : 0, TH = TT ? TT.h : 0, TK = TT ? TT.k : 0, TO = f.tx && f.tx.O, TU = f.tx && f.tx.U, TV = f.tx && f.tx.V;
+    var SMP = f.tx && window.DBLook ? window.DBLook.sampler(f.tx, C.d3.k * ratio * Math.sqrt(Math.max(0.08, Math.abs(r3dot(f.n, sc.depthDir))))) : null;   // screen pixels per mm on this face
     var tint = f.cab != null && badCab[f.cab];
     var edges = pts.map(function (p, i) { var q = pts[(i + 1) % pts.length], dx = q[0] - p[0], dy = q[1] - p[1]; return [p[0], p[1], dx, dy, 1 / (Math.hypot(dx, dy) || 1), (p[1] + q[1]) / 2]; });
     var cy = pts.reduce(function (s, p) { return s + p[1]; }, 0) / pts.length;
@@ -4966,9 +5000,8 @@ function render3d(st) {
         var z = u * a[2] + v * b[2] + ww * cc[2], idx = y * PW + x; if (z >= depth[idx]) continue; depth[idx] = z; ids[idx] = f.cab == null ? -1 : f.cab;
         var fct = lit, hi = 0;
         var cR = rgb[0], cG = rgb[1], cB = rgb[2];
-        if (TD) { var tx = u * f.p[0][0] + v * f.p[k][0] + ww * f.p[k + 1][0] - TO[0], ty = u * f.p[0][1] + v * f.p[k][1] + ww * f.p[k + 1][1] - TO[1], tz = u * f.p[0][2] + v * f.p[k][2] + ww * f.p[k + 1][2] - TO[2];
-          var si = Math.floor((tx * TU[0] + ty * TU[1] + tz * TU[2]) * TK) % (2 * TW), ti = Math.floor((tx * TV[0] + ty * TV[1] + tz * TV[2]) * TK) % (2 * TH); if (si < 0) si += 2 * TW; if (ti < 0) ti += 2 * TH; if (si >= TW) si = 2 * TW - 1 - si; if (ti >= TH) ti = 2 * TH - 1 - ti;
-          var q4 = (ti * TW + si) * 4; cR = TD[q4]; cG = TD[q4 + 1]; cB = TD[q4 + 2]; if (tint) { cR = cR * 0.8 + 36; cG = cG * 0.8 + 8.2; cB = cB * 0.8 + 6.2; } }
+        if (SMP) { var cv = SMP(u * f.p[0][0] + v * f.p[k][0] + ww * f.p[k + 1][0], u * f.p[0][1] + v * f.p[k][1] + ww * f.p[k + 1][1], u * f.p[0][2] + v * f.p[k][2] + ww * f.p[k + 1][2]);
+          cR = cv >> 16 & 255; cG = cv >> 8 & 255; cB = cv & 255; if (tint) { cR = cR * 0.8 + 36; cG = cG * 0.8 + 8.2; cB = cB * 0.8 + 6.2; } }
         else if (f.wood) { var wx = u * f.p[0][0] + v * f.p[k][0] + ww * f.p[k + 1][0], wy = u * f.p[0][1] + v * f.p[k][1] + ww * f.p[k + 1][1], wz = u * f.p[0][2] + v * f.p[k][2] + ww * f.p[k + 1][2]; fct += 0.025 * Math.sin(wx * 0.65 + wy * 0.12 + Math.sin(wz * 0.016) * 0.9); }
         var ed = Infinity, up = false; for (var e = 0; e < edges.length; e++) { var E = edges[e], dd = Math.abs(E[2] * (sy - E[1]) - E[3] * (sx - E[0])) * E[4]; if (dd < ed) { ed = dd; up = E[5] < cy; } }
         if (ed < (f.front ? 0.85 : 0.4) * ratio) { if (f.front) { fct *= up ? 1 : 0.58; hi = up ? 22 : 0; } else fct *= 0.86; }
@@ -6856,7 +6889,9 @@ lt:{
  rmSideNote:'Plokštė prie spintelės šono, iš fasado medžiagos, lygi su fasadais. Pjaunama kaip papildoma detalė (be skylių), juda kartu su spintele. Matmenis keiskite spintelės „Papildomos detalės“.',
  rmSideSpare:'Iš pasiūlymo dar nepastatyta šoninių plokščių: {n} ({s}) — ＋ jas pastato.', rmSideShort:'Šoninei plokštei trūksta {n} mm vietos — sumažinkite spintelę arba pastumkite kaimynes.', rmSideMoved:'Spintelės pastumtos {n} mm, kad tilptų plokštė.',
  exSide:'Šoninė plokštė', exSideAdd:'Šoninė plokštė', exWhere:'Vieta', exSideNone:'nepastatyta', exZb:'Apačia nuo spintelės dugno', exYf:'Priekis prieš korpusą', exSideNote:'Šoninė plokštė stovi prie spintelės šono (Baldai skirtukas: pasirinkite spintelę → ＋ Kairėje / Dešinėje). Apačia žemiau 0 — plokštė leidžiasi žemiau spintelės (iki grindų).',
- lookT:'Išvaizda 3D vaizde', lookL:'Įkelkite plokštės dekoro nuotrauką (tekstūrą) arba pasirinkite spalvą — tokie bus 3D ir priekio vaizdai. „Raštas“ — kiek milimetrų plokštės apima nuotraukos plotis; ↻ — kai nuotraukoje rievės eina skersai.', lookUp:'Įkelti tekstūrą', lookChange:'Keisti', lookCol:'Spalva', lookMm:'Raštas', lookRot:'Pasukti raštą 90°', lookRm:'Pašalinti išvaizdą', lookBad:'Nepavyko perskaityti paveikslėlio', lookNone:'Medžiagų dar nėra — įrašykite jas spintelės 1 žingsnyje.', lookFull:'Nepavyko išsaugoti — naršyklės atmintis pilna. Įkelkite mažesnę nuotrauką.', rmEdit:'Redaguoti spintelę', rmDup:'Kopija šalia', rmUnplace:'Nuimti nuo sienos', rmKeys:'← → stumia po 10 mm (Shift — 100 mm), Delete — nuima nuo sienos.',
+ lookFit:'Per visą detalę', lookFitT:'Nuotrauka dedama per visą kiekvieną detalę (be kartojimo, kraštai apkerpami). Išjungus — kartojama tikru dydžiu: nurodykite, kiek mm plokštės apima nuotraukos plotis.', lookPaste:'Įklijuoti', lookPasteT:'Įklijuoti paveikslėlį iš iškarpinės (nukopijuotą nuotrauką arba ekrano iškarpą)', lookCtrlV:'Paspauskite Ctrl+V — paveikslėlis bus įklijuotas į „{n}“',
+ lookNoImg:'Iškarpinėje nėra paveikslėlio — nukopijuokite nuotrauką (dešinys pelės mygtukas → Kopijuoti paveikslėlį) arba padarykite ekrano iškarpą', lookPick:'Kuriai medžiagai? Spauskite „Įklijuoti“ prie medžiagos, tada Ctrl+V',
+ lookT:'Išvaizda 3D vaizde', lookL:'Įkelkite plokštės dekoro nuotrauką (tekstūrą), įklijuokite ją iš iškarpinės (Įklijuoti arba Ctrl+V), nutempkite ant medžiagos arba pasirinkite spalvą — tokie bus 3D ir priekio vaizdai. Nuotrauka dedama per visą kiekvieną detalę; išjungus „Per visą detalę“ — kartojama tikru dydžiu („Raštas“ — kiek mm plokštės apima nuotraukos plotis). ↻ — kai nuotraukoje rievės eina skersai. Geriausia — nuotrauka be šešėlių ir rėmelių.', lookUp:'Įkelti tekstūrą', lookChange:'Keisti', lookCol:'Spalva', lookMm:'Raštas', lookRot:'Pasukti raštą 90°', lookRm:'Pašalinti išvaizdą', lookBad:'Nepavyko perskaityti paveikslėlio', lookNone:'Medžiagų dar nėra — įrašykite jas spintelės 1 žingsnyje.', lookFull:'Nepavyko išsaugoti — naršyklės atmintis pilna. Įkelkite mažesnę nuotrauką.', rmEdit:'Redaguoti spintelę', rmDup:'Kopija šalia', rmUnplace:'Nuimti nuo sienos', rmKeys:'← → stumia po 10 mm (Shift — 100 mm), Delete — nuima nuo sienos.',
  rmUsed:'užstatyta {u} mm', rmWallDel:'Pašalinti paskutinę sieną', rmWallDelDone:'Siena pašalinta — jos spintelės perkeltos į „Nepastatytos“', rmRoom:'Patalpa',
  rmRoomL:'Sienos eina pagal laikrodžio rodyklę, žiūrint iš viršaus: A — į dešinę, B — žemyn, C — į kairę, D — aukštyn. Viena siena — baldai tiesia linija, dvi — L, trys — U.',
  rmWallAdd:'Pridėti sieną', rmWallZ:'Pakabinamų apačia nuo grindų', rmRoomH:'Patalpos aukštis', rmWorktop:'Rodyti stalviršį', rmProbs:'Patikrinkite',
@@ -6983,7 +7018,9 @@ en:{
  rmSideNote:'A board against the cabinet side, in the front material, flush with the fronts. Cut as an extra part (no holes), moves with the cabinet. Change its size in the cabinet\'s “Extra parts”.',
  rmSideSpare:'Side panels from the offer not placed yet: {n} ({s}) — ＋ places them.', rmSideShort:'The side panel is {n} mm short of room — make a cabinet narrower or move the neighbours.', rmSideMoved:'Cabinets moved {n} mm to make room for the panel.',
  exSide:'Side panel', exSideAdd:'Side panel', exWhere:'Place', exSideNone:'not placed', exZb:'Bottom from the carcass bottom', exYf:'Front ahead of the carcass', exSideNote:'A side panel stands against the cabinet side (Furniture tab: select the cabinet → ＋ Left / Right). A bottom below 0 takes it below the cabinet (to the floor).',
- lookT:'Look in the 3D views', lookL:'Upload a photo of the board decor (texture) or pick a colour — the 3D and front views show it. “Pattern” is how many millimetres of board the photo width covers; ↻ when the grain runs across the photo.', lookUp:'Upload texture', lookChange:'Change', lookCol:'Colour', lookMm:'Pattern', lookRot:'Turn the pattern 90°', lookRm:'Remove the look', lookBad:'The image could not be read', lookNone:'No materials yet — enter them in step 1 of a cabinet.', lookFull:'Could not save — the browser storage is full. Upload a smaller photo.', rmEdit:'Edit cabinet', rmDup:'Copy next to it', rmUnplace:'Take off the wall', rmKeys:'← → move 10 mm (Shift — 100 mm), Delete takes it off the wall.',
+ lookFit:'Over the whole board', lookFitT:'The photo is laid once over each board (no repeats, the edges cropped). Off: it repeats at its real size — enter how many mm of board the photo width covers.', lookPaste:'Paste', lookPasteT:'Paste an image from the clipboard (a copied picture or a screenshot)', lookCtrlV:'Press Ctrl+V — the image goes to “{n}”',
+ lookNoImg:'No image on the clipboard — copy a picture (right click → Copy image) or take a screenshot', lookPick:'Which material? Press “Paste” at the material, then Ctrl+V',
+ lookT:'Look in the 3D views', lookL:'Upload a photo of the board decor (texture), paste it from the clipboard (Paste or Ctrl+V), drop it on a material, or pick a colour — the 3D and front views show it. The photo is laid over each whole board; turn “Over the whole board” off to repeat it at its real size (“Pattern”: how many mm of board the photo width covers). ↻ when the grain runs across the photo. Best: a photo without shadows or borders.', lookUp:'Upload texture', lookChange:'Change', lookCol:'Colour', lookMm:'Pattern', lookRot:'Turn the pattern 90°', lookRm:'Remove the look', lookBad:'The image could not be read', lookNone:'No materials yet — enter them in step 1 of a cabinet.', lookFull:'Could not save — the browser storage is full. Upload a smaller photo.', rmEdit:'Edit cabinet', rmDup:'Copy next to it', rmUnplace:'Take off the wall', rmKeys:'← → move 10 mm (Shift — 100 mm), Delete takes it off the wall.',
  rmUsed:'{u} mm used', rmWallDel:'Remove the last wall', rmWallDelDone:'Wall removed — its cabinets moved to “Not placed”', rmRoom:'Room',
  rmRoomL:'Walls run clockwise seen from above: A to the right, B down, C to the left, D up. One wall — furniture in a straight line, two — L, three — U.',
  rmWallAdd:'Add a wall', rmWallZ:'Wall cabinets bottom from the floor', rmRoomH:'Room height', rmWorktop:'Show the worktop', rmProbs:'Check',
@@ -7799,21 +7836,70 @@ function lookBlock(names, room) {
   return '<div class="looks">' + names.map(function (n, k) {
     var l = lk[n] || {}, col = l.color || (window.DBFront ? window.DBFront.matColor(n, '#e5e2da') : '#e5e2da'), id = 'f-look-' + (room ? 'r' : 'c') + k;
     if (!/^#[0-9a-f]{6}$/i.test(col)) col = '#e5e2da';
-    return '<div class="look"><span class="lk-sw" style="background-color:' + col + (l.tex ? ';background-image:url(' + esc(l.tex) + ')' : '') + '"></span><b title="' + esc(n) + '">' + esc(n) + '</b><span class="lk-acts">' +
+    return '<div class="look" data-look="' + esc(n) + '"><span class="lk-sw" style="background-color:' + col + (l.tex ? ';background-image:url(' + esc(l.tex) + ')' : '') + '"></span><b title="' + esc(n) + '">' + esc(n) + '</b><span class="lk-acts">' +
       '<label class="btn sm" for="' + id + '">' + (l.tex ? t('lookChange') : t('lookUp')) + '</label><input id="' + id + '" type="file" accept="image/*" data-act-change="looktex" data-v="' + esc(n) + '" hidden>' +
+      '<button type="button" class="btn sm" data-act="lookpaste" data-v="' + esc(n) + '" title="' + esc(t('lookPasteT')) + '">' + t('lookPaste') + '</button>' +
       '<input type="color" class="lk-col" value="' + col + '" data-act-change="lookcol" data-v="' + esc(n) + '" title="' + esc(t('lookCol')) + '" aria-label="' + esc(t('lookCol') + ' · ' + n) + '">' +
-      (l.tex ? '<label class="lk-mm" title="' + esc(t('lookL')) + '"><span>' + t('lookMm') + '</span><input type="text" inputmode="decimal" value="' + esc(l.mm || 1000) + '" data-act-change="lookmm" data-v="' + esc(n) + '" aria-label="' + esc(t('lookMm') + ' · ' + n) + '"><span class="unit">mm</span></label>' +
+      (l.tex ? '<button type="button" class="btn sm' + (l.fit !== false ? ' on' : '') + '" data-act="lookfit" data-v="' + esc(n) + '" aria-pressed="' + (l.fit !== false) + '" title="' + esc(t('lookFitT')) + '">' + t('lookFit') + '</button>' +
+        (l.fit === false ? '<label class="lk-mm" title="' + esc(t('lookFitT')) + '"><span>' + t('lookMm') + '</span><input type="text" inputmode="decimal" value="' + esc(l.mm || 1000) + '" data-act-change="lookmm" data-v="' + esc(n) + '" aria-label="' + esc(t('lookMm') + ' · ' + n) + '"><span class="unit">mm</span></label>' : '') +
         '<button type="button" class="btn sm' + (l.rot ? ' on' : '') + '" data-act="lookrot" data-v="' + esc(n) + '" aria-pressed="' + !!l.rot + '" title="' + esc(t('lookRot')) + '">↻ 90°</button>' : '') +
       (l.tex || l.color ? '<button type="button" class="xbtn" data-act="lookrm" data-v="' + esc(n) + '" title="' + esc(t('lookRm')) + '" aria-label="' + esc(t('lookRm') + ' · ' + n) + '">✕</button>' : '') + '</span></div>'; }).join('') + '</div>';
 }
+/* a texture from the clipboard: "Paste" reads it (the browser may ask once); without that, the next Ctrl+V goes to this material.
+   Ctrl+V also works on its own while a material's row has the focus, and an image can be dropped on a row. */
+function lookPaste(name) {
+  S.lookPasteTo = { name:name, until:Date.now() + 60000 };
+  var ask = function () { toast(t('lookCtrlV').replace('{n}', name)); };
+  if (!(navigator.clipboard && navigator.clipboard.read)) { ask(); return; }
+  navigator.clipboard.read().then(function (items) {
+    for (var i = 0; i < items.length; i++) { var ty = items[i].types.filter(function (x) { return /^image\//.test(x); })[0];
+      if (ty) return items[i].getType(ty).then(function (blob) { S.lookPasteTo = null; lookTexture(name, blob); }); }
+    toast(t('lookNoImg'), true);
+  }).catch(ask);
+}
+function imageOf(list) { for (var i = 0; list && i < list.length; i++) { var it = list[i], f = it.getAsFile ? (it.kind === 'file' && /^image\//.test(it.type) ? it.getAsFile() : null) : (/^image\//.test(it.type) ? it : null); if (f) return f; } return null; }
+document.addEventListener('paste', function (e) {
+  if (!S.proj || !e.clipboardData) return;
+  var f = imageOf(e.clipboardData.items) || imageOf(e.clipboardData.files); if (!f) return;
+  var to = S.lookPasteTo && S.lookPasteTo.until > Date.now() ? S.lookPasteTo.name : null, ae = document.activeElement, row = ae && ae.closest && ae.closest('[data-look]');
+  if (row) to = row.getAttribute('data-look');
+  if (!to) { var rows = document.querySelectorAll('[data-look]'); if (rows.length === 1) to = rows[0].getAttribute('data-look'); }   // only one material shown: that one
+  if (!to) { if (rows.length) toast(t('lookPick'), true); return; }
+  e.preventDefault(); S.lookPasteTo = null; lookTexture(to, f);
+});
+document.addEventListener('dragover', function (e) { var row = e.target && e.target.closest && e.target.closest('[data-look]'); if (!row || !e.dataTransfer || [].indexOf.call(e.dataTransfer.types || [], 'Files') < 0) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; row.classList.add('drop'); });
+document.addEventListener('dragleave', function (e) { var row = e.target && e.target.closest && e.target.closest('[data-look]'); if (row) row.classList.remove('drop'); });
+document.addEventListener('drop', function (e) { var row = e.target && e.target.closest && e.target.closest('[data-look]'); if (!row || !e.dataTransfer) return; var f = imageOf(e.dataTransfer.files); e.preventDefault(); row.classList.remove('drop'); if (f) lookTexture(row.getAttribute('data-look'), f); else toast(t('lookNoImg'), true); });
 function lookSet(name, fn) { S.proj.look = S.proj.look || {}; var l = Object.assign({}, S.proj.look[name] || {}); fn(l); if (!l.tex && !l.color) delete S.proj.look[name]; else S.proj.look[name] = l; save(); render(); }
-/* a texture photo: made smaller (at most 640 px, JPEG) so the project stays light; then laid on every board of that material */
+/* plain margins (one colour, as round a pasted screenshot or a product photo) cut off, at most a quarter from each side → { c, w, h } */
+function trimmed(im, w, h) {
+  try {
+    var k = Math.min(1, 400 / Math.max(w, h)), sw = Math.max(1, Math.round(w * k)), sh = Math.max(1, Math.round(h * k)), cv = document.createElement('canvas'); cv.width = sw; cv.height = sh;
+    var cx = cv.getContext('2d'); cx.drawImage(im, 0, 0, sw, sh); var d = cx.getImageData(0, 0, sw, sh).data, lum = function (x, y) { var o = (y * sw + x) * 4; return 0.3 * d[o] + 0.59 * d[o + 1] + 0.11 * d[o + 2]; };
+    var flat = function (n, get) { var m = 0, q = 0; for (var i = 0; i < n; i++) { var v = get(i); m += v; q += v * v; } m /= n; return Math.sqrt(Math.max(0, q / n - m * m)) < 4; };   // nearly one colour
+    var x0 = 0, x1 = sw - 1, y0 = 0, y1 = sh - 1;
+    while (y0 < sh / 4 && flat(sw, function (i) { return lum(i, y0); })) y0++;
+    while (y1 > sh * 3 / 4 && flat(sw, function (i) { return lum(i, y1); })) y1--;
+    while (x0 < sw / 4 && flat(y1 - y0 + 1, function (i) { return lum(x0, y0 + i); })) x0++;
+    while (x1 > sw * 3 / 4 && flat(y1 - y0 + 1, function (i) { return lum(x1, y0 + i); })) x1--;
+    if (!x0 && !y0 && x1 === sw - 1 && y1 === sh - 1) return { c:im, w:w, h:h };
+    var X0 = Math.ceil((x0 + 1) / k), Y0 = Math.ceil((y0 + 1) / k), X1 = Math.floor(x1 / k), Y1 = Math.floor(y1 / k), out = document.createElement('canvas');   // a pixel inside the edge, so no margin line is left
+    out.width = Math.max(1, X1 - X0); out.height = Math.max(1, Y1 - Y0); out.getContext('2d').drawImage(im, X0, Y0, out.width, out.height, 0, 0, out.width, out.height);
+    return { c:out, w:out.width, h:out.height };
+  } catch (er) { return { c:im, w:w, h:h }; }
+}
+/* a texture photo: made smaller (at most 1280 px, JPEG) so the project stays light; then laid on every board of that material */
 function lookTexture(name, file) {
   if (!file) return; var rd = new FileReader();
   rd.onload = function () { var im = new Image();
-    im.onload = function () { try { var w = im.naturalWidth || im.width, h = im.naturalHeight || im.height, k = Math.min(1, 640 / Math.max(w, h, 1)), cv = document.createElement('canvas');
-        cv.width = Math.max(1, Math.round(w * k)); cv.height = Math.max(1, Math.round(h * k)); cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
-        var url = cv.toDataURL('image/jpeg', 0.82); lookSet(name, function (l) { l.tex = url; l.color = ''; if (!(num(l.mm) > 0)) l.mm = 1000; }); }
+    im.onload = function () { try { var w = im.naturalWidth || im.width, h = im.naturalHeight || im.height;
+        var shrink = function (src, sw, sh, max) {   // halve while more than twice too big (smooth), then the last step
+          var cur = src, cw = sw, ch = sh, k = Math.min(1, max / Math.max(sw, sh, 1)), tw = Math.max(1, Math.round(sw * k)), th = Math.max(1, Math.round(sh * k));
+          while (cw / 2 >= tw * 1.01 && ch / 2 >= th) { var hv = document.createElement('canvas'); hv.width = Math.max(tw, Math.round(cw / 2)); hv.height = Math.max(th, Math.round(ch / 2)); var hx = hv.getContext('2d'); hx.imageSmoothingQuality = 'high'; hx.drawImage(cur, 0, 0, hv.width, hv.height); cur = hv; cw = hv.width; ch = hv.height; }
+          var cv = document.createElement('canvas'); cv.width = tw; cv.height = th; var cx = cv.getContext('2d'); cx.imageSmoothingQuality = 'high'; cx.fillStyle = '#ffffff'; cx.fillRect(0, 0, tw, th); cx.drawImage(cur, 0, 0, tw, th); return cv; };
+        var src = trimmed(im, w, h); im = src.c; w = src.w; h = src.h;   // a screenshot's plain margins are cut off
+        var url = shrink(im, w, h, 1280).toDataURL('image/jpeg', 0.86); if (url.length > 700000) url = shrink(im, w, h, 960).toDataURL('image/jpeg', 0.8);   // keeps the project small enough for the browser's storage
+        lookSet(name, function (l) { l.tex = url; l.color = ''; if (!(num(l.mm) > 0)) l.mm = 1000; }); }
       catch (er) { toast(t('lookBad'), true); } };
     im.onerror = function () { toast(t('lookBad'), true); }; im.src = rd.result; };
   rd.onerror = function () { toast(t('lookBad'), true); }; rd.readAsDataURL(file);
@@ -8720,6 +8806,8 @@ app.addEventListener('click', function (e) {
     case 'addsec': { var ns = newSection(v); ns.col = isNaN(i) ? 0 : i; S.colSel = ns.col; cur().sections.push(ns); save(); break; }
     case 'colsel': S.colSel = +v; break;
     case 'lookrot': lookSet(v, function (l) { l.rot = !l.rot; }); return;
+    case 'lookpaste': lookPaste(v); return;
+    case 'lookfit': lookSet(v, function (l) { l.fit = l.fit === false; if (!(num(l.mm) > 0)) l.mm = 1000; }); return;
     case 'lookrm': lookSet(v, function (l) { l.tex = ''; l.color = ''; }); return;
     case 'adminset': { var p1 = (document.getElementById('adm-pin') || {}).value || '', p2 = (document.getElementById('adm-pin2') || {}).value || '';
       if (p1.length < 4) { toast(S.lang === 'lt' ? 'PIN — bent 4 simboliai' : 'PIN — at least 4 characters', true); return; }
