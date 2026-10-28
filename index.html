@@ -650,7 +650,11 @@ button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(
 .rm-bar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:10px}
 .rm-bar .btn{margin-left:auto}
 .rm-main{display:grid;grid-template-columns:200px minmax(0,1fr) 290px;gap:14px;align-items:start}
-.rm-stage{background:var(--paper);border:1px solid var(--paper-line);border-radius:var(--r);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;min-height:300px}
+.rm-stage{position:relative;background:var(--paper);border:1px solid var(--paper-line);border-radius:var(--r);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;min-height:300px;overscroll-behavior:contain}
+.rm-stage.zoomed svg{cursor:grab}.rm-stage.zoomed:active svg{cursor:grabbing}
+.rm-zoom{position:absolute;right:8px;bottom:8px;display:flex;gap:4px;z-index:2}
+.rm-zoom button{width:28px;height:28px;padding:0;border:1px solid var(--line2);border-radius:7px;background:var(--panel);color:var(--ink);font:600 17px/1 var(--f-body);cursor:pointer;opacity:.9;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.rm-zoom button:hover{opacity:1;border-color:var(--accent);color:var(--accent)}
 .rm-stage:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .rm-stage svg{display:block}
 .rm-pal,.rm-ins{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
@@ -3380,7 +3384,9 @@ root.DBLook = { set:set, get:get, tex:tex, color:color, has:has, frame:frame, sa
    3-D view. The picture gets cleaner the longer it runs; drag to turn, wheel to zoom; download as PNG. */
 (function (root) {
 'use strict';
-var R = null, Q = 'good', QN = { fast:64, good:300, best:1200 };
+/* quality: samples to stop at, pixels traced (the picture is scaled up to the window), light bounces, and until how many samples
+   the edge-keeping denoiser smooths the grain (less and less as the picture settles) */
+var R = null, Q = 'good', QP = { fast:{ n:48, px:0.5e6, b:3, dn:160 }, good:{ n:256, px:1.1e6, b:4, dn:330 }, best:{ n:1000, px:2.6e6, b:6, dn:400 } };
 function T(k) { return R && R.o.t ? R.o.t(k) : k; }
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function status(txt, frac) { if (!R) return; var st = R.ov.querySelector('.rr-st'); if (st) st.textContent = txt; var b = R.ov.querySelector('.rr-bar i'); if (b) b.style.width = Math.round(Math.max(0, Math.min(1, frac || 0)) * 100) + '%'; }
@@ -3413,7 +3419,7 @@ function onClick(e) {
   if (!R) return; var b = e.target.closest('[data-rr],[data-rq]'); if (!b) { if (e.target === R.ov) close(); return; }
   if (b.getAttribute('data-rr') === 'close') { close(); return; }
   if (b.getAttribute('data-rr') === 'dl') { download(); return; }
-  var q = b.getAttribute('data-rq'); if (q && QN[q]) { Q = q; R.ov.querySelectorAll('[data-rq]').forEach(function (x) { var on = x.getAttribute('data-rq') === q; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); }); R.done = false; }
+  var q = b.getAttribute('data-rq'); if (q && QP[q]) { Q = q; R.ov.querySelectorAll('[data-rq]').forEach(function (x) { var on = x.getAttribute('data-rq') === q; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); }); applyQ(); R.done = false; }
 }
 function download() {
   if (!R || !R.renderer) return; var cv = R.renderer.domElement, nm = String((R.o.proj && R.o.proj.name) || 'vaizdas').replace(/[^\wÀ-ɏ.-]+/g, '_');
@@ -3501,8 +3507,9 @@ function build(THREE, PT, items) {
       var ctr = q.b.getCenter(new THREE.Vector3()), half = Math.abs(n.x) * sz.x / 2 + Math.abs(n.z) * sz.z / 2; return { b:q.b, n:n, p:ctr.clone().addScaledVector(n, half + 5), area:(Math.abs(n.x) * sz.z + Math.abs(n.z) * sz.x) * sz.y }; }).filter(Boolean);
     resize(); R.th = bestTurn(THREE, R.th);   // sized first: how far back the eye stands depends on the picture's shape
     var pt = new PT.WebGLPathTracer(renderer); R.pt = pt;
-    pt.tiles.set(2, 2); pt.bounces = 5; pt.filterGlossyFactor = 0.5; pt.minSamples = 1; pt.renderDelay = 0; pt.fadeDuration = 250; pt.dynamicLowRes = true; pt.lowResScale = 0.3;
+    pt.tiles.set(2, 2); pt.filterGlossyFactor = 0.5; pt.minSamples = 1; pt.renderDelay = 0; pt.fadeDuration = 250; pt.dynamicLowRes = true; pt.lowResScale = 0.3;
     if (Object.keys(texs).length) pt.textureSize.set(2048, 2048);
+    denoiser(THREE, PT, pt); applyQ();
     place(true);
     R.resize = function () { if (!R) return; resize(); place(); }; window.addEventListener('resize', R.resize);
     controls(stage);
@@ -3513,6 +3520,21 @@ function resize() {
   var stage = R.ov.querySelector('.rr-stage'), w = Math.max(200, stage.clientWidth), h = Math.max(150, stage.clientHeight), dpr = Math.min(2, window.devicePixelRatio || 1);
   if (w * h * dpr * dpr > 2.6e6) dpr = Math.sqrt(2.6e6 / (w * h));   // enough pixels for a sharp picture, not more than the card can trace
   R.renderer.setPixelRatio(dpr); R.renderer.setSize(w, h, false); R.camera.aspect = w / h; R.camera.updateProjectionMatrix();
+  if (R.pt) R.pt.renderScale = traceScale();
+}
+function traceScale() { var cv = R.renderer.domElement; return Math.min(1, Math.sqrt(QP[Q].px / Math.max(1, cv.width * cv.height))); }   // fewer pixels traced for a quicker picture
+function applyQ() { if (!R || !R.pt) return; R.pt.renderScale = traceScale(); R.pt.bounces = QP[Q].b; R.pt.reset(); R.k = 1; }
+/* the picture on the screen: while there are few samples an edge-keeping blur takes the grain away (BrutPitt's smart denoise,
+   shipped with the path tracer), fading out as the samples add up */
+function denoiser(THREE, PT, pt) {
+  var cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), mat = new PT.DenoiseMaterial({ blending:THREE.NoBlending, transparent:false, depthTest:false, depthWrite:false }), quadMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat);
+  quadMesh.frustumCulled = false; R.dn = mat;
+  pt.renderToCanvasCallback = function (target, renderer, quad) {
+    var ac = renderer.autoClear, f = R && !R.noDenoise ? 1 - pt.samples / QP[Q].dn : 0; renderer.autoClear = false;
+    if (f <= 0.03 || quad.material.opacity < 1) quad.render(renderer);
+    else { var u = mat.uniforms; u.map.value = target.texture; u.sigma.value = 0.8 + 2.4 * f; u.kSigma.value = 1.3; u.threshold.value = 0.05 + 0.1 * f; u.opacity.value = 1; renderer.render(quadMesh, cam); }
+    renderer.autoClear = ac;
+  };
 }
 /* the camera: a person at eye height on a circle round the furniture, as far as the lens needs to take it all in
    (walls the eye stands behind are left out, as when a wall is taken away for a photo of a room) */
@@ -3551,7 +3573,7 @@ function turnScore(THREE, th) {
   return f0(th);
 }
 function camAt() {
-  var THREE = R.THREE, p = camPos(THREE, R.th, R.camera.position);
+  var THREE = R.THREE, p = camPos(THREE, R.th, R.camera.position); R.moved = performance.now();
   R.camera.fov = R.fov; R.camera.updateProjectionMatrix();
   R.camera.lookAt(R.fc.x, R.fc.y, R.fc.z); R.camera.updateMatrixWorld();   // at the middle of the furniture, so all of it is in the picture
   return p;
@@ -3571,13 +3593,17 @@ function controls(stage) {
   stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
   stage.addEventListener('wheel', function (e) { if (!R || !R.pt) return; e.preventDefault(); R.far = Math.max(0.35, Math.min(3, R.far * Math.exp((e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY) * 0.001))); clearTimeout(R.wt); camAt(); R.pt.updateCamera(); R.done = false; R.wt = setTimeout(function () { if (R) place(false); }, 300); }, { passive:false });   // nearer or further (walls sorted out after)
 }
-function loop() {
+function loop(t) {
   if (!R) return; R.raf = requestAnimationFrame(loop);
-  var pt = R.pt, n = QN[Q], dl = R.ov.querySelector('[data-rr=dl]');
-  if (pt.samples < n) { pt.renderSample(); status(pt.isCompiling ? T('rrBuilding') : T('rrProg').replace('{n}', Math.floor(pt.samples)).replace('{m}', n), pt.samples / n); dl.disabled = pt.samples < 1; }
+  var pt = R.pt, n = QP[Q].n, dl = R.ov.querySelector('[data-rr=dl]'), now = typeof t === 'number' ? t : performance.now();
+  if (pt.samples < n) {
+    var dt = R.lt ? now - R.lt : 16; R.lt = now;   // a fast card finishes a tile long before the next frame: give it more per frame, as long as the frames keep coming quickly
+    if (pt.isCompiling || now - (R.moved || 0) < 400) R.k = 1; else if (dt < 26) R.k = Math.min((R.k || 1) + 1, 32); else if (dt > 45) R.k = Math.max(1, Math.floor((R.k || 1) * 0.6));
+    pt.renderToCanvas = false; for (var i = 1; i < (R.k || 1) && pt.samples < n - 0.01; i++) pt.renderSample();
+    pt.renderToCanvas = true; pt.renderSample(); status(pt.isCompiling ? T('rrBuilding') : T('rrProg').replace('{n}', Math.floor(pt.samples)).replace('{m}', n), pt.samples / n); dl.disabled = pt.samples < 1; }
   else if (!R.done) { R.done = true; status(T('rrDone').replace('{m}', n), 1); dl.disabled = false; }
 }
-root.DBRender = { open:open, close:close, _state:function () { return R; }, _score:function (th) { return R && R.THREE ? turnScore(R.THREE, th) : null; } };
+root.DBRender = { open:open, close:close, _state:function () { return R; }, _quality:function () { return { q:Q, scale:R && R.pt ? R.pt.renderScale : null, bounces:R && R.pt ? R.pt.bounces : null, k:R && R.k }; }, _score:function (th) { return R && R.THREE ? turnScore(R.THREE, th) : null; } };
 })(typeof window !== 'undefined' ? window : this);
 </script>
 <script>
@@ -4963,6 +4989,7 @@ function frontLayout() {
   k = Math.min(k, (C.h - 110) / H);
   C.fr = { ws:ws, off:off, k:k, H:H, roomH:roomH, ox:(w - total * k) / 2, base:30 + H * k + 10 };
   C.h = Math.round(C.fr.base + 70);
+  zApply(C.fr, 'base');
 }
 function fX(wi, x) { return C.fr.ox + (C.fr.off[wi] + x) * C.fr.k; }
 function fY(z) { return C.fr.base - z * C.fr.k; }
@@ -5040,11 +5067,12 @@ function planLayout() {
   var maxD = 700; G.forEach(function (g) { xs.push(g.P[0] + g.n[0] * maxD); ys.push(g.P[1] + g.n[1] * maxD); });
   var x0 = Math.min.apply(null, xs) - 330, x1 = Math.max.apply(null, xs) + 330, y0 = Math.min.apply(null, ys) - 330, y1 = Math.max.apply(null, ys) + 330;   // room for the wall names outside the walls
   var k = Math.min((C.w - 20) / (x1 - x0), 520 / (y1 - y0), 0.22);
-  C.pl = { k:k, x0:x0, y0:y0, ox:(C.w - (x1 - x0) * k) / 2 };
+  C.pl = { k:k, x0:x0, y0:y0, ox:(C.w - (x1 - x0) * k) / 2, oy:10 };
   C.h = Math.round((y1 - y0) * k + 34);   // + the legend line under the plan
+  zApply(C.pl, 'oy');
 }
 function pX(x) { return C.pl.ox + (x - C.pl.x0) * C.pl.k; }
-function pY(y) { return 10 + (y - C.pl.y0) * C.pl.k; }
+function pY(y) { return C.pl.oy + (y - C.pl.y0) * C.pl.k; }
 function drawPlan() {
   var proj = C.o.proj, L = proj.layout, G = geo(L), k = C.pl.k, s = '', prob = problems(proj), drag = D && D.mode === 'move' ? D : null;
   G.forEach(function (g, wi) {   // wall: a thick line on the outside of the room line
@@ -5290,15 +5318,39 @@ function tip(t) {
     lines.map(function (l, i) { return '<text x="' + (x + 8).toFixed(1) + '" y="' + (y + 16 + i * 15).toFixed(1) + '"' + (i ? '' : ' class="b"') + '>' + esc(l) + '</text>'; }).join('') + '</g>';
 }
 
+/* ---------------------------------------------------------------- zoom: wheel, touchpad pinch, two fingers, the ± buttons
+   Front view and plan: screen = z · fitted picture + p, never smaller than the fitted picture; kept per view (and per wall shown).
+   3D: V.z3 and the shift V.px3 / V.py3 from the middle. The page itself is never zoomed or scrolled from the drawing. */
+var TP = {}, PZ = null, GZ = null, LT = null;   // touches down, a two-finger pinch, a Safari touchpad pinch, the last tap on the background
+function zf() { var key = V.view + (V.view === 'front' ? ':' + V.wall : ''); if (!V.zf || V.zf.key !== key) V.zf = { key:key, z:1, px:0, py:0 }; return V.zf; }
+function zClamp(Z) { Z.z = Math.max(1, Math.min(12, Z.z)); Z.px = Math.max(C.w * (1 - Z.z), Math.min(0, Z.px)); Z.py = Math.max(C.h * (1 - Z.z), Math.min(0, Z.py)); }
+function zApply(F, ykey) { var Z = zf(); zClamp(Z); if (Z.z === 1) return; F.k *= Z.z; F.ox = Z.z * F.ox + Z.px; F[ykey] = Z.z * F[ykey] + Z.py; }
+function zoomBy(f, mx, my, later) {   // f times at the point (mx, my) of the picture
+  if (V.view === '3d') { var z1 = V.z3 || 1, z3 = Math.max(0.5, Math.min(8, z1 * f)), kk = z3 / z1, cx = mx - C.w / 2, cy = my - C.h / 2;
+    V.px3 = cx * (1 - kk) + (V.px3 || 0) * kk; V.py3 = cy * (1 - kk) + (V.py3 || 0) * kk; V.z3 = z3; }
+  else { var Z = zf(), z2 = Math.max(1, Math.min(12, Z.z * f)), k = z2 / Z.z; Z.px = mx - k * (mx - Z.px); Z.py = my - k * (my - Z.py); Z.z = z2; zClamp(Z); }
+  if (!later) draw();
+}
+function panBy(dx, dy, later) { if (V.view === '3d') { V.px3 = (V.px3 || 0) + dx; V.py3 = (V.py3 || 0) + dy; } else { var Z = zf(); Z.px += dx; Z.py += dy; zClamp(Z); } if (!later) draw(); }
+function zoomFit() { if (V.view === '3d') { V.z3 = 1; V.px3 = V.py3 = 0; } else V.zf = null; draw(); }
+function zoomCtl() {
+  return '<div class="rm-zoom" role="group" aria-label="' + esc(T('rmZoom')) + '"><button type="button" data-rm="zin" title="' + esc(T('rmZoomIn')) + '" aria-label="' + esc(T('rmZoomIn')) + '">+</button>' +
+    '<button type="button" data-rm="zout" title="' + esc(T('rmZoomOut')) + '" aria-label="' + esc(T('rmZoomOut')) + '">−</button>' +
+    '<button type="button" data-rm="zfit" title="' + esc(T('rmZoomFit')) + '" aria-label="' + esc(T('rmZoomFit')) + '">⤢</button></div>';
+}
+function touchPts() { return Object.keys(TP).slice(0, 2).map(function (k) { return TP[k]; }); }
+function pinchAt() { var t = touchPts(), m = local({ clientX:(t[0][0] + t[1][0]) / 2, clientY:(t[0][1] + t[1][1]) / 2 }); return { d:Math.max(1, Math.hypot(t[0][0] - t[1][0], t[0][1] - t[1][1])), m:m }; }
+
 /* ---------------------------------------------------------------- draw */
 function draw() {
   if (!C) return;
   var st = C.el.querySelector('.rm-stage'); C.w = st.clientWidth || 800; C.h = Math.round(Math.max(380, Math.min(620, C.w * 0.62)));
   var body;
   if (V.view === 'plan') { planLayout(); body = drawPlan(); }
-  else if (V.view === '3d') { setup3d(); render3d(st); return; }
+  else if (V.view === '3d') { setup3d(); render3d(st); st.insertAdjacentHTML('beforeend', zoomCtl()); st.classList.remove('zoomed'); return; }
   else { frontLayout(); body = drawFront(); }
-  st.innerHTML = '<svg width="' + C.w + '" height="' + C.h + '" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="' + esc(T('rmTitle')) + '">' + body + '</svg>';
+  st.innerHTML = '<svg width="' + C.w + '" height="' + C.h + '" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="' + esc(T('rmTitle')) + '">' + body + '</svg>' + zoomCtl();
+  st.classList.toggle('zoomed', zf().z > 1.001);
 }
 
 /* ---------------------------------------------------------------- pointer → room position */
@@ -5313,7 +5365,7 @@ function wallAt(m) {
     if (best == null) best = m[0] < fX(F.ws[0], 0) ? F.ws[0] : F.ws[F.ws.length - 1];
     return { wall:best, along:(m[0] - fX(best, 0)) / F.k, z:(C.fr.base - m[1]) / F.k };
   }
-  var p = [(m[0] - C.pl.ox) / C.pl.k + C.pl.x0, (m[1] - 10) / C.pl.k + C.pl.y0], bw = null, bd = 1e9;
+  var p = [(m[0] - C.pl.ox) / C.pl.k + C.pl.x0, (m[1] - C.pl.oy) / C.pl.k + C.pl.y0], bw = null, bd = 1e9;
   G.forEach(function (g, wi) { var rel = [p[0] - g.P[0], p[1] - g.P[1]], a = rel[0] * g.d[0] + rel[1] * g.d[1], n = rel[0] * g.n[0] + rel[1] * g.n[1];
     var ac = Math.max(0, Math.min(g.len, a)), d = Math.hypot(a - ac, n); if (d < bd) { bd = d; bw = { wall:wi, along:a, dist:d }; } });   // nearest wall line
   return bw;
@@ -5329,6 +5381,7 @@ function onMove(e) {
   if (!D || !C) return;
   if (Math.hypot(e.clientX - D.x, e.clientY - D.y) > 4) D.moved = true;
   if (D.mode === 'orbit') { if (!D.moved) return; V.th = D.th - (e.clientX - D.x) * 0.008; V.ph = Math.max(0.05, Math.min(1.35, D.ph + (e.clientY - D.y) * 0.006)); draw(); return; }
+  if (D.mode === 'bg') { if (D.moved && V.view !== '3d' && zf().z > 1.001) { var Z = zf(); Z.px = D.px0 + e.clientX - D.x; Z.py = D.py0 + e.clientY - D.y; zClamp(Z); draw(); } return; }   // the zoomed drawing slides
   var m = local(e);
   if (D.mode === 'move') {
     if (!D.moved) return;
@@ -5523,6 +5576,8 @@ function onClick(e) {
   if (a === 'view') { if (v === '3d') { V.z3 = 1; V.px3 = V.py3 = 0; } V.view = v; D = null; attach(C.el, C.o); return; }
   if (a === 'wallv') { V.wall = +v; draw(); C.el.querySelectorAll('[data-rm=wallv]').forEach(function (x) { x.classList.toggle('on', +x.getAttribute('data-v') === V.wall); }); return; }
   if (a === 'undo') { C.o.onUndo(); return; }
+  if (a === 'zin' || a === 'zout') { zoomBy(a === 'zin' ? 1.5 : 1 / 1.5, C.w / 2, C.h / 2); return; }
+  if (a === 'zfit') { zoomFit(); return; }
   if (a === 'render') { if (window.DBRender) window.DBRender.open({ proj:proj, infos:C.o.infos, th:V.th, ph:V.ph, t:C.o.t }); return; }
   if (a === 'desel') { C.o.onSelect(null); return; }
   if (a === 'sel') { C.o.onSelect(+b.getAttribute('data-i')); return; }
@@ -5587,28 +5642,48 @@ function attach(el, o) {
   var stage = el.querySelector('.rm-stage');
   stage.addEventListener('pointerdown', function (e) {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
+    if (e.target.closest('.rm-zoom')) return;   // the ± buttons are plain buttons
+    if (e.pointerType === 'touch') {
+      if (e.isPrimary) { TP = {}; PZ = null; }
+      TP[e.pointerId] = [e.clientX, e.clientY];
+      if (Object.keys(TP).length >= 2) {   // a second finger: the move or turn just begun is dropped, the two fingers zoom and slide
+        if (D && D.ghost) D.ghost.remove(); D = null; PZ = pinchAt(); draw();
+        try { stage.setPointerCapture(e.pointerId); } catch (er) {} e.preventDefault(); return;
+      }
+    }
     var cab = e.target.closest('[data-cab]');
     if (V.view === '3d') { var k3 = pick3d(e); D = { mode:'orbit', x:e.clientX, y:e.clientY, th:V.th, ph:V.ph, moved:false, cab:k3 }; }
     else if (cab) startMove(e, +cab.getAttribute('data-cab'));
-    else D = { mode:'bg', x:e.clientX, y:e.clientY, moved:false };
+    else D = { mode:'bg', x:e.clientX, y:e.clientY, moved:false, px0:zf().px, py0:zf().py };
     try { stage.setPointerCapture(e.pointerId); } catch (er) {}
     stage.focus({ preventScroll:true }); e.preventDefault();
   });
-  stage.addEventListener('pointermove', onMove);
-  stage.addEventListener('dblclick', function () { if (V.view === '3d') { V.z3 = 1; V.px3 = V.py3 = 0; draw(); } });   // back to the whole room
-  stage.addEventListener('wheel', function (e) {   // 3D: zoom at the pointer
-    if (V.view !== '3d' || !C.d3) return; e.preventDefault();
-    var r = stage.querySelector('.rm3-canvas'); if (!r) return; r = r.getBoundingClientRect();
-    var step = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY, z1 = V.z3 || 1, z2 = Math.max(0.5, Math.min(8, z1 * Math.exp(-step * 0.0015))), kk = z2 / z1;
-    var cx = e.clientX - r.left - C.w / 2, cy = e.clientY - r.top - C.h / 2;
-    V.px3 = cx * (1 - kk) + (V.px3 || 0) * kk; V.py3 = cy * (1 - kk) + (V.py3 || 0) * kk; V.z3 = z2; draw();
+  stage.addEventListener('pointermove', function (e) {
+    if (e.pointerType === 'touch' && TP[e.pointerId]) {
+      TP[e.pointerId] = [e.clientX, e.clientY];
+      if (PZ) { if (Object.keys(TP).length >= 2) { var q = pinchAt(); panBy(q.m[0] - PZ.m[0], q.m[1] - PZ.m[1], true); zoomBy(q.d / PZ.d, q.m[0], q.m[1]); PZ = q; } return; }
+    }
+    onMove(e);
+  });
+  stage.addEventListener('dblclick', function (e) { if (V.view === '3d' && !e.target.closest('.rm-zoom')) zoomFit(); });   // back to the whole room
+  stage.addEventListener('wheel', function (e) {   // wheel, or two fingers pinched on a touchpad (ctrl + wheel): the drawing zooms at the pointer, not the page
+    if (!C || (V.view === '3d' && !C.d3)) return; e.preventDefault(); if (GZ) return;
+    var step = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY, m = local(e);
+    zoomBy(Math.exp(e.ctrlKey ? -Math.max(-0.5, Math.min(0.5, step * 0.01)) : -step * 0.0015), m[0], m[1]);
   }, { passive:false });
+  // Safari on a Mac: a touchpad pinch comes as gesture events (the page would zoom without these)
+  stage.addEventListener('gesturestart', function (e) { e.preventDefault(); GZ = { s:1 }; });
+  stage.addEventListener('gesturechange', function (e) { e.preventDefault(); if (!GZ || !C || PZ) return; var m = local(e), f = e.scale / (GZ.s || 1); GZ.s = e.scale; if (f > 0 && isFinite(f)) zoomBy(f, m[0], m[1]); });
+  stage.addEventListener('gestureend', function (e) { e.preventDefault(); GZ = null; });
   stage.addEventListener('pointerup', function (e) {
+    if (e.pointerType === 'touch') { delete TP[e.pointerId]; if (PZ) { if (Object.keys(TP).length < 2) { PZ = null; D = null; } return; } }
     if (D && D.mode === 'orbit' && !D.moved && D.cab != null) { var k = D.cab; D = null; C.o.onSelect(k); return; }
-    if (D && D.mode === 'bg') { var mv = D.moved; D = null; if (!mv) C.o.onSelect(null); return; }
+    if (D && D.mode === 'bg') { var mv = D.moved; D = null; if (mv) return;
+      var now = Date.now(); if (LT && now - LT.t < 400 && Math.hypot(e.clientX - LT.x, e.clientY - LT.y) < 14) { LT = null; zoomFit(); return; }   // a double click on the background: the whole drawing again
+      LT = { t:now, x:e.clientX, y:e.clientY }; C.o.onSelect(null); return; }
     onUp(e);
   });
-  stage.addEventListener('pointercancel', function () { D = null; draw(); });
+  stage.addEventListener('pointercancel', function (e) { if (e.pointerType === 'touch') { delete TP[e.pointerId]; PZ = null; } D = null; draw(); });
   stage.addEventListener('keydown', onKey);
   el.querySelectorAll('.rm-chip').forEach(function (ch) {
     ch.addEventListener('pointerdown', function (e) {
@@ -7120,7 +7195,7 @@ lt:{
  rmUnplaced:'Nepastatytos', rmPlace:'Pastatyti', rmX:'Nuo sienos pradžios', rmZ:'Apačia nuo grindų', rmHang:'Kabo ant sienos', rmHitShort:'Kliūna už kitos spintelės arba išeina už sienos — patraukite arba pakeiskite plotį.',
  rmFill:'Užpildyti tarpą: {w} mm',
  rrBtn:'Realus vaizdas', rrBtnT:'Fotorealistiškas visos patalpos vaizdas (skaičiuojamas vaizdo plokštėje)', rrTitle:'Realus vaizdas', rrLoading:'Kraunamas 3D variklis…', rrBuilding:'Ruošiama scena…', rrProg:'Skaičiuojama: {n} / {m}', rrDone:'Paruošta · {m} kadrų',
- rrCabT:'Fotorealistiškas šios spintelės vaizdas (skaičiuojamas vaizdo plokštėje)', rrQ:'Kokybė', rrQ_fast:'Greitai', rrQ_good:'Gerai', rrQ_best:'Labai gerai', rrDl:'Atsisiųsti PNG', rrHint:'Tempkite į šonus — eikite aplink, aukštyn ir žemyn — akių aukštis · ratukas — arčiau / toliau · kuo ilgiau skaičiuojama, tuo švaresnis vaizdas. Spalvos ir tekstūros — iš „Išvaizda 3D vaizde“.',
+ rrCabT:'Fotorealistiškas šios spintelės vaizdas (skaičiuojamas vaizdo plokštėje)', rrQ:'Kokybė', rrQ_fast:'Greitai', rrQ_good:'Gerai', rrQ_best:'Labai gerai', rrDl:'Atsisiųsti PNG', rrHint:'Tempkite į šonus — eikite aplink, aukštyn ir žemyn — akių aukštis · ratukas — arčiau / toliau · „Greitai“ — peržiūrai, „Labai gerai“ — pilna raiška atsisiuntimui. Spalvos ir tekstūros — iš „Išvaizda 3D vaizde“.',
  rrNoLib:'Nepavyko įkelti 3D variklio — reikia interneto ryšio.', rrNoGL:'Ši naršyklė ar kompiuteris nepalaiko WebGL 2 — realaus vaizdo padaryti nepavyks.', rrEmpty:'Baldų dar nėra — pastatykite spintelių ant sienų.',
  pPanel:'Plokštė', rmEditP:'Redaguoti plokštę', rmAddedP:'Pridėta plokštė {n}', rmPanelPush:'Paleiskite — spintelės pasislinks {n} mm', rmThick:'Storis', rmPMat:'Medžiaga', rmToCeil:'Iki lubų', rmToFloor:'Iki grindų',
  rmPanelNote:'Atskira plokštė: stovi pati, bet kokio dydžio (didelis šonas, užpildas, apdaila). Pjaunama kaip detalė, be skylių. Apačia virš 0 — plokštė kabo tame aukštyje.',
@@ -7137,6 +7212,7 @@ lt:{
  rmRoomL:'Sienos eina pagal laikrodžio rodyklę, žiūrint iš viršaus: A — į dešinę, B — žemyn, C — į kairę, D — aukštyn. Viena siena — baldai tiesia linija, dvi — L, trys — U.',
  rmWallAdd:'Pridėti sieną', rmWallZ:'Pakabinamų apačia nuo grindų', rmRoomH:'Patalpos aukštis', rmWorktop:'Rodyti stalviršį', rmProbs:'Patikrinkite',
  rmProbOut:'Spintelė {a} išeina už sienos galo', rmOtherProbs:'Kitur patalpoje problemų: {n} — uždarykite (✕), kad matytumėte sąrašą', rmWtHint:'Stalviršis rodomas spintelėms, kurioms jis įjungtas (spintelės 1 žingsnis).', rmProbCeil:'Spintelė {a} aukštesnė už patalpą (lubas)', rmBadVal:'Netinkama reikšmė — palikta ankstesnė', rmProbFloor:'Spintelė {a} žemiau grindų', rmProbHit:'Spintelės {a} ir {b} kliūna viena už kitos', rmNoProbs:'Spintelės telpa ir nekliūna viena už kitos',
+ rmZoom:'Mastelis', rmZoomIn:'Artinti', rmZoomOut:'Tolinti', rmZoomFit:'Visas vaizdas (dukart spustelėkite tuščią vietą)',
  rmHint:'Spintelę tempkite išilgai sienos ar į kitą sieną — ji prisitraukia prie sienos galo, kampo ar kaimynės. Spustelėkite spintelę — dešinėje pakeisite plotį, užpildysite tarpą, atidarysite redagavimą.',
  rmFromStart:'{x} mm nuo sienos pradžios', rmLeftRight:'kairėje {l} · dešinėje {r}', rmSnap_wall:'prie sienos galo', rmSnap_corner:'prie kampo', rmSnap_nb:'prie kaimynės',
  rmHit:'Kliūna už kitos spintelės', rmHitDrop:'Pastatyta, bet kliūna — patraukite arba pakeiskite plotį', rmDropAdd:'Paleiskite — pridėti čia', rmFitTo:'Tarpe telpa {w} mm — plotis bus {w} mm',
@@ -7252,7 +7328,7 @@ en:{
  rmUnplaced:'Not placed', rmPlace:'Place', rmX:'From the wall start', rmZ:'Bottom from the floor', rmHang:'Hangs on the wall', rmHitShort:'Hits another cabinet or runs past the wall — move it or change the width.',
  rmFill:'Fill the gap: {w} mm',
  rrBtn:'Realistic image', rrBtnT:'A photo-like picture of the whole room (rendered on the graphics card)', rrTitle:'Realistic image', rrLoading:'Loading the 3D engine…', rrBuilding:'Preparing the scene…', rrProg:'Rendering: {n} / {m}', rrDone:'Ready · {m} samples',
- rrCabT:'A photo-like picture of this cabinet (rendered on the graphics card)', rrQ:'Quality', rrQ_fast:'Fast', rrQ_good:'Good', rrQ_best:'Best', rrDl:'Download PNG', rrHint:'Drag sideways to walk round, up and down for eye height · wheel to come nearer or step back · the longer it runs, the cleaner the picture. Colours and textures come from “Look in the 3D views”.',
+ rrCabT:'A photo-like picture of this cabinet (rendered on the graphics card)', rrQ:'Quality', rrQ_fast:'Fast', rrQ_good:'Good', rrQ_best:'Best', rrDl:'Download PNG', rrHint:'Drag sideways to walk round, up and down for eye height · wheel to come nearer or step back · “Fast” to look around, “Best” for full resolution to download. Colours and textures come from “Look in the 3D views”.',
  rrNoLib:'Could not load the 3D engine — needs an internet connection.', rrNoGL:'This browser or computer has no WebGL 2 — the realistic image cannot be made.', rrEmpty:'No furniture yet — place cabinets on the walls.',
  pPanel:'Panel', rmEditP:'Edit panel', rmAddedP:'Panel {n} added', rmPanelPush:'Drop — the cabinets move over {n} mm', rmThick:'Thickness', rmPMat:'Material', rmToCeil:'To the ceiling', rmToFloor:'Down to the floor',
  rmPanelNote:'A loose panel: it stands on its own, any size (a big side, a filler, a cover). Cut as a part, no holes. A bottom above 0 hangs it at that height.',
@@ -7269,6 +7345,7 @@ en:{
  rmRoomL:'Walls run clockwise seen from above: A to the right, B down, C to the left, D up. One wall — furniture in a straight line, two — L, three — U.',
  rmWallAdd:'Add a wall', rmWallZ:'Wall cabinets bottom from the floor', rmRoomH:'Room height', rmWorktop:'Show the worktop', rmProbs:'Check',
  rmProbOut:'Cabinet {a} runs past the wall end', rmOtherProbs:'Problems elsewhere in the room: {n} — close (✕) to see the list', rmWtHint:'A worktop shows on cabinets that have one turned on (cabinet step 1).', rmProbCeil:'Cabinet {a} reaches above the ceiling', rmBadVal:'Not a valid value — the previous one is kept', rmProbFloor:'Cabinet {a} is below the floor', rmProbHit:'Cabinets {a} and {b} hit each other', rmNoProbs:'Cabinets fit and do not hit each other',
+ rmZoom:'Zoom', rmZoomIn:'Zoom in', rmZoomOut:'Zoom out', rmZoomFit:'Whole drawing (or double-click an empty spot)',
  rmHint:'Drag a cabinet along a wall or to another wall — it snaps to the wall end, corner or neighbour. Click a cabinet to change its width, fill a gap or open it for editing on the right.',
  rmFromStart:'{x} mm from the wall start', rmLeftRight:'left {l} · right {r}', rmSnap_wall:'at the wall end', rmSnap_corner:'at the corner', rmSnap_nb:'at the neighbour',
  rmHit:'Hits another cabinet', rmHitDrop:'Placed, but it hits — move it or change the width', rmDropAdd:'Release to add here', rmFitTo:'The gap is {w} mm — width will be {w} mm',
