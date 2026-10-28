@@ -3454,7 +3454,7 @@ function boxUV(geo, size, g, look, iw, ih) {
 function build(THREE, PT, items) {
   R.THREE = THREE; var o = R.o, ov = R.ov, cv = ov.querySelector('canvas'), stage = ov.querySelector('.rr-stage');
   var renderer = new THREE.WebGLRenderer({ canvas:cv, antialias:false, preserveDrawingBuffer:true, powerPreference:'high-performance' });
-  R.renderer = renderer;
+  R.renderer = renderer; R.gl = renderer.getContext();
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.NeutralToneMapping || THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1;
   var scene = new THREE.Scene(), L = o.proj.layout, G = root.DBRoom.geo(L), H = +L.roomH > 0 ? +L.roomH : 2600;
   scene.background = new THREE.Color(0xe9e7e2);
@@ -3613,14 +3613,22 @@ function controls(stage) {
   stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
   stage.addEventListener('wheel', function (e) { if (!R || !R.pt) return; e.preventDefault(); R.far = Math.max(0.35, Math.min(3, R.far * Math.exp((e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY) * 0.001))); clearTimeout(R.wt); camAt(); R.pt.updateCamera(); R.done = false; R.wt = setTimeout(function () { if (R) place(false); }, 300); }, { passive:false });   // nearer or further (walls sorted out after)
 }
+/* the graphics card gets new work only when it has finished the last (a fence, checked without waiting), so the window stays
+   responsive on a slow card; a card that finishes within a frame gets more tiles a frame, up to 32 */
 function loop(t) {
   if (!R) return; R.raf = requestAnimationFrame(loop);
-  var pt = R.pt, n = QP[Q].n, dl = R.ov.querySelector('[data-rr=dl]'), now = typeof t === 'number' ? t : performance.now();
+  var pt = R.pt, n = QP[Q].n, dl = R.ov.querySelector('[data-rr=dl]'), now = typeof t === 'number' ? t : performance.now(), gl = R.gl;
   if (pt.samples < n) {
-    var dt = R.lt ? now - R.lt : 16; R.lt = now;   // a fast card finishes a tile long before the next frame: give it more per frame, as long as the frames keep coming quickly
-    if (pt.isCompiling || now - (R.moved || 0) < 400) R.k = 1; else if (dt < 26) R.k = Math.min((R.k || 1) + 1, 32); else if (dt > 45) R.k = Math.max(1, Math.floor((R.k || 1) * 0.6));
+    if (R.fence) {
+      if (gl.getSyncParameter(R.fence, gl.SYNC_STATUS) !== gl.SIGNALED) { R.wait = (R.wait || 0) + 1; return; }   // still busy: skip this frame
+      gl.deleteSync(R.fence); R.fence = null;
+      if (pt.isCompiling || now - (R.moved || 0) < 400) R.k = 1; else if (!R.wait) R.k = Math.min((R.k || 1) + 1, 32); else if (R.wait > 1) R.k = Math.max(1, Math.floor((R.k || 1) * 0.7));
+    }
+    R.wait = 0;
     pt.renderToCanvas = false; for (var i = 1; i < (R.k || 1) && pt.samples < n - 0.01; i++) pt.renderSample();
-    pt.renderToCanvas = true; pt.renderSample(); status(pt.isCompiling ? T('rrBuilding') : T('rrProg').replace('{n}', Math.floor(pt.samples)).replace('{m}', n), pt.samples / n); dl.disabled = pt.samples < 1; }
+    pt.renderToCanvas = true; pt.renderSample();
+    if (gl && gl.fenceSync) { R.fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0); gl.flush(); }
+    status(pt.isCompiling ? T('rrBuilding') : T('rrProg').replace('{n}', Math.floor(pt.samples)).replace('{m}', n), pt.samples / n); dl.disabled = pt.samples < 1; }
   else if (!R.done) { R.done = true; status(T('rrDone').replace('{m}', n), 1); dl.disabled = false; }
 }
 root.DBRender = { open:open, close:close, _state:function () { return R; }, _quality:function () { return { q:Q, scale:R && R.pt ? R.pt.renderScale : null, bounces:R && R.pt ? R.pt.bounces : null, k:R && R.k }; }, _score:function (th) { return R && R.THREE ? turnScore(R.THREE, th) : null; } };
