@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Spintelių kūrėjas</title>
+<!-- the realistic picture (Baldai → Realus vaizdas) loads three.js and a path tracer on first use -->
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js","three/examples/jsm/":"https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/","three-mesh-bvh":"https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.9.15/build/index.module.js","three-gpu-pathtracer":"https://cdn.jsdelivr.net/npm/three-gpu-pathtracer@0.0.26/build/index.module.js"}}</script>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Dėdės Baldai — spintelės pagal paprastus nustatymus: eskizas, detalių sąrašas ir CNC programos (.XXL)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -729,6 +731,24 @@ button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(
 .rm-sidechip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);border-radius:7px;padding:3px 4px 3px 9px;font-size:12.5px;background:var(--panel)}
 .rm-sidechip small{font:11px var(--f-mono);color:var(--muted)}
 .rm-sidechip .xbtn{min-width:26px;height:26px}
+/* realistic image */
+.rm-render{border-color:var(--accent);color:var(--accent);font-weight:600}
+.rr-cab{display:flex;justify-content:flex-end;margin:8px 0 0}
+.rr-ov{position:fixed;inset:0;z-index:90;background:rgba(18,22,20,.62);display:flex;align-items:center;justify-content:center;padding:16px}
+.rr-box{background:var(--panel);border-radius:12px;box-shadow:0 18px 60px rgba(0,0,0,.35);width:min(1400px,100%);height:min(900px,100%);display:flex;flex-direction:column;overflow:hidden}
+.rr-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--line2)}
+.rr-head b{font:600 19px var(--f-display)}
+.rr-st{font:12.5px var(--f-mono);color:var(--muted)}
+.rr-ov.err .rr-st{color:var(--bad)}
+.rr-sp{flex:1}
+.rr-q button{font-size:12.5px;padding:6px 10px}
+.rr-stage{position:relative;flex:1;min-height:0;background:#e9e7e2;cursor:grab;touch-action:none}
+.rr-stage:active{cursor:grabbing}
+.rr-cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+.rr-bar{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(0,0,0,.08)}
+.rr-bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+.rr-hint{margin:0;padding:7px 12px;font-size:12px;color:var(--muted);border-top:1px solid var(--line2)}
+@media (max-width:640px){.rr-ov{padding:0}.rr-box{border-radius:0;height:100%}.rr-head b{font-size:16px}}
 .rm-ins .rm-f input.rm-pm[type=text]{width:150px;max-width:100%;text-align:left;font:500 13px var(--f-body)}
 .rm-body.panel{stroke:#1b211e;stroke-width:1}
 /* material look: texture photo or colour per material */
@@ -3354,6 +3374,201 @@ root.DBLook = { set:set, get:get, tex:tex, color:color, has:has, frame:frame, sa
 })(typeof window !== 'undefined' ? window : this);
 </script>
 <script>
+/* Realistic picture of the room (Baldai → "Realus vaizdas"): the furniture of the 3-D view (DBRoom.items3d) with the room's walls
+   and floor, path traced on the graphics card — three.js and three-gpu-pathtracer, loaded from jsDelivr on first use. Daylight from
+   above and from the sky, real soft shadows and bounced light; boards in their colours and texture photos (DBLook), laid as in the
+   3-D view. The picture gets cleaner the longer it runs; drag to turn, wheel to zoom; download as PNG. */
+(function (root) {
+'use strict';
+var R = null, Q = 'good', QN = { fast:64, good:300, best:1200 };
+function T(k) { return R && R.o.t ? R.o.t(k) : k; }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function status(txt, frac) { if (!R) return; var st = R.ov.querySelector('.rr-st'); if (st) st.textContent = txt; var b = R.ov.querySelector('.rr-bar i'); if (b) b.style.width = Math.round(Math.max(0, Math.min(1, frac || 0)) * 100) + '%'; }
+function fail(msg) { status(msg, 0); if (R) R.ov.classList.add('err'); }
+function open(o) {
+  if (R) close();
+  var ov = document.createElement('div'); ov.className = 'rr-ov'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
+  R = { o:o, ov:ov, th:+o.th || 0.55, eye:1600, fov:50, far:1, raf:0 };
+  ov.setAttribute('aria-label', T('rrTitle'));
+  ov.innerHTML = '<div class="rr-box"><div class="rr-head"><b>' + esc(T('rrTitle')) + '</b><span class="rr-st" role="status">' + esc(T('rrLoading')) + '</span><span class="rr-sp"></span>' +
+    '<div class="seg rr-q" role="group" aria-label="' + esc(T('rrQ')) + '">' + ['fast', 'good', 'best'].map(function (q) { return '<button type="button" data-rq="' + q + '" class="' + (q === Q ? 'on' : '') + '" aria-pressed="' + (q === Q) + '">' + esc(T('rrQ_' + q)) + '</button>'; }).join('') + '</div>' +
+    '<button type="button" class="btn" data-rr="dl" disabled>⤓ ' + esc(T('rrDl')) + '</button><button type="button" class="btn ghost" data-rr="close" aria-label="' + esc(T('close')) + '">✕</button></div>' +
+    '<div class="rr-stage"><canvas class="rr-cv"></canvas><div class="rr-bar"><i></i></div></div><p class="rr-hint">' + esc(T('rrHint')) + '</p></div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click', onClick); R.key = function (e) { if (e.key === 'Escape') close(); }; document.addEventListener('keydown', R.key);
+  var items = root.DBRoom && root.DBRoom.items3d ? root.DBRoom.items3d(o.proj, o.infos || []) : [];
+  if (!items.length) { fail(T('rrEmpty')); return; }
+  var timer = new Promise(function (res, rej) { setTimeout(function () { rej(new Error('timeout')); }, 45000); });
+  Promise.race([Promise.all([import('three'), import('three-gpu-pathtracer')]), timer]).then(function (m) { if (!R || R.ov !== ov) return; status(T('rrBuilding'), 0); return build(m[0], m[1], items); })
+    .catch(function (e) { if (R && R.ov === ov) fail(/WebGL|context/i.test(String(e && e.message)) ? T('rrNoGL') : T('rrNoLib')); try { console.error(e); } catch (er) {} });
+}
+function close() {
+  if (!R) return; var r = R; R = null;
+  cancelAnimationFrame(r.raf); document.removeEventListener('keydown', r.key); if (r.resize) window.removeEventListener('resize', r.resize);
+  try { if (r.pt && r.pt.dispose) r.pt.dispose(); } catch (e) {}
+  try { if (r.renderer) { r.renderer.dispose(); r.renderer.forceContextLoss(); } } catch (e) {}
+  r.ov.remove();
+}
+function onClick(e) {
+  if (!R) return; var b = e.target.closest('[data-rr],[data-rq]'); if (!b) { if (e.target === R.ov) close(); return; }
+  if (b.getAttribute('data-rr') === 'close') { close(); return; }
+  if (b.getAttribute('data-rr') === 'dl') { download(); return; }
+  var q = b.getAttribute('data-rq'); if (q && QN[q]) { Q = q; R.ov.querySelectorAll('[data-rq]').forEach(function (x) { var on = x.getAttribute('data-rq') === q; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); }); R.done = false; }
+}
+function download() {
+  if (!R || !R.renderer) return; var cv = R.renderer.domElement, nm = String((R.o.proj && R.o.proj.name) || 'vaizdas').replace(/[^\wÀ-ɏ.-]+/g, '_');
+  cv.toBlob(function (b) { if (!b) return; var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = nm + '_vaizdas.png'; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }, 'image/png');
+}
+/* plank floor: light oak, drawn once */
+function floorTexture(THREE) {
+  var cv = document.createElement('canvas'); cv.width = 1024; cv.height = 1024; var g = cv.getContext('2d'), seed = 7, rnd = function () { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  var pw = 1024 / 6;
+  for (var i = 0; i < 6; i++) {
+    var y = 0, off = rnd() * 1024;
+    while (y < 1024) { var len = 380 + rnd() * 520, base = 178 + rnd() * 16, y0 = (y + off) % 1024; g.fillStyle = 'rgb(' + Math.round(base) + ',' + Math.round(base * 0.87) + ',' + Math.round(base * 0.74) + ')';
+      g.fillRect(i * pw, y0, pw, len); if (y0 + len > 1024) g.fillRect(i * pw, y0 - 1024, pw, len); g.fillStyle = 'rgba(70,50,30,0.22)'; g.fillRect(i * pw, y0, pw, 1.5); y += len; }
+    for (var k = 0; k < 90; k++) { var x = i * pw + rnd() * pw, a = 0.03 + rnd() * 0.04; g.strokeStyle = 'rgba(90,60,30,' + a + ')'; g.lineWidth = 0.6 + rnd() * 1.4; g.beginPath(); g.moveTo(x, 0); g.bezierCurveTo(x + rnd() * 8 - 4, 340, x + rnd() * 8 - 4, 680, x + rnd() * 6 - 3, 1024); g.stroke(); }
+    g.fillStyle = 'rgba(70,50,30,0.35)'; g.fillRect(i * pw, 0, 1.5, 1024);
+  }
+  var t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+}
+function loadImage(src) { return new Promise(function (res, rej) { var im = new Image(); im.onload = function () { res(im); }; im.onerror = rej; im.src = src; }); }
+/* where the photo lies on a box's six faces (as in the 3-D view: along the board's grain, laid once over it or repeated at its size) */
+function boxUV(geo, size, g, look, iw, ih) {
+  var pos = geo.attributes.position, uv = geo.attributes.uv, rot = !!look.rot, fit = look.fit !== false;
+  var Lg = size[g], Lw = Math.max.apply(null, [0, 1, 2].filter(function (k) { return k !== g; }).map(function (k) { return size[k]; })), Lu = rot ? Lw : Lg, Lv = rot ? Lg : Lw;
+  var k, s0 = 0, t0 = 0; if (fit) { k = Math.max(iw / Lu, ih / Lv); s0 = (iw - Lu * k) / 2; t0 = (ih - Lv * k) / 2; } else k = iw / Math.max(20, +look.mm || 1000);
+  for (var i = 0; i < pos.count; i++) {
+    var a = [0, 0, 1, 1, 2, 2][i >> 2], p = [pos.getX(i), pos.getY(i), pos.getZ(i)], inPl = [0, 1, 2].filter(function (x) { return x !== a; });
+    var u = inPl.indexOf(g) >= 0 ? g : inPl[0], v = inPl[0] === u ? inPl[1] : inPl[0]; if (rot) { var tmp = u; u = v; v = tmp; }
+    uv.setXY(i, (s0 + (p[u] + size[u] / 2) * k) / iw, 1 - (t0 + (p[v] + size[v] / 2) * k) / ih);
+  }
+  uv.needsUpdate = true;
+}
+function build(THREE, PT, items) {
+  R.THREE = THREE; var o = R.o, ov = R.ov, cv = ov.querySelector('canvas'), stage = ov.querySelector('.rr-stage');
+  var renderer = new THREE.WebGLRenderer({ canvas:cv, antialias:false, preserveDrawingBuffer:true, powerPreference:'high-performance' });
+  R.renderer = renderer;
+  renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.NeutralToneMapping || THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1;
+  var scene = new THREE.Scene(), L = o.proj.layout, G = root.DBRoom.geo(L), H = +L.roomH > 0 ? +L.roomH : 2600;
+  scene.background = new THREE.Color(0xe9e7e2);
+  var sky = new PT.GradientEquirectTexture(256); sky.topColor.set(0xffffff); sky.bottomColor.set(0x6f685e); sky.exponent = 1.1; sky.update();
+  scene.environment = sky; scene.environmentIntensity = 1.05;
+  var V3 = function (p) { return new THREE.Vector3(p[0], p[2], p[1]); };   // plan x, plan y, height → three.js (y up)
+  var LK = root.DBLook, maxAniso = renderer.capabilities.getMaxAnisotropy();
+  /* materials: per board name and kind; texture photos loaded first */
+  var names = {}; items.forEach(function (it) { var n = it.o.tex && it.o.tex.name; if (n && LK && LK.has(n)) names[n] = 1; });
+  var texs = {};
+  return Promise.all(Object.keys(names).map(function (n) { var l = LK.get(n); return loadImage(l.tex).then(function (im) {
+      var t = new THREE.Texture(im); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = maxAniso; t.needsUpdate = true;
+      if (l.fit === false) t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping;
+      texs[n] = { t:t, w:im.naturalWidth || im.width, h:im.naturalHeight || im.height, look:l }; }).catch(function () {}); })).then(function () {
+    if (!R || R.renderer !== renderer) return;
+    var mats = {}, mat = function (it) {
+      var kind = it.o.metal ? 'metal' : it.kind || 'part', tn = it.o.tex && it.o.tex.name, tx = tn && texs[tn], key = kind + '|' + (tx ? 'T' + tn : it.color);
+      if (mats[key]) return mats[key];
+      var rough = { front:0.42, top:0.32, hdf:0.75, part:0.55, metal:0.35 }[kind] || 0.5;
+      return (mats[key] = new THREE.MeshStandardMaterial({ color:tx ? 0xffffff : new THREE.Color(it.color || '#dddddd'), map:tx ? tx.t : null, roughness:rough, metalness:kind === 'metal' ? 0.7 : 0 }));
+    };
+    var group = new THREE.Group(), bb = new THREE.Box3();
+    items.forEach(function (it) {
+      var e = it.e, P0 = V3(it.tr([e[0], e[2], e[4]])), ex = V3(it.tr([e[1], e[2], e[4]])).sub(P0), ey = V3(it.tr([e[0], e[3], e[4]])).sub(P0), ez = V3(it.tr([e[0], e[2], e[5]])).sub(P0);
+      var size = [ex.length(), ey.length(), ez.length()], c = P0.clone().addScaledVector(ex, 0.5).addScaledVector(ey, 0.5).addScaledVector(ez, 0.5);
+      ex.normalize(); ey.normalize(); ez.normalize(); if (new THREE.Vector3().crossVectors(ex, ey).dot(ez) < 0) ey.negate();   // keep the basis right-handed (the box is the same)
+      var m = mat(it), mesh;
+      if (it.kind === 'leg') { var rr = Math.min(size[0], size[1]) / 2; mesh = new THREE.Mesh(new THREE.CylinderGeometry(rr, rr, size[2], 24), m); mesh.matrix.makeBasis(ex, ez, new THREE.Vector3().crossVectors(ex, ez)); }
+      else { var geo = new THREE.BoxGeometry(size[0], size[1], size[2]), tn = it.o.tex && it.o.tex.name; if (tn && texs[tn]) boxUV(geo, size, it.o.tex.g || 0, texs[tn].look, texs[tn].w, texs[tn].h);
+        mesh = new THREE.Mesh(geo, m); mesh.matrix.makeBasis(ex, ey, ez); }
+      mesh.matrix.setPosition(c); mesh.matrixAutoUpdate = false; mesh.matrixWorldNeedsUpdate = true; group.add(mesh);
+    });
+    scene.add(group); group.updateMatrixWorld(true); bb.setFromObject(group);
+    /* the room: floor and walls (those between the eye and the furniture are left out, as in the 3-D view) */
+    var rb = new THREE.Box3(); G.forEach(function (g) { rb.expandByPoint(V3([g.P[0], g.P[1], 0])); rb.expandByPoint(V3([g.P[0] + g.d[0] * g.len, g.P[1] + g.d[1] * g.len, 0])); }); rb.union(bb);
+    var fw = 60000, fd = 60000, ftx = floorTexture(THREE); ftx.repeat.set(fw / 2400, fd / 2400); ftx.anisotropy = maxAniso;   // a floor to the horizon: no edge in the picture
+    var fl = new THREE.Mesh(new THREE.BoxGeometry(fw, 20, fd), new THREE.MeshStandardMaterial({ map:ftx, roughness:0.55 })); fl.position.set((rb.min.x + rb.max.x) / 2, -10, (rb.min.z + rb.max.z) / 2); scene.add(fl);
+    var wallMat = new THREE.MeshStandardMaterial({ color:0xf1efe9, roughness:0.92 }), walls = G.map(function (g) {
+      var a = V3([g.P[0], g.P[1], 0]), d = new THREE.Vector3(g.d[0], 0, g.d[1]), n = new THREE.Vector3(g.n[0], 0, g.n[1]), up = new THREE.Vector3(0, 1, 0), w = new THREE.Mesh(new THREE.BoxGeometry(g.len + 200, H, 100), wallMat);
+      var zx = new THREE.Vector3().crossVectors(d, up); w.matrix.makeBasis(d, up, zx); w.matrix.setPosition(a.clone().addScaledVector(d, g.len / 2).addScaledVector(n, -50).add(new THREE.Vector3(0, H / 2, 0))); w.matrixAutoUpdate = false; w.userData.n = n; return w; });
+    /* light: a big soft panel over the room (like a bright ceiling) and the sky */
+    var size = rb.getSize(new THREE.Vector3()), ctr = rb.getCenter(new THREE.Vector3());
+    var lamp = new THREE.RectAreaLight(0xfff6ea, 4, Math.max(1200, size.x * 0.7), Math.max(1200, size.z * 0.7)); lamp.position.set(ctr.x, H + 500, ctr.z); lamp.lookAt(ctr.x, 0, ctr.z); scene.add(lamp);
+    var camera = new THREE.PerspectiveCamera(R.fov, 1, 30, 100000);
+    R.scene = scene; R.camera = camera; R.walls = walls; R.fc = bb.getCenter(new THREE.Vector3()); R.fr = bb.getBoundingSphere(new THREE.Sphere()).radius; R.H = H;
+    /* the fronts: per cabinet its box, the side its fronts face and their size — the view is turned to where most of them show, unhidden */
+    var cabs = {}; items.forEach(function (it) { var k = it.o.cab; if (k == null) return; var q = cabs[k] || (cabs[k] = { b:new THREE.Box3() });
+      [[it.e[0], it.e[2], it.e[4]], [it.e[1], it.e[3], it.e[5]]].forEach(function (p) { q.b.expandByPoint(V3(it.tr(p))); }); });
+    R.fronts = Object.keys(cabs).map(function (k) { var c = o.proj.cabinets[+k], it = c && L.items[c.id], g = it && G[it.wall]; if (!g) return null; var q = cabs[k], n = new THREE.Vector3(g.n[0], 0, g.n[1]), sz = q.b.getSize(new THREE.Vector3());
+      var ctr = q.b.getCenter(new THREE.Vector3()), half = Math.abs(n.x) * sz.x / 2 + Math.abs(n.z) * sz.z / 2; return { b:q.b, n:n, p:ctr.clone().addScaledVector(n, half + 5), area:(Math.abs(n.x) * sz.z + Math.abs(n.z) * sz.x) * sz.y }; }).filter(Boolean);
+    R.th = bestTurn(THREE, R.th);
+    var pt = new PT.WebGLPathTracer(renderer); R.pt = pt;
+    pt.tiles.set(2, 2); pt.bounces = 5; pt.filterGlossyFactor = 0.5; pt.minSamples = 1; pt.renderDelay = 0; pt.fadeDuration = 250; pt.dynamicLowRes = true; pt.lowResScale = 0.3;
+    if (Object.keys(texs).length) pt.textureSize.set(2048, 2048);
+    resize(); place(true);
+    R.resize = function () { if (!R) return; resize(); R.pt.updateCamera(); }; window.addEventListener('resize', R.resize);
+    controls(stage);
+    loop();
+  });
+}
+function resize() {
+  var stage = R.ov.querySelector('.rr-stage'), w = Math.max(200, stage.clientWidth), h = Math.max(150, stage.clientHeight), dpr = Math.min(2, window.devicePixelRatio || 1);
+  if (w * h * dpr * dpr > 2.6e6) dpr = Math.sqrt(2.6e6 / (w * h));   // enough pixels for a sharp picture, not more than the card can trace
+  R.renderer.setPixelRatio(dpr); R.renderer.setSize(w, h, false); R.camera.aspect = w / h; R.camera.updateProjectionMatrix();
+}
+/* the camera: a person at eye height on a circle round the furniture, as far as the lens needs to take it all in
+   (walls the eye stands behind are left out, as when a wall is taken away for a photo of a room) */
+function camPos(THREE, th, out) {
+  var fov = R.fov * Math.PI / 180, hf = 2 * Math.atan(Math.tan(fov / 2) * (R.camera ? R.camera.aspect : 1.6)), d = R.fr / Math.sin(Math.min(fov, hf) / 2) * 0.9 * R.far;
+  return (out || new THREE.Vector3()).set(R.fc.x + Math.sin(th) * d, Math.max(400, R.eye), R.fc.z + Math.cos(th) * d);
+}
+/* which way round shows the fronts best: their size, how squarely they face the eye, and nothing standing in front of them */
+function bestTurn(THREE, th0) {
+  var score = function (th) { return turnScore(THREE, th); };
+  var best = th0, bs = score(th0), mine = bs;
+  for (var k = 0; k < 72; k++) { var th = k * Math.PI / 36, sc = score(th); if (sc > bs + 1e-6) { bs = sc; best = th; } }
+  return mine >= bs * 0.85 ? th0 : best;   // the turn of the 3-D view when it shows nearly as much
+}
+function turnScore(THREE, th) {
+  var f0 = function (th) { var cam = camPos(THREE, th), s = 0, ray = new THREE.Ray(), hit = new THREE.Vector3();
+    R.fronts.forEach(function (f) { var to = cam.clone().sub(f.p), dist = to.length(); to.normalize(); var facing = f.n.dot(to);
+      if (facing < -0.05) { s += f.area * facing * 0.7; return; }   // its back in sight: a picture of the backs is not what anyone wants
+      if (facing <= 0.05) return;
+      ray.set(cam, f.p.clone().sub(cam).normalize());
+      var blocked = R.fronts.some(function (g) { if (g === f) return false; var h = ray.intersectBox(g.b, hit); return h && cam.distanceTo(h) < dist - 30; });
+      if (!blocked) s += f.area * facing; });
+    return s; };
+  return f0(th);
+}
+function camAt() {
+  var THREE = R.THREE, p = camPos(THREE, R.th, R.camera.position);
+  R.camera.fov = R.fov; R.camera.updateProjectionMatrix();
+  R.camera.lookAt(R.fc.x, R.fc.y, R.fc.z); R.camera.updateMatrixWorld();   // at the middle of the furniture, so all of it is in the picture
+  return p;
+}
+/* after a turn: walls the eye stands behind are left out (the scene is rebuilt when that changes) */
+function place(first) {
+  var cam = camAt(), want = R.walls.filter(function (w) { var n = w.userData.n, e = w.matrix.elements; return (cam.x - e[12]) * n.x + (cam.z - e[14]) * n.z > -60; }), key = want.map(function (w) { return R.walls.indexOf(w); }).join(',');
+  if (first || key !== R.wallKey) { R.walls.forEach(function (w) { R.scene.remove(w); }); want.forEach(function (w) { R.scene.add(w); }); R.wallKey = key; R.pt.setScene(R.scene, R.camera); }
+  else R.pt.updateCamera();
+  R.done = false;
+}
+function controls(stage) {
+  var d = null;
+  stage.addEventListener('pointerdown', function (e) { if (!R || !R.pt) return; d = { x:e.clientX, y:e.clientY, th:R.th, eye:R.eye }; try { stage.setPointerCapture(e.pointerId); } catch (er) {} e.preventDefault(); });
+  stage.addEventListener('pointermove', function (e) { if (!d || !R) return; R.th = d.th - (e.clientX - d.x) * 0.006; R.eye = Math.max(500, Math.min(R.H + 2500, d.eye + (e.clientY - d.y) * 5)); camAt(); R.pt.updateCamera(); R.done = false; });   // across: walk round; up and down: eye height (above the room too)
+  var up = function () { if (d && R) place(false); d = null; };
+  stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
+  stage.addEventListener('wheel', function (e) { if (!R || !R.pt) return; e.preventDefault(); R.far = Math.max(0.35, Math.min(3, R.far * Math.exp((e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY) * 0.001))); clearTimeout(R.wt); camAt(); R.pt.updateCamera(); R.done = false; R.wt = setTimeout(function () { if (R) place(false); }, 300); }, { passive:false });   // nearer or further (walls sorted out after)
+}
+function loop() {
+  if (!R) return; R.raf = requestAnimationFrame(loop);
+  var pt = R.pt, n = QN[Q], dl = R.ov.querySelector('[data-rr=dl]');
+  if (pt.samples < n) { pt.renderSample(); status(pt.isCompiling ? T('rrBuilding') : T('rrProg').replace('{n}', Math.floor(pt.samples)).replace('{m}', n), pt.samples / n); dl.disabled = pt.samples < 1; }
+  else if (!R.done) { R.done = true; status(T('rrDone').replace('{m}', n), 1); dl.disabled = false; }
+}
+root.DBRender = { open:open, close:close, _state:function () { return R; }, _score:function (th) { return R && R.THREE ? turnScore(R.THREE, th) : null; } };
+})(typeof window !== 'undefined' ? window : this);
+</script>
+<script>
 /* Front view of one cabinet, drawn from the engine's real parts (buildCabinet().panels): every part projected
    straight onto the front plane at its true size, painted back to front, coloured by its material
    (a few common board names → colours), with soft interior shadow, handles, legs and an oven where one is.
@@ -4907,6 +5122,38 @@ function r3cross(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] *
 function r3dot(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
 var R3WOOD = /oak|ąžuol|azuol|walnut|riešut|riesut|uos|ash|beech|buk|medi/i;
 function r3mat(name, dflt) { return window.DBFront ? window.DBFront.matColor(name, dflt) : dflt; }
+/* the furniture in 3-D: every part, leg, plinth, side panel and worktop as a box in its cabinet's coordinates, with the map to the room
+   (tr: cabinet x, y from the front, z up → plan x, plan y, height), its colour and how it is drawn (o: cab, front, wood, metal, tex)
+   — for the room's 3-D view and for the realistic picture (DBRender) */
+function items3d(proj, infos) {
+  var L = proj.layout, G = geo(L), out = [];
+  var add = function (tr, x0, x1, y0, y1, z0, z1, color, o, kind) { if (x1 - x0 < 0.01 || y1 - y0 < 0.01 || z1 - z0 < 0.01) return; out.push({ tr:tr, e:[x0, x1, y0, y1, z0, z1], color:color, o:o, kind:kind || '' }); };
+  placed(proj).forEach(function (o) {
+    var c = o.c, it = o.it, g = G[it.wall], D0 = cabD(c), z0 = z0Of(c, it, L), inf = infos[o.i], mat = c.mat || {};
+    var tr = function (p) { var a = it.x + p[0], b = D0 - p[1]; return [g.P[0] + g.d[0] * a + g.n[0] * b, g.P[1] + g.d[1] * a + g.n[1] * b, z0 + p[2]]; };
+    var carc = r3mat(mat.carc, '#e5e2da'), fac = r3mat(mat.facade, '#d5cbbd'), back = r3mat(mat.back || mat.carc, carc);
+    var opt = { cab:o.i };
+    if (inf && inf.r && inf.r.panels && inf.r.panels.length) inf.r.panels.forEach(function (p) {
+      if (!p.place) return;
+      var q = p.place, pts = [];
+      [0, p.L].forEach(function (a) { [0, p.W].forEach(function (b) { [0, p.T].forEach(function (t) { pts.push([q.o[0] + a * q.u[0] + b * q.v[0] - t * q.n[0], q.o[1] + a * q.u[1] + b * q.v[1] - t * q.n[1], q.o[2] + a * q.u[2] + b * q.v[2] - t * q.n[2]]); }); }); });
+      var mn = [0, 1, 2].map(function (k) { return Math.min.apply(null, pts.map(function (v) { return v[k]; })); }), mx = [0, 1, 2].map(function (k) { return Math.max.apply(null, pts.map(function (v) { return v[k]; })); });
+      var front = p.role === 'FASADAS' || p.role === 'DURYS', hdf = p.role === 'PLAUSAS' || /HDF/.test(p.mat || '');
+      var col = front ? fac : hdf ? '#e4e1da' : p.role === 'NUGARA' ? back : carc, wd = front ? R3WOOD.test(mat.facade || '') : R3WOOD.test(mat.carc || '');
+      var pm = p.mat || (front ? mat.facade : p.role === 'NUGARA' ? (mat.back || mat.carc) : mat.carc), ga = Math.abs(q.u[0]) > 0.5 ? 0 : Math.abs(q.u[1]) > 0.5 ? 1 : 2;   // the grain: the part's length
+      if (p.mat && !hdf) col = r3mat(p.mat, col);
+      add(tr, mn[0], mx[0], mn[1], mx[1], mn[2], mx[2], col, { cab:o.i, front:front, wood:wd && !hdf, tex:hdf ? null : { name:pm, g:ga } }, front ? 'front' : hdf ? 'hdf' : 'part');
+    });
+    else add(tr, 0, cabW(c), 0, D0, 0, cabH(c), c.dishwasher ? fac : carc, { cab:o.i, front:true, wood:R3WOOD.test(mat.facade || '') });
+    if (inf && inf.r && inf.r.legs) inf.r.legs.forEach(function (lg) { var rr = Math.min(25, (lg.d || 32) / 2); add(tr, lg.x - rr, lg.x + rr, lg.y - rr, lg.y + rr, -legH(c), 0, '#343b3a', { cab:o.i, metal:true }, 'leg'); });
+    var pl = inf && inf.r && inf.r.visual && inf.r.visual.plinth;
+    if (pl) add(tr, pl.x0, pl.x1, pl.y0, pl.y0 + pl.t, pl.z0, pl.z1, r3mat(pl.mat, fac), { cab:o.i, front:true, wood:R3WOOD.test(pl.mat || ''), tex:{ name:pl.mat, g:0 } }, 'front');
+    else if (c.dishwasher && legH(c)) add(tr, 0, cabW(c), 40, D0, -legH(c), 0, fac, opt);
+    sideP(c).forEach(function (q) { add(tr, q.x0, q.x1, q.y0, q.y1, q.z0, q.z1, r3mat(q.mat, fac), { cab:o.i, front:true, wood:R3WOOD.test(q.mat || ''), tex:{ name:q.mat, g:2 } }, 'front'); });   // side panels: the grain up
+    var wt = L.worktop && wtOf(c); if (wt) add(tr, wt.x0, wt.x1, wt.y0, wt.y1, wt.z0, wt.z1, r3mat(wt.mat, '#b98a55'), { cab:o.i, wood:!wt.mat || R3WOOD.test(wt.mat), tex:{ name:wt.mat, g:0 } }, 'top');
+  });
+  return out;
+}
 function faces3d() {
   var proj = C.o.proj, L = proj.layout, G = geo(L), H = +L.roomH || 2600, F = [], Q = C.d3;
   var depthDir = [-Q.st * Q.cp, Q.ct * Q.cp, -Q.sp];   // world direction away from the viewer (world y = −plan y)
@@ -4935,30 +5182,7 @@ function faces3d() {
     var tr = function (p) { return [a[0] + g.d[0] * p[0] - g.n[0] * p[1], a[1] + g.d[1] * p[0] - g.n[1] * p[1], p[2]]; };
     box(tr, 0, g.len, 0, t, 0, H, '#f7f5ef', {});
   });
-  placed(proj).forEach(function (o) {
-    var c = o.c, it = o.it, g = G[it.wall], D0 = cabD(c), z0 = z0Of(c, it, L), inf = C.o.infos[o.i], mat = c.mat || {};
-    var tr = function (p) { var a = it.x + p[0], b = D0 - p[1]; return [g.P[0] + g.d[0] * a + g.n[0] * b, g.P[1] + g.d[1] * a + g.n[1] * b, z0 + p[2]]; };
-    var carc = r3mat(mat.carc, '#e5e2da'), fac = r3mat(mat.facade, '#d5cbbd'), back = r3mat(mat.back || mat.carc, carc);
-    var opt = { cab:o.i };
-    if (inf && inf.r && inf.r.panels && inf.r.panels.length) inf.r.panels.forEach(function (p) {
-      if (!p.place) return;
-      var q = p.place, pts = [];
-      [0, p.L].forEach(function (a) { [0, p.W].forEach(function (b) { [0, p.T].forEach(function (t) { pts.push([q.o[0] + a * q.u[0] + b * q.v[0] - t * q.n[0], q.o[1] + a * q.u[1] + b * q.v[1] - t * q.n[1], q.o[2] + a * q.u[2] + b * q.v[2] - t * q.n[2]]); }); }); });
-      var mn = [0, 1, 2].map(function (k) { return Math.min.apply(null, pts.map(function (v) { return v[k]; })); }), mx = [0, 1, 2].map(function (k) { return Math.max.apply(null, pts.map(function (v) { return v[k]; })); });
-      var front = p.role === 'FASADAS' || p.role === 'DURYS', hdf = p.role === 'PLAUSAS' || /HDF/.test(p.mat || '');
-      var col = front ? fac : hdf ? '#e4e1da' : p.role === 'NUGARA' ? back : carc, wd = front ? R3WOOD.test(mat.facade || '') : R3WOOD.test(mat.carc || '');
-      var pm = p.mat || (front ? mat.facade : p.role === 'NUGARA' ? (mat.back || mat.carc) : mat.carc), ga = Math.abs(q.u[0]) > 0.5 ? 0 : Math.abs(q.u[1]) > 0.5 ? 1 : 2;   // the grain: the part's length
-      if (p.mat && !hdf) col = r3mat(p.mat, col);
-      box(tr, mn[0], mx[0], mn[1], mx[1], mn[2], mx[2], col, { cab:o.i, front:front, wood:wd && !hdf, tex:hdf ? null : { name:pm, g:ga } });
-    });
-    else box(tr, 0, cabW(c), 0, D0, 0, cabH(c), c.dishwasher ? fac : carc, { cab:o.i, front:true, wood:R3WOOD.test(mat.facade || '') });
-    if (inf && inf.r && inf.r.legs) inf.r.legs.forEach(function (lg) { var rr = Math.min(25, (lg.d || 32) / 2); box(tr, lg.x - rr, lg.x + rr, lg.y - rr, lg.y + rr, -legH(c), 0, '#343b3a', { cab:o.i, metal:true }); });
-    var pl = inf && inf.r && inf.r.visual && inf.r.visual.plinth;
-    if (pl) box(tr, pl.x0, pl.x1, pl.y0, pl.y0 + pl.t, pl.z0, pl.z1, r3mat(pl.mat, fac), { cab:o.i, front:true, wood:R3WOOD.test(pl.mat || ''), tex:{ name:pl.mat, g:0 } });
-    else if (c.dishwasher && legH(c)) box(tr, 0, cabW(c), 40, D0, -legH(c), 0, fac, opt);
-    sideP(c).forEach(function (q) { box(tr, q.x0, q.x1, q.y0, q.y1, q.z0, q.z1, r3mat(q.mat, fac), { cab:o.i, front:true, wood:R3WOOD.test(q.mat || ''), tex:{ name:q.mat, g:2 } }); });   // side panels: the grain up
-    var wt = L.worktop && wtOf(c); if (wt) box(tr, wt.x0, wt.x1, wt.y0, wt.y1, wt.z0, wt.z1, r3mat(wt.mat, '#b98a55'), { cab:o.i, wood:!wt.mat || R3WOOD.test(wt.mat), tex:{ name:wt.mat, g:0 } });
-  });
+  items3d(proj, C.o.infos).forEach(function (q) { box(q.tr, q.e[0], q.e[1], q.e[2], q.e[3], q.e[4], q.e[5], q.color, q.o); });
   return { faces:F, depthDir:depthDir, H:H, G:G };
 }
 function render3d(st) {
@@ -5154,6 +5378,7 @@ function bar() {
     (V.view === 'front' && L.walls.length > 1 ? '<div class="seg" role="group" aria-label="' + esc(T('rmWalls')) + '">' + [[-1, T('rmAllWalls')]].concat(L.walls.map(function (w, i) { return [i, LETTER[i]]; })).map(function (v) {
       return '<button type="button" data-rm="wallv" data-v="' + v[0] + '" class="' + (V.wall === v[0] ? 'on' : '') + '">' + esc(v[1]) + '</button>'; }).join('') + '</div>' : '') +
     (V.view === '3d' ? '<span class="unit">' + esc(T('rm3Hint')) + '</span>' : '') +
+    '<button type="button" class="btn rm-render" data-rm="render" title="' + esc(T('rrBtnT')) + '">✦ ' + esc(T('rrBtn')) + '</button>' +
     '<button type="button" class="btn" data-rm="undo"' + (C.o.canUndo ? '' : ' disabled') + ' title="Ctrl+Z">↶ ' + esc(T('isoUndo')) + '</button></div>';
 }
 function palette() {
@@ -5286,6 +5511,7 @@ function onClick(e) {
   if (a === 'view') { if (v === '3d') { V.z3 = 1; V.px3 = V.py3 = 0; } V.view = v; D = null; attach(C.el, C.o); return; }
   if (a === 'wallv') { V.wall = +v; draw(); C.el.querySelectorAll('[data-rm=wallv]').forEach(function (x) { x.classList.toggle('on', +x.getAttribute('data-v') === V.wall); }); return; }
   if (a === 'undo') { C.o.onUndo(); return; }
+  if (a === 'render') { if (window.DBRender) window.DBRender.open({ proj:proj, infos:C.o.infos, th:V.th, ph:V.ph, t:C.o.t }); return; }
   if (a === 'desel') { C.o.onSelect(null); return; }
   if (a === 'sel') { C.o.onSelect(+b.getAttribute('data-i')); return; }
   if (a === 'place') { var k = +b.getAttribute('data-i'), cc = proj.cabinets[k]; C.o.onLayout(function (p) { var old = p.layout.items[cc.id], z = old && old.z; delete p.layout.items[cc.id]; var s = autoSpot(p, cc); p.layout.items[cc.id] = { wall:s.wall, x:s.x, z:z }; }, { sel:k }); return; }   // a wall cabinet keeps its height
@@ -5393,7 +5619,7 @@ function attach(el, o) {
   if (window.ResizeObserver) { if (RO) RO.disconnect(); var lw = stage.clientWidth; RO = new ResizeObserver(function () { if (C && C.el === el && Math.abs(stage.clientWidth - lw) > 2) { lw = stage.clientWidth; draw(); } }); RO.observe(stage); }
 }
 
-var api = { attach:attach, ensure:ensure, problems:problems, geo:geo, snap:snap, gapAround:gapAround, autoSpot:autoSpot, cabW:cabW, cabD:cabD, cabH:cabH, legH:legH, z0Of:z0Of, wtOf:wtOf, placed:placed, level:level, view:V,
+var api = { attach:attach, ensure:ensure, problems:problems, geo:geo, items3d:items3d, snap:snap, gapAround:gapAround, autoSpot:autoSpot, cabW:cabW, cabD:cabD, cabH:cabH, legH:legH, z0Of:z0Of, wtOf:wtOf, placed:placed, level:level, view:V,
             sideP:sideP, sideW:sideW, sideRects:sideRects, addSide:addSide, sideFit:sideFit, refit:refit, makeRoom:makeRoom, _state:function () { return { C:C, D:D }; } };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.DBRoom = api;
 })(typeof window !== 'undefined' ? window : this);
@@ -6881,6 +7107,9 @@ lt:{
  rm3Hint:'Tempkite — sukasi. Spustelėkite spintelę — pažymite.', rmAdd:'Pridėti spintelę', rmAddT:'Nutempkite ant sienos (vaizdas „Iš priekio“ arba „Planas“) arba spustelėkite — atsiras po paskutine',
  rmUnplaced:'Nepastatytos', rmPlace:'Pastatyti', rmX:'Nuo sienos pradžios', rmZ:'Apačia nuo grindų', rmHang:'Kabo ant sienos', rmHitShort:'Kliūna už kitos spintelės arba išeina už sienos — patraukite arba pakeiskite plotį.',
  rmFill:'Užpildyti tarpą: {w} mm',
+ rrBtn:'Realus vaizdas', rrBtnT:'Fotorealistiškas visos patalpos vaizdas (skaičiuojamas vaizdo plokštėje)', rrTitle:'Realus vaizdas', rrLoading:'Kraunamas 3D variklis…', rrBuilding:'Ruošiama scena…', rrProg:'Skaičiuojama: {n} / {m}', rrDone:'Paruošta · {m} kadrų',
+ rrCabT:'Fotorealistiškas šios spintelės vaizdas (skaičiuojamas vaizdo plokštėje)', rrQ:'Kokybė', rrQ_fast:'Greitai', rrQ_good:'Gerai', rrQ_best:'Labai gerai', rrDl:'Atsisiųsti PNG', rrHint:'Tempkite į šonus — eikite aplink, aukštyn ir žemyn — akių aukštis · ratukas — arčiau / toliau · kuo ilgiau skaičiuojama, tuo švaresnis vaizdas. Spalvos ir tekstūros — iš „Išvaizda 3D vaizde“.',
+ rrNoLib:'Nepavyko įkelti 3D variklio — reikia interneto ryšio.', rrNoGL:'Ši naršyklė ar kompiuteris nepalaiko WebGL 2 — realaus vaizdo padaryti nepavyks.', rrEmpty:'Baldų dar nėra — pastatykite spintelių ant sienų.',
  pPanel:'Plokštė', rmEditP:'Redaguoti plokštę', rmAddedP:'Pridėta plokštė {n}', rmPanelPush:'Paleiskite — spintelės pasislinks {n} mm', rmThick:'Storis', rmPMat:'Medžiaga', rmToCeil:'Iki lubų', rmToFloor:'Iki grindų',
  rmPanelNote:'Atskira plokštė: stovi pati, bet kokio dydžio (didelis šonas, užpildas, apdaila). Pjaunama kaip detalė, be skylių. Apačia virš 0 — plokštė kabo tame aukštyje.',
  pnS1:'Plokštė', pnS1l:'Atskira plokštė — tik pjaunama, be skylių. Kur ji stovi ir aukštį nuo grindų nustatykite Baldai skirtuke (tempkite kaip spintelę).', pnEdges:'Kraštai', pnEdgeMat:'Krašto medžiaga', pnE1:'L1 priekis', pnE2:'L2 galas', pnE3:'W1 apačia', pnE4:'W2 viršus',
@@ -7010,6 +7239,9 @@ en:{
  rm3Hint:'Drag to turn. Click a cabinet to select it.', rmAdd:'Add a cabinet', rmAddT:'Drag onto a wall (Front or Plan view) or click — it goes after the last one',
  rmUnplaced:'Not placed', rmPlace:'Place', rmX:'From the wall start', rmZ:'Bottom from the floor', rmHang:'Hangs on the wall', rmHitShort:'Hits another cabinet or runs past the wall — move it or change the width.',
  rmFill:'Fill the gap: {w} mm',
+ rrBtn:'Realistic image', rrBtnT:'A photo-like picture of the whole room (rendered on the graphics card)', rrTitle:'Realistic image', rrLoading:'Loading the 3D engine…', rrBuilding:'Preparing the scene…', rrProg:'Rendering: {n} / {m}', rrDone:'Ready · {m} samples',
+ rrCabT:'A photo-like picture of this cabinet (rendered on the graphics card)', rrQ:'Quality', rrQ_fast:'Fast', rrQ_good:'Good', rrQ_best:'Best', rrDl:'Download PNG', rrHint:'Drag sideways to walk round, up and down for eye height · wheel to come nearer or step back · the longer it runs, the cleaner the picture. Colours and textures come from “Look in the 3D views”.',
+ rrNoLib:'Could not load the 3D engine — needs an internet connection.', rrNoGL:'This browser or computer has no WebGL 2 — the realistic image cannot be made.', rrEmpty:'No furniture yet — place cabinets on the walls.',
  pPanel:'Panel', rmEditP:'Edit panel', rmAddedP:'Panel {n} added', rmPanelPush:'Drop — the cabinets move over {n} mm', rmThick:'Thickness', rmPMat:'Material', rmToCeil:'To the ceiling', rmToFloor:'Down to the floor',
  rmPanelNote:'A loose panel: it stands on its own, any size (a big side, a filler, a cover). Cut as a part, no holes. A bottom above 0 hangs it at that height.',
  pnS1:'Panel', pnS1l:'A loose panel — only cut, no holes. Where it stands and its height from the floor are set in the Furniture tab (drag it like a cabinet).', pnEdges:'Edges', pnEdgeMat:'Edge material', pnE1:'L1 front', pnE2:'L2 back', pnE3:'W1 bottom', pnE4:'W2 top',
@@ -8041,7 +8273,7 @@ function viewSheet(c, inf) {
   var nParts = inf.r.panels.length;
   var w = inf.warnings.map(function (x) { var lv = level(x); return '<div class="w ' + lv + '"><span class="tag">' + t(lv === 'bad' ? 'errTag' : lv === 'warn' ? 'warnTag' : 'infoTag') + '</span><span>' + esc(wTxt(x)) + '</span></div>'; }).join('');
   var j = c.dishwasher ? '—' : (c.cnc.joinery === 'cam' ? t('jCam') : t('jConf'));
-  return '<aside class="sheet"><div id="assembly-preview"></div><div id="pricecard-wrap">' + priceCard(c, inf) + '</div><details class="technical-preview"' + (S.techOpen ? ' open' : '') + '><summary>' + (S.lang === 'lt' ? 'Brėžinys ir gamybos suvestinė' : 'Drawing & manufacturing summary') + '</summary><div class="paper"><div class="tb"><b>' + (S.sel + 1) + ' · ' + esc(c.name || typeName(c)) + '</b><span>' + fmt(c.dishwasher ? c.dishWidth : c.W) + '×' + fmt(c.H) + '×' + fmt(c.D) + '</span></div>' +
+  return '<aside class="sheet"><div id="assembly-preview"></div><div class="rr-cab"><button type="button" class="btn rm-render" data-act="rrcab" title="' + esc(t('rrCabT')) + '">✦ ' + t('rrBtn') + '</button></div><div id="pricecard-wrap">' + priceCard(c, inf) + '</div><details class="technical-preview"' + (S.techOpen ? ' open' : '') + '><summary>' + (S.lang === 'lt' ? 'Brėžinys ir gamybos suvestinė' : 'Drawing & manufacturing summary') + '</summary><div class="paper"><div class="tb"><b>' + (S.sel + 1) + ' · ' + esc(c.name || typeName(c)) + '</b><span>' + fmt(c.dishwasher ? c.dishWidth : c.W) + '×' + fmt(c.H) + '×' + fmt(c.D) + '</span></div>' +
     '<div class="draw" id="sketch">' + sketchOf(c) + '</div><div class="titleblk"><div>' + t('parts') + '<b>' + nParts + '</b></div><div>' + t('progs') + '<b>' + inf.nProg + '</b></div><div>' + (S.lang === 'lt' ? 'Jungtys' : 'Joinery') + '<b style="font-size:11px">' + esc(j) + '</b></div></div></div></details>' +
     '<details class="preview-warnings"' + (S.warnOpen ? ' open' : '') + '><summary>' + (S.lang === 'lt' ? 'Gamybos patikra' : 'Manufacturing checks') + ' <span>' + inf.warnings.length + '</span></summary><div class="warns" id="warns">' + w + '</div></details>' +
     '<button class="btn pri big go" data-act="tab" data-v="res">' + t('toRes') + '</button><button class="btn big go drwgo" data-act="drwcab">' + t('drwCab') + '</button></aside>';
@@ -8807,6 +9039,12 @@ app.addEventListener('click', function (e) {
     case 'colsel': S.colSel = +v; break;
     case 'lookrot': lookSet(v, function (l) { l.rot = !l.rot; }); return;
     case 'lookpaste': lookPaste(v); return;
+    case 'rrcab': {   // this cabinet alone, standing against one wall, in the realistic picture
+      var rcb = cur(), ri = S._info && S._info[S.sel]; if (!rcb || !ri || !window.DBRender || !RM) return;
+      var lay = S.proj.layout || {}, it0 = lay.items && lay.items[rcb.id], wl = Math.max(2400, RM.cabW(rcb) + 1600);
+      var tp = { name:S.proj.name + '_' + (S.sel + 1), look:S.proj.look, cabinets:[rcb], layout:{ walls:[{ len:wl }], wallZ:num(lay.wallZ) || 1450, roomH:Math.max(num(lay.roomH) || 2600, RM.cabH(rcb) + 600), worktop:lay.worktop !== false, items:{} } };
+      tp.layout.items[rcb.id] = { wall:0, x:(wl - RM.cabW(rcb)) / 2, z:it0 && it0.z != null ? it0.z : null };
+      window.DBRender.open({ proj:tp, infos:[ri], th:0.35, t:t }); return; }
     case 'lookfit': lookSet(v, function (l) { l.fit = l.fit === false; if (!(num(l.mm) > 0)) l.mm = 1000; }); return;
     case 'lookrm': lookSet(v, function (l) { l.tex = ''; l.color = ''; }); return;
     case 'adminset': { var p1 = (document.getElementById('adm-pin') || {}).value || '', p2 = (document.getElementById('adm-pin2') || {}).value || '';
