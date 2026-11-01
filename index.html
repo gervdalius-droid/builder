@@ -3515,12 +3515,14 @@ function build(THREE, PT, items) {
     scene.add(group); group.updateMatrixWorld(true); bb.setFromObject(group);
     /* the room: floor and walls (those between the eye and the furniture are left out, as in the 3-D view) */
     var rb = new THREE.Box3(); G.forEach(function (g) { rb.expandByPoint(V3([g.P[0], g.P[1], 0])); rb.expandByPoint(V3([g.P[0] + g.d[0] * g.len, g.P[1] + g.d[1] * g.len, 0])); }); rb.union(bb);
-    /* the plank floor over the room (and 1.8 m in front of every wall, so an open side is floored too); plain ground outside it, seen through the windows */
-    var fb = rb.clone(); G.forEach(function (g) { [0, g.len].forEach(function (a2) { fb.expandByPoint(V3([g.P[0] + g.d[0] * a2 + g.n[0] * 1800, g.P[1] + g.d[1] * a2 + g.n[1] * 1800, 0])); }); });
-    fb.min.x -= 100; fb.min.z -= 100; fb.max.x += 100; fb.max.z += 100;
+    /* the plank floor: to the horizon (a showroom), or — with a window in the room — over the room and 1.8 m in front of every wall,
+       with plain ground outside it, so the view through the window is not of the room's own floor */
+    var fb = rb.clone(), win = root.DBRoom.opsOf && root.DBRoom.opsOf(L).some(function (op) { return op.type === 'window'; });
+    if (win) { G.forEach(function (g) { [0, g.len].forEach(function (a2) { fb.expandByPoint(V3([g.P[0] + g.d[0] * a2 + g.n[0] * 1800, g.P[1] + g.d[1] * a2 + g.n[1] * 1800, 0])); }); }); fb.min.x -= 100; fb.min.z -= 100; fb.max.x += 100; fb.max.z += 100; }
+    else { var fcx = (fb.min.x + fb.max.x) / 2, fcz = (fb.min.z + fb.max.z) / 2; fb.min.x = fcx - 30000; fb.max.x = fcx + 30000; fb.min.z = fcz - 30000; fb.max.z = fcz + 30000; }
     var fw = fb.max.x - fb.min.x, fd = fb.max.z - fb.min.z, ftx = floorTexture(THREE); ftx.repeat.set(fw / 2400, fd / 2400); ftx.anisotropy = maxAniso;
     var fl = new THREE.Mesh(new THREE.BoxGeometry(fw, 20, fd), new THREE.MeshStandardMaterial({ map:ftx, roughness:0.55 })); fl.position.set((fb.min.x + fb.max.x) / 2, -10, (fb.min.z + fb.max.z) / 2); scene.add(fl);
-    var gr = new THREE.Mesh(new THREE.BoxGeometry(60000, 20, 60000), new THREE.MeshStandardMaterial({ color:0xd6d3cb, roughness:0.95 })); gr.position.set(fl.position.x, -13, fl.position.z); scene.add(gr);
+    if (win) { var gr = new THREE.Mesh(new THREE.BoxGeometry(60000, 20, 60000), new THREE.MeshStandardMaterial({ color:0xd6d3cb, roughness:0.95 })); gr.position.set(fl.position.x, -13, fl.position.z); scene.add(gr); }
     /* walls, 100 mm thick behind their line, with real holes for the doors and windows (daylight comes in through the glass) */
     var wallMat = new THREE.MeshStandardMaterial({ color:0xf1efe9, roughness:0.92 }), RMd = root.DBRoom, opMats = {};
     var glassMat = new THREE.MeshPhysicalMaterial({ color:0xffffff, metalness:0, roughness:0.02, transmission:1, ior:1.5, thickness:6 });
