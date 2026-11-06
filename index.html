@@ -3579,7 +3579,7 @@ function build(THREE, PT, items) {
       var W = function (x, y, z) { return a.clone().addScaledVector(d, x).addScaledVector(n, -y).add(new THREE.Vector3(0, z, 0)); };   // the wall's own coordinates: x along it, y into it from the room side, z up
       var boxW = function (x0, x1, y0, y1, z0, z1, mat) { var m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, z1 - z0, y1 - y0), mat); m.matrix.makeBasis(d, up, zx); m.matrix.setPosition(W((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2)); m.matrixAutoUpdate = false; m.matrixWorldNeedsUpdate = true; grp.add(m); };
       (RMd.wallPieces ? RMd.wallPieces(L, wi, -100, g.len + 100, H) : [[-100, g.len + 100, 0, H]]).forEach(function (pc) { boxW(pc[0], pc[1], 0, 100, pc[2], pc[3], wallMat); });
-      (RMd.opsOf ? RMd.opsOf(L) : []).forEach(function (op) { if (op.wall !== wi) return; RMd.opParts(op, 100).forEach(function (q) { var e = q.e; boxW(e[0], e[1], e[2], e[3], e[4], e[5], opMat(q)); }); });
+      (RMd.opsOf ? RMd.opsOf(L) : []).forEach(function (op) { if (op.wall !== wi) return; RMd.opParts(op, 100, L).forEach(function (q) { var e = q.e; boxW(e[0], e[1], e[2], e[3], e[4], e[5], opMat(q)); }); });
       (RMd.ptsOf ? RMd.ptsOf(L) : []).forEach(function (pt) { if (pt.wall !== wi) return; RMd.ptParts(pt).forEach(function (q) { var e = q.e;   // sockets: plates; pipes: round, out of the wall into the room
         if (q.kind === 'pipe' || q.kind === 'drain') { var rr = (e[1] - e[0]) / 2, len = e[3] - e[2], cy = new THREE.Mesh(new THREE.CylinderGeometry(rr, rr, len, 24), opMat({ kind:q.kind === 'pipe' ? 'metal' : 'sill', color:q.color }));
           cy.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), n); cy.position.copy(W((e[0] + e[1]) / 2, (e[2] + e[3]) / 2, (e[4] + e[5]) / 2)); cy.updateMatrix(); cy.matrixAutoUpdate = false; grp.add(cy); }
@@ -4981,8 +4981,10 @@ var OP_T = ['door', 'gdoor', 'window'], OP_CAS = 70, OP_JAMB = 30;
 var OP_DEF = { door:{ w:880, h:2070, z:0, color:'#b08458' }, gdoor:{ w:880, h:2070, z:0, color:'#f1eee6' }, window:{ w:1200, h:1400, z:900, color:'#f4f4f1' } };
 function opsOf(L) { return L && Array.isArray(L.openings) ? L.openings : []; }
 function isDoor(op) { return op.type !== 'window'; }
-function opRange(op) {   // what it takes on the wall: [a, b] along it, [z0, z1] up — a cabinet there stands in front of it
-  return isDoor(op) ? { a:op.x - OP_CAS, b:op.x + op.w + OP_CAS, z0:0, z1:op.h + OP_CAS } : { a:op.x, b:op.x + op.w, z0:op.z, z1:op.z + op.h }; }
+/* the casing over a door: OP_CAS, or what is left up to the ceiling (none when the door reaches it) */
+function opCasTop(op, L) { if (!isDoor(op)) return 0; var rh = L ? (+L.roomH > 0 ? +L.roomH : 2600) : Infinity; return Math.max(0, Math.min(OP_CAS, rh - op.h)); }
+function opRange(op, L) {   // what it takes on the wall: [a, b] along it, [z0, z1] up — a cabinet there stands in front of it
+  return isDoor(op) ? { a:op.x - OP_CAS, b:op.x + op.w + OP_CAS, z0:0, z1:op.h + opCasTop(op, L) } : { a:op.x, b:op.x + op.w, z0:op.z, z1:op.z + op.h }; }
 function opName(L, op) { var n = 0, k = 0; opsOf(L).forEach(function (o) { if ((o.type === 'window') === (op.type === 'window')) { n++; if (o.id === op.id) k = n; } }); return T(op.type === 'window' ? 'opWinN' : 'opDoorN').replace('{n}', k || n + 1); }
 function newOp(type) { var d = OP_DEF[type] || OP_DEF.door; return { id:'o' + Math.random().toString(36).slice(2, 9), type:OP_DEF[type] ? type : 'door', wall:0, x:0, w:d.w, h:d.h, z:d.z, hinge:'L', swing:'in', color:d.color }; }
 function normOps(L) {   // keeps only sound openings on existing walls, with numbers where numbers belong
@@ -5035,12 +5037,12 @@ function wallPieces(L, wi, a, b, H) {
 }
 /* a door's or a window's parts in the wall's coordinates: x along it, y into the wall from its room side (−y: into the room), z up; t: wall thickness
    → [{ e:[x0, x1, y0, y1, z0, z1], kind:'frame'|'leaf'|'glass'|'sill'|'metal', color }] */
-function opParts(op, t) {
+function opParts(op, t, L) {
   var P = [], col = op.color, add = function (x0, x1, y0, y1, z0, z1, kind, color) { if (x1 - x0 > 0.5 && y1 - y0 > 0.5 && z1 - z0 > 0.5) P.push({ e:[x0, x1, y0, y1, z0, z1], kind:kind, color:color || col }); };
   var x0 = op.x, x1 = op.x + op.w, z0 = isDoor(op) ? 0 : op.z, z1 = z0 + op.h, metal = '#8e918d', glass = '#cfe2ea';
   if (isDoor(op)) {
-    var j = OP_JAMB, c = OP_CAS, frame = op.type === 'gdoor' ? col : col;
-    add(x0 - c, x0, -15, 0, 0, z1 + c, 'frame', frame); add(x1, x1 + c, -15, 0, 0, z1 + c, 'frame', frame); add(x0 - c, x1 + c, -15, 0, z1, z1 + c, 'frame', frame);   // casing on the room side
+    var j = OP_JAMB, c = OP_CAS, ct = opCasTop(op, L), frame = op.type === 'gdoor' ? col : col;
+    add(x0 - c, x0, -15, 0, 0, z1 + ct, 'frame', frame); add(x1, x1 + c, -15, 0, 0, z1 + ct, 'frame', frame); add(x0 - c, x1 + c, -15, 0, z1, z1 + ct, 'frame', frame);   // casing on the room side (none over a door up to the ceiling)
     add(x0, x0 + j, 0, t, 0, z1, 'frame', frame); add(x1 - j, x1, 0, t, 0, z1, 'frame', frame); add(x0 + j, x1 - j, 0, t, z1 - j, z1, 'frame', frame);   // lining in the hole
     var lx0 = x0 + j + 2, lx1 = x1 - j - 2, lz0 = 8, lz1 = z1 - j - 2, ly0 = 4, ly1 = Math.max(ly0 + 20, Math.min(t - 4, 44));
     if (op.type === 'gdoor') {   // a leaf with a tall glass panel
@@ -5100,7 +5102,7 @@ function snapCands(proj, c, wi) {
   if (ci) out.push([ci + sw.L, 'corner']); if (co) out.push([len - co - w - sw.R, 'corner']);
   neighbours(proj, c, wi).forEach(function (o) { out.push([fx0(o.c, o.it.x) - w - sw.R, 'nb']); out.push([fx1(o.c, o.it.x) + sw.L, 'nb']); });
   var vr = vRange(c, L.items[c.id] || {}, L);
-  opsOf(L).forEach(function (op) { if (op.wall !== wi) return; var r = opRange(op); if (!vOverlap(vr, [r.z0, r.z1])) return; out.push([r.a - w - sw.R, 'op']); out.push([r.b + sw.L, 'op']); });   // beside a door or a window
+  opsOf(L).forEach(function (op) { if (op.wall !== wi) return; var r = opRange(op, L); if (!vOverlap(vr, [r.z0, r.z1])) return; out.push([r.a - w - sw.R, 'op']); out.push([r.b + sw.L, 'op']); });   // beside a door or a window
   return out;
 }
 function snap(proj, c, wi, x, thr) {
@@ -5154,11 +5156,11 @@ function problems(proj) {
   /* doors and windows: past the wall end or the ceiling, into each other, a cabinet in front of one or in a door's way */
   var OPS = opsOf(L), badOp = {};
   OPS.forEach(function (op, k) {
-    var g = G[op.wall]; if (!g) return; var r = opRange(op), q = function (a2, b2) { return [g.P[0] + g.d[0] * a2 + g.n[0] * b2, g.P[1] + g.d[1] * a2 + g.n[1] * b2]; };
+    var g = G[op.wall]; if (!g) return; var r = opRange(op, L), q = function (a2, b2) { return [g.P[0] + g.d[0] * a2 + g.n[0] * b2, g.P[1] + g.d[1] * a2 + g.n[1] * b2]; };
     var rect = function (a2, b2, d0, d1) { var pts = [q(a2, d0), q(b2, d0), q(b2, d1), q(a2, d1)], xs = pts.map(function (v) { return v[0]; }), ys = pts.map(function (v) { return v[1]; }); return { x0:Math.min.apply(null, xs), x1:Math.max.apply(null, xs), y0:Math.min.apply(null, ys), y1:Math.max.apply(null, ys) }; };
     if (r.a < -0.5 || r.b > g.len + 0.5) { out.push({ kind:'opout', op:op.id }); badOp[op.id] = 1; }
-    if (r.z1 > roomH + 0.5) { out.push({ kind:'opceil', op:op.id }); badOp[op.id] = 1; }
-    for (var j = k + 1; j < OPS.length; j++) { var o2 = OPS[j], r2 = opRange(o2); if (o2.wall === op.wall && Math.min(r.b, r2.b) - Math.max(r.a, r2.a) > 1 && vOverlap([r.z0, r.z1], [r2.z0, r2.z1])) { out.push({ kind:'ophit', op:op.id, op2:o2.id }); badOp[op.id] = badOp[o2.id] = 1; } }
+    if ((isDoor(op) ? op.h : op.z + op.h) > roomH + 0.5) { out.push({ kind:'opceil', op:op.id }); badOp[op.id] = 1; }
+    for (var j = k + 1; j < OPS.length; j++) { var o2 = OPS[j], r2 = opRange(o2, L); if (o2.wall === op.wall && Math.min(r.b, r2.b) - Math.max(r.a, r2.a) > 1 && vOverlap([r.z0, r.z1], [r2.z0, r2.z1])) { out.push({ kind:'ophit', op:op.id, op2:o2.id }); badOp[op.id] = badOp[o2.id] = 1; } }
     var strip = rect(r.a, r.b, 0, 40), lw = op.w - 2 * OP_JAMB, sweep = isDoor(op) && op.swing !== 'out' ? rect(op.x + OP_JAMB, op.x + op.w - OP_JAMB, 0, lw) : null;   // just in front of it; the floor a door sweeps
     ps.forEach(function (a) { var ra = planRect(a.c, a.it, G), va = vRange(a.c, a.it, L), wa = wtRect(a.c, a.it, G, L), sa = sideRects(a.c, a.it, G, L), top = Math.max(va[1], wa ? wa.v[1] : -1);
       var inFront = (cross(ra, strip) && vOverlap([va[0], top], [r.z0, r.z1])) || sa.some(function (s2) { return cross(s2, strip) && vOverlap(s2.v, [r.z0, r.z1]); });
@@ -5171,7 +5173,7 @@ function problems(proj) {
   ptsOf(L).forEach(function (pt) {
     var g = G[pt.wall]; if (!g) return; var bx = ptBox(pt), zr = [bx.z0, bx.z1];
     if (bx.a < -0.5 || bx.b > g.len + 0.5 || bx.z0 < -0.5 || bx.z1 > roomH + 0.5) { out.push({ kind:'ptout', pt:pt.id }); badPt[pt.id] = 1; return; }
-    OPS.forEach(function (op) { var r = opRange(op); if (op.wall === pt.wall && Math.min(r.b, bx.b) - Math.max(r.a, bx.a) > 0 && vOverlap([r.z0, r.z1], zr)) { out.push({ kind:'pthit', pt:pt.id, op:op.id }); badPt[pt.id] = 1; } });
+    OPS.forEach(function (op) { var r = opRange(op, L); if (op.wall === pt.wall && Math.min(r.b, bx.b) - Math.max(r.a, bx.a) > 0 && vOverlap([r.z0, r.z1], zr)) { out.push({ kind:'pthit', pt:pt.id, op:op.id }); badPt[pt.id] = 1; } });
     ps.forEach(function (a) {
       if (a.it.wall !== pt.wall || a.c.dishwasher || a.c.kind === 'box') return;
       var c = a.c, x0 = a.it.x, w = cabW(c), t = +c.thick || 18, va = vRange(c, a.it, L), wa = wtRect(c, a.it, G, L);
@@ -5340,7 +5342,7 @@ function rszSnap(proj, c, wall, axis, v, thr) {
     if (axis === 'z') { var z0 = z0Of(o.c, o.it, L), z1 = z0 + cabH(o.c), wt = wtOf(o.c); cand.push([z1, nm], [z0, nm]); if (wt && L.worktop && level(o.c) !== 'wall') cand.push([z1 + wt.T, T('rszWt')]); }
     else cand.push([o.it.x, nm], [o.it.x + cabW(o.c), nm]); });
   opsOf(L).forEach(function (op) { if (op.wall !== wall) return; var nm = opName(L, op);
-    if (axis === 'z') cand.push([op.z + op.h, nm], [op.z + op.h + OP_CAS, nm + ' · ' + T('rszCas')]); else cand.push([op.x, nm], [op.x + op.w, nm], [op.x - OP_CAS, nm + ' · ' + T('rszCas')], [op.x + op.w + OP_CAS, nm + ' · ' + T('rszCas')]); });
+    if (axis === 'z') cand.push([op.z + op.h, nm]); if (opCasTop(op, L) > 0.5) cand.push([op.z + op.h + opCasTop(op, L), nm + ' · ' + T('rszCas')]); else cand.push([op.x, nm], [op.x + op.w, nm], [op.x - OP_CAS, nm + ' · ' + T('rszCas')], [op.x + op.w + OP_CAS, nm + ' · ' + T('rszCas')]); });
   if (axis === 'z') { cand.push([+L.roomH > 0 ? +L.roomH : 2600, T('rszCeil')]); if (+L.wallZ > 0) cand.push([+L.wallZ, T('rszWallZ')]); }
   else if (G[wall]) cand.push([0, T('rmSnap_wall')], [G[wall].len, T('rmSnap_wall')]);
   cand.forEach(function (q) { var d = Math.abs(q[0] - v); if (d <= thr && (!best || d < best.d)) best = { v:q[0], why:q[1], d:d }; });
@@ -5554,7 +5556,7 @@ function faces3d() {
     var tr = function (p) { return [a[0] + g.d[0] * p[0] - g.n[0] * p[1], a[1] + g.d[1] * p[0] - g.n[1] * p[1], p[2]]; };
     wallPieces(L, wi, 0, g.len, H).forEach(function (pc) { box(tr, pc[0], pc[1], 0, t, pc[2], pc[3], '#f7f5ef', {}); });   // the wall round its doors and windows
     opsOf(L).forEach(function (op, k) { if (op.wall !== wi) return;
-      opParts(op, t).forEach(function (q) { var e = q.e; box(tr, e[0], e[1], e[2], e[3], e[4], e[5], q.color, { op:k, alpha:q.kind === 'glass' ? 0.38 : 0, metal:q.kind === 'metal' }); }); });
+      opParts(op, t, L).forEach(function (q) { var e = q.e; box(tr, e[0], e[1], e[2], e[3], e[4], e[5], q.color, { op:k, alpha:q.kind === 'glass' ? 0.38 : 0, metal:q.kind === 'metal' }); }); });
     ptsOf(L).forEach(function (pt, k) { if (pt.wall !== wi) return; ptParts(pt).forEach(function (q) { var e = q.e; box(tr, e[0], e[1], e[2], e[3], e[4], e[5], q.color, { pt:k, metal:q.kind === 'pipe' }); }); });
   });
   items3d(proj, C.o.infos).forEach(function (q) { box(q.tr, q.e[0], q.e[1], q.e[2], q.e[3], q.e[4], q.e[5], q.color, q.o); });
@@ -5631,7 +5633,7 @@ function render3d(st) {
   opsOf(L).forEach(function (op) {
     var g = G[op.wall]; if (!g || !(op.id === V.osel || (prob.badOp && prob.badOp[op.id]))) return;
     if (r3dot([g.n[0], -g.n[1], 0], sc.depthDir) > -0.05) return;   // its wall is left out of this view
-    var r = opRange(op), pts = []; [r.a, r.b].forEach(function (x) { [-20, 60].forEach(function (y) { [isDoor(op) ? 0 : op.z - 25, r.z1].forEach(function (z) { pts.push(P3(g.P[0] + g.d[0] * x - g.n[0] * y, g.P[1] + g.d[1] * x - g.n[1] * y, z)); }); }); });
+    var r = opRange(op, C.o.proj.layout), pts = []; [r.a, r.b].forEach(function (x) { [-20, 60].forEach(function (y) { [isDoor(op) ? 0 : op.z - 25, r.z1].forEach(function (z) { pts.push(P3(g.P[0] + g.d[0] * x - g.n[0] * y, g.P[1] + g.d[1] * x - g.n[1] * y, z)); }); }); });
     s += '<polygon class="rm3-sel' + (op.id === V.osel ? '' : ' bad') + '" points="' + r3hull(pts).map(function (q) { return q[0].toFixed(1) + ',' + q[1].toFixed(1); }).join(' ') + '"/>';
   });
   ptsOf(L).forEach(function (pt) {
@@ -5687,7 +5689,7 @@ function frontOp(op, prob, mode) {   // mode: 'act' (being moved) or 'ghost' (be
   var glass = function (gx0, gx1, gz0, gz1) { return R(gx0, gx1, gz0, gz1, 'rm-opglass') + ((gx1 - gx0) * k > 14 ? '<line class="rm-opglare" x1="' + f1(X(gx0 + (gx1 - gx0) * 0.2)) + '" y1="' + f1(fY(gz0 + (gz1 - gz0) * 0.42)) + '" x2="' + f1(X(gx0 + (gx1 - gx0) * 0.55)) + '" y2="' + f1(fY(gz0 + (gz1 - gz0) * 0.7)) + '"/>' : ''); };
   if (isDoor(op)) {
     var lx0 = x0 + OP_JAMB, lx1 = x1 - OP_JAMB, lz1 = z1 - OP_JAMB;
-    s += R(x0 - OP_CAS, x1 + OP_CAS, 0, z1 + OP_CAS, 'rm-opfr', op.color) + R(lx0, lx1, 0, lz1, 'rm-opleaf', op.color);
+    s += R(x0 - OP_CAS, x1 + OP_CAS, 0, z1 + opCasTop(op, L), 'rm-opfr', op.color) + R(lx0, lx1, 0, lz1, 'rm-opleaf', op.color);
     if (op.type === 'gdoor') { var m = Math.max(90, Math.min(140, (lx1 - lx0) * 0.18)); s += glass(lx0 + m, lx1 - m, Math.min(300, lz1 * 0.15), lz1 - Math.min(260, lz1 * 0.13)); }
     var hx = op.hinge === 'R' ? lx1 : lx0, ox = op.hinge === 'R' ? lx0 : lx1;   // the opening sign: from the handle side's corners to the hinges
     s += '<path class="rm-opsym" d="M' + f1(X(ox)) + ',' + f1(fY(0)) + ' L' + f1(X(hx)) + ',' + f1(fY(lz1 / 2)) + ' L' + f1(X(ox)) + ',' + f1(fY(lz1)) + '"/>';
@@ -5722,9 +5724,9 @@ function planOp(op, prob, mode) {
 }
 /* where an opening snaps on wall wi: the wall ends, its middle, beside a cabinet at its height, beside another opening */
 function opSnapCands(proj, op, wi) {
-  var L = proj.layout, g = geo(L)[wi], r = opRange(Object.assign({}, op, { x:0 })), out = [[-r.a, 'wall'], [g.len - r.b, 'wall'], [(g.len - op.w) / 2, 'mid']];
+  var L = proj.layout, g = geo(L)[wi], r = opRange(Object.assign({}, op, { x:0 }), L), out = [[-r.a, 'wall'], [g.len - r.b, 'wall'], [(g.len - op.w) / 2, 'mid']];
   placed(proj).forEach(function (o) { if (o.it.wall !== wi || !vOverlap(vRange(o.c, o.it, L), [r.z0, r.z1])) return; out.push([fx0(o.c, o.it.x) - r.b, 'nb']); out.push([fx1(o.c, o.it.x) - r.a, 'nb']); });
-  opsOf(L).forEach(function (o2) { if (o2.id === op.id || o2.wall !== wi) return; var r2 = opRange(o2); out.push([r2.a - r.b, 'op']); out.push([r2.b - r.a, 'op']); });
+  opsOf(L).forEach(function (o2) { if (o2.id === op.id || o2.wall !== wi) return; var r2 = opRange(o2, L); out.push([r2.a - r.b, 'op']); out.push([r2.b - r.a, 'op']); });
   return out;
 }
 function opSnap(proj, op, wi, x, thr) {
@@ -5739,11 +5741,11 @@ function probsWithOp(proj, op) {   // the problems as they would be with op wher
 /* a free place for a new opening: the wall shown first, the middle of its longest free stretch at the opening's height */
 function autoSpotOp(proj, op) {
   var L = proj.layout, G = geo(L), order = []; if (V.view === 'front' && V.wall >= 0 && V.wall < G.length) order.push(V.wall); G.forEach(function (g, i) { if (order.indexOf(i) < 0) order.push(i); });
-  var r = opRange(Object.assign({}, op, { x:0 })), need = r.b - r.a;
+  var r = opRange(Object.assign({}, op, { x:0 }), L), need = r.b - r.a;
   for (var k = 0; k < order.length; k++) {
     var wi = order[k], len = G[wi].len, taken = [];
     placed(proj).forEach(function (o) { if (o.it.wall === wi && vOverlap(vRange(o.c, o.it, L), [r.z0, r.z1])) taken.push([fx0(o.c, o.it.x), fx1(o.c, o.it.x)]); });
-    opsOf(L).forEach(function (o2) { if (o2.wall === wi) { var r2 = opRange(o2); taken.push([r2.a, r2.b]); } });
+    opsOf(L).forEach(function (o2) { if (o2.wall === wi) { var r2 = opRange(o2, L); taken.push([r2.a, r2.b]); } });
     taken.sort(function (p2, q2) { return p2[0] - q2[0]; }); var free = [], at = 0;
     taken.forEach(function (t2) { if (t2[0] > at) free.push([at, t2[0]]); at = Math.max(at, t2[1]); }); if (len > at) free.push([at, len]);
     var best = null; free.forEach(function (f2) { if (f2[1] - f2[0] >= need && (!best || f2[1] - f2[0] > best[1] - best[0])) best = f2; });
@@ -6419,7 +6421,7 @@ function attach(el, o) {
 
 var api = { attach:attach, ensure:ensure, problems:problems, geo:geo, items3d:items3d, snap:snap, gapAround:gapAround, autoSpot:autoSpot, cabW:cabW, cabD:cabD, cabH:cabH, legH:legH, z0Of:z0Of, wtOf:wtOf, placed:placed, level:level, view:V,
             sideP:sideP, sideW:sideW, sideRects:sideRects, addSide:addSide, sideFit:sideFit, refit:refit, makeRoom:makeRoom, _state:function () { return { C:C, D:D }; },
-            opsOf:opsOf, opRange:opRange, wallPieces:wallPieces, opParts:opParts, isDoor:isDoor, normOps:normOps, OP_CAS:OP_CAS, OP_JAMB:OP_JAMB,
+            opsOf:opsOf, opRange:opRange, wallPieces:wallPieces, opParts:opParts, opCasTop:opCasTop, isDoor:isDoor, normOps:normOps, OP_CAS:OP_CAS, OP_JAMB:OP_JAMB,
             ptsOf:ptsOf, ptParts:ptParts, ptBox:ptBox, normPts:normPts, PT_DEF:PT_DEF };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.DBRoom = api;
 })(typeof window !== 'undefined' ? window : this);
@@ -7310,7 +7312,7 @@ function sheetWall(proj, infos, RM, wi, meta) {
   OPS.forEach(function (op) {   // a door with its casing, leaf and opening sign; a window with its frame, sashes and sill
     var R2 = function (a0, a1, z0, z1, o) { var p0 = P(a0, z1), p1 = P(a1, z0); return rect(p0[0], p0[1], p1[0] - p0[0], p1[1] - p0[1], o); }, x0 = op.x, x1 = op.x + op.w;
     if (RM.isDoor(op)) { var J = RM.OP_JAMB || 30, C2 = RM.OP_CAS || 70, lz = op.h - J, hx = op.hinge === 'R' ? x1 - J : x0 + J, ox = op.hinge === 'R' ? x0 + J : x1 - J;
-      svg += R2(x0 - C2, x1 + C2, 0, op.h + C2, { w:0.2, fill:'#ffffff', stroke:COL.thin }) + R2(x0 + J, x1 - J, 0, lz, { w:0.25, fill:'#f6f4ef' });
+      svg += R2(x0 - C2, x1 + C2, 0, op.h + (RM.opCasTop ? RM.opCasTop(op, Lo) : C2), { w:0.2, fill:'#ffffff', stroke:COL.thin }) + R2(x0 + J, x1 - J, 0, lz, { w:0.25, fill:'#f6f4ef' });
       if (op.type === 'gdoor') { var gm = Math.max(90, Math.min(140, (op.w - 2 * J) * 0.18)); svg += R2(x0 + J + gm, x1 - J - gm, Math.min(300, lz * 0.15), lz - Math.min(260, lz * 0.13), { w:0.2, fill:'#e6eff3', stroke:COL.dim }); }
       svg += line(P(ox, 0), P(hx, lz / 2), 0.15, COL.thin, '1.2 0.8') + line(P(hx, lz / 2), P(ox, lz), 0.15, COL.thin, '1.2 0.8');
     } else { var f = 65, z0 = op.z, z1 = op.z + op.h;
@@ -7332,7 +7334,7 @@ function sheetWall(proj, infos, RM, wi, meta) {
     var lg = P(0, 0); svg += txt(lg[0], lg[1] + 31, L.ptLegend, 2, { fill:'#55605a' });
   }
   OPS.forEach(function (op) {   // where it is and how big: from the wall start to it and its width over it, the sill height and its own height beside it
-    var top = RM.isDoor(op) ? op.h + (RM.OP_CAS || 70) : op.z + op.h, z0 = RM.isDoor(op) ? 0 : op.z;
+    var top = RM.isDoor(op) ? op.h + (RM.opCasTop ? RM.opCasTop(op, Lo) : (RM.OP_CAS || 70)) : op.z + op.h, z0 = RM.isDoor(op) ? 0 : op.z;
     svg += dimChain([0, op.x, op.x + op.w].map(function (v) { var q = P(v, top); return [q[0], q[1], v]; }), [0, -1], 3.5, { size:2.1 });
     svg += dim(P(op.x + op.w, z0), P(op.x + op.w, z0 + op.h), [1, 0], 3, nm(op.h), { size:2.1 });
     if (!RM.isDoor(op)) svg += dim(P(op.x, 0), P(op.x, op.z), [-1, 0], 3, nm(op.z), { size:2.1 });

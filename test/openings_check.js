@@ -32,7 +32,9 @@ const kinds = pr => pr.list.map(p => p.kind).sort().join(',');
   pr = RM.problems(p); if (kinds(pr) !== 'opblock') B('DOOR BLOCK ' + kinds(pr));
   p.layout.openings[0].x = 1600 + 70; pr = RM.problems(p); if (pr.list.length) B('DOOR BESIDE ' + kinds(pr));
   p.layout.openings[0].x = 3000 - 880 - 70 + 10; pr = RM.problems(p); if (kinds(pr) !== 'opout') B('DOOR OUT ' + kinds(pr));
-  p.layout.openings[0].x = 1800; p.layout.openings[0].h = 2600; pr = RM.problems(p); if (kinds(pr) !== 'opceil') B('DOOR CEIL ' + kinds(pr));
+  p.layout.openings[0].x = 1800; p.layout.openings[0].h = 2600; pr = RM.problems(p); if (pr.list.length) B('DOOR TO CEIL ' + kinds(pr));   // up to the ceiling: no casing over it, fine
+  if (RM.opParts(p.layout.openings[0], 100, p.layout).some(function (q) { return q.e[5] > 2600.5; })) B('DOOR CASING OVER CEIL');
+  p.layout.openings[0].h = 2650; pr = RM.problems(p); if (kinds(pr) !== 'opceil') B('DOOR CEIL ' + kinds(pr));
   p.layout.openings = [{ id:'a', type:'door', wall:0, x:1700, w:800, h:2000, z:0, hinge:'L', swing:'out', color:'#ffffff' }, { id:'b', type:'window', wall:0, x:2400, w:500, h:600, z:1200, hinge:'L', swing:'in', color:'#ffffff' }];
   pr = RM.problems(p); if (kinds(pr) !== 'ophit') B('OP HIT ' + kinds(pr));
   /* a door near the corner opening into the room: a cabinet on the next wall in its sweep */
