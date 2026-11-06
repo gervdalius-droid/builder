@@ -633,6 +633,15 @@ button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(
 .stepnav .sdot{width:8px;height:8px;border-radius:50%;background:var(--bad);display:inline-block}
 .stepnav button.need .sn{border-color:var(--bad);color:var(--bad)}
 .stepnav button.on.need .sn{color:var(--panel)}
+.stepnav{flex-wrap:wrap;overflow:visible}.stepnav button{padding:6px 8px}
+.card.step.off{display:none}
+.stepfoot{display:flex;justify-content:space-between;gap:10px;align-items:center}.stepfoot .btn{min-height:42px}
+.cabbar{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.cabbar .f{flex:1;min-width:180px}.cabact{display:flex;gap:6px;flex-wrap:wrap}
+.bgrp{padding:14px 0;border-top:1px solid var(--line)}.bgrp:first-child{border-top:0;padding-top:4px}.bgt{font-weight:600;margin-bottom:8px}
+.editor p.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;position:relative}
+.editor p.clamp.open{display:block;-webkit-line-clamp:unset}
+.editor p.clamp:not(.open)::after{content:'';position:absolute;right:0;bottom:0;width:90px;height:1.4em;background:linear-gradient(90deg,transparent,var(--panel) 70%)}
 @media (max-width:720px){ .stepnav{top:0} .stepnav .sl{display:none} .stepnav button.on .sl{display:inline} }
 .card.step{scroll-margin-top:130px}
 
@@ -998,7 +1007,7 @@ button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(
 <style>:root{--bg:#f2f3f5;--accent:#315c50;--accent-soft:#e8f0ec;--accent-ink:#fff;--r:12px;--f-display:"IBM Plex Sans",system-ui,sans-serif}
 .wrap{max-width:1840px}.top .wrap{padding-block:12px}.brand h1{font-size:19px;letter-spacing:-.6px}.logo{background:#315c50;border-radius:10px}.brand .sub{font-size:11px;margin-top:4px}.card{box-shadow:0 2px 6px #15251d03;padding:20px}.step h3{font-size:18px;letter-spacing:-.4px}.step .no{font-size:19px;color:var(--accent);background:var(--accent-soft);border-radius:8px;padding:6px 0;align-self:start}.step{gap:12px;grid-template-columns:30px minmax(0,1fr)}.step .lead{line-height:1.55;margin-top:5px}.btn{border-radius:8px;min-height:36px}.f input,.f select{min-height:39px;background:var(--sunk)}.cab{padding:13px 10px;border-radius:10px}.cab.on{background:var(--accent-soft)}.stepnav{border-radius:10px}.stepnav .sl{font-size:11px}.sheet{gap:10px}.technical-preview,.preview-warnings{border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}summary{cursor:pointer;padding:12px 16px;font-weight:600;font-size:12px}summary span{float:right;background:var(--sunk);border-radius:6px;padding:0 6px}.technical-preview .paper{border:0;border-top:1px solid var(--line);border-radius:0}.preview-warnings .warns{padding:0 12px 12px;max-height:240px;overflow:auto}
 @media (max-width:820px){.step{grid-template-columns:minmax(0,1fr)}.step .no{display:none}}   /* phones: the step number is hidden, the body takes the full width */
-@media(min-width:1250px){.ws{grid-template-columns:176px minmax(420px,.9fr) minmax(450px,1.2fr);gap:16px}.constr{grid-template-columns:1fr}.xsec{justify-self:start}.sheet{top:88px}.rail{top:88px}.stepnav{top:82px}.choices{grid-template-columns:1fr}.projname{flex-basis:180px}}
+@media(min-width:1250px){.sheet{max-height:calc(100vh - 100px);overflow:auto;overscroll-behavior:contain}.ws{grid-template-columns:176px minmax(420px,.9fr) minmax(450px,1.2fr);gap:16px}.constr{grid-template-columns:1fr}.xsec{justify-self:start}.sheet{top:88px}.rail{top:88px}.stepnav{top:82px}.choices{grid-template-columns:1fr}.projname{flex-basis:180px}}
 .av{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 8px 28px #15251d09}.av-head{padding:16px 18px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px}.av-head b{font-size:16px;letter-spacing:-.4px}.av-head small{display:block;color:var(--muted);font:11px var(--f-mono);margin-top:4px}.av-live{font-size:10px;color:var(--accent);background:var(--accent-soft);padding:5px 8px;border-radius:20px;white-space:nowrap}.av-tools{display:flex;gap:5px;padding:0 18px 12px;flex-wrap:wrap}.av button{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:7px 10px;font-size:12px;cursor:pointer;min-height:34px}.av button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}.av-stage{position:relative;height:clamp(330px,48vh,560px);background:radial-gradient(ellipse at 48% 30%,#fff,#eef0ee 85%);overflow:hidden}.av-stage canvas{width:100%;height:100%;touch-action:none;display:block;cursor:grab}.av-stage canvas:active{cursor:grabbing}.av-hint{position:absolute;bottom:12px;left:0;right:0;text-align:center;font-size:10px;color:#78837d;pointer-events:none}.av-camera{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:5px}.av-camera button{background:#ffffffeb;color:#34463d;border-color:#dce1dd;font-size:15px;width:34px;padding:4px}.av-footer{padding:14px 18px;display:grid;gap:12px}.av-range{display:grid;grid-template-columns:95px minmax(0,1fr) 38px;gap:10px;align-items:center;font-size:12px}.av-range input{width:100%;accent-color:var(--accent)}.av-range output{text-align:right;font:11px var(--f-mono)}.av-settings{display:flex;align-items:center;gap:15px;flex-wrap:wrap;font-size:12px}.av-settings label{display:flex;gap:5px;align-items:center}.av-settings input{accent-color:var(--accent)}.av-note{font-size:10px;color:var(--muted);line-height:1.45;border-top:1px solid var(--line);padding-top:10px}.av.full{position:fixed;inset:16px;z-index:999;display:flex;flex-direction:column;box-shadow:0 0 0 30px #13221bcc}
 .sheet:has(.av.full){z-index:3000}.sheet>*{flex-shrink:0}.av.full .av-stage{flex:1;height:auto}.av.full .av-footer{max-width:800px;width:100%;margin:auto}.av.full .av-head{padding:16px 24px}.av.full .av-tools{padding-left:24px}
 @media(max-width:1249px) and (min-width:901px){.ws{grid-template-columns:155px minmax(0,1fr)}.sheet{grid-column:2;grid-row:1;position:static}.editor{grid-column:2;grid-row:2}.rail{grid-row:1 / span 2}.av-stage{height:420px}}
@@ -8105,7 +8114,7 @@ lt:{
  project:'Projektas', projPh:'PROJEKTO_KODAS',
  tCab:'Spintelės', tRes:'Detalės ir CNC', tDrw:'Brėžiniai', drwTitle:'Brėžiniai', drwLead:'Sudaromi automatiškai iš detalių: baldų išdėstymas ir sienų vaizdai (kai spintelės sudėliotos Baldų skirtuke), kiekvienai spintelei — vaizdai su matmenimis ir surinkimo schema su detalių ir furnitūros sąrašu.', drwShow:'Rodyti', drwAll:'Visi lapai', drwFurn:'Tik baldų išdėstymas', drwPaper:'Popierius', drwPdf:'⤓ Atsisiųsti PDF ({n} lap.)', drwOne:'⤓ PDF', drwView:'Peržiūrėti', drwBuilding:'Ruošiamas PDF… {i} / {n}', drwDone:'PDF paruoštas', drwFail:'Nepavyko sudaryti PDF: ', drwNone:'Nėra ką braižyti — pridėkite spintelę.', drwCab:'📐 Brėžiniai', drwZip:'PDF su visais brėžiniais įdedamas ir į „Viskas ZIP“.', drwClose:'Uždaryti', drwPrev:'‹ Ankstesnis', drwNext:'Kitas ›', drwSheets:'lapai', tSet:'Nustatymai', projects:'Projektai',
  cabs:'Spintelės', newCab:'＋ Nauja spintelė', dup:'Kopijuoti', del:'Ištrinti', delSure:'Tikrai ištrinti?',
- libT:'Biblioteka', libQ:'Ieškoti: pavadinimas, matmenys (600x720), medžiaga…', libCats:'Katalogai', libAll:'Visi', libNewCat:'Naujas katalogas', libAddT:'Pridėti šią spintelę į projektą (kopija)', libMove:'Perkelti į katalogą', libNone:'Nieko nerasta — pakeiskite paiešką ar katalogą.', libEmpty:'Biblioteka tuščia. Spintelės redaktoriuje paspauskite „☆ Į biblioteką“ — spintelė bus čia visuose projektuose.', libNewT:'Nauja iš šablono', libSave:'Į biblioteką', libSaveT:'Išsaugoti šią spintelę bibliotekoje — ją galėsite pridėti bet kuriame projekte. Vėlesni pakeitimai atnaujins bibliotekos kopiją.', libLinked:'Bibliotekoje', libLinkedT:'Ši spintelė yra bibliotekoje ir jos pakeitimai ten atnaujinami. Spustelėkite — atsieti (bibliotekos kopija liks tokia, kokia yra).', libSaved:'Išsaugota bibliotekoje: {n} ({c})', libUnlinked:'Atsieta — bibliotekos kopija daugiau nekeičiama', libAdded:'Pridėta iš bibliotekos: {n}', pickTitle:'Kokią spintelę kuriame?', pickLead:'Pasirinkite panašiausią — viską galėsite pakeisti.', cancel:'Atšaukti',
+ sB:'Konstrukcija', sBl:'Kaip surenkama dėžė: atramos, dugnas, viršus, šonai, nugara, jungtys.', nB:'Konstrukcija', bgBase:'Atramos ir dugnas', stepNext:'Toliau', stepBack:'Atgal', libT:'Biblioteka', libQ:'Ieškoti: pavadinimas, matmenys (600x720), medžiaga…', libCats:'Katalogai', libAll:'Visi', libNewCat:'Naujas katalogas', libAddT:'Pridėti šią spintelę į projektą (kopija)', libMove:'Perkelti į katalogą', libNone:'Nieko nerasta — pakeiskite paiešką ar katalogą.', libEmpty:'Biblioteka tuščia. Spintelės redaktoriuje paspauskite „☆ Į biblioteką“ — spintelė bus čia visuose projektuose.', libNewT:'Nauja iš šablono', libSave:'Į biblioteką', libSaveT:'Išsaugoti šią spintelę bibliotekoje — ją galėsite pridėti bet kuriame projekte. Vėlesni pakeitimai atnaujins bibliotekos kopiją.', libLinked:'Bibliotekoje', libLinkedT:'Ši spintelė yra bibliotekoje ir jos pakeitimai ten atnaujinami. Spustelėkite — atsieti (bibliotekos kopija liks tokia, kokia yra).', libSaved:'Išsaugota bibliotekoje: {n} ({c})', libUnlinked:'Atsieta — bibliotekos kopija daugiau nekeičiama', libAdded:'Pridėta iš bibliotekos: {n}', pickTitle:'Kokią spintelę kuriame?', pickLead:'Pasirinkite panašiausią — viską galėsite pakeisti.', cancel:'Atšaukti',
  pDrawers:'Stalčių spintelė', pDoors:'Durų spintelė', pDrDoors:'Stalčius + durys', pWall:'Pakabinama', pTall:'Aukšta su orkaite', pFridge:'Šaldytuvo spinta', kFridge:'Šaldytuvas', fridgeHinge:'Vyriai', fridgeHandle:'Rankena — {s}',
  ledAddL:'Pridėti LED:', ledT:'LED apšvietimas', ledL2:'įleidžiamo profilio griovelis 16 × 8, frezuojamas CNC', ledAt:'Kur', ledBottom:'Dugne', ledTop:'Viršuje', ledL:'Kairiame šone', ledR:'Dešiniame šone', ledSide:'Pusė', ledIn:'Viduje', ledOut:'Išorėje', ledFrom:'Nuo priekio', ledEnds:'Galai', ledOpen:'Kiaurai', ledClosed:'Uždari', ledNone:'LED nėra. Pridėkite čia arba Baldų skirtuke nutempkite „LED juostą“ ant spintelės.', ledNote:'Frezuojama kaip step2xxl: freza T=96 Ø15.5, įleidimas nuožulniai per 30 mm, paliekama ≥ 2 mm. „Kiaurai“ — griovelis per visą detalę (profilis įstumiamas, laidas išeina gale). Pakabinamos dugne „Išorėje“ — šviečia žemyn ant stalviršio.', ledChip:'LED juosta', ledChipS:'griovelis 16×8', ledAddT:'Nutempkite ant spintelės — prie jos apačios, viršaus ar šono', ledAdded:'LED pridėtas: {w}', ledMiss:'Paleiskite ant spintelės (vaizdas iš priekio)', rmLeds:'LED', visT:'Matomi šonai (iš fasado medžiagos)', sideFull:'Šonai per visą aukštį (dengia viršų ir dugną)', topMount:'Viršus', topOn:'Ant šonų', topInside:'Tarp šonų', visL:'Kairys', visR:'Dešinys', visB:'Apačia', visNote:'Pažymėtas šonas pjaunamas iš fasado medžiagos ir aplijuojamas fasado briauna; kiti lieka karkaso medžiagos. Baldų skirtuke — mygtukas, kuris pažymi laisvus šonus pagal išdėstymą.', fridgeSec:'Integruojamas šaldytuvas', fridgeN:'Fasadai', fridge1:'1 — vien šaldytuvas', fridge2:'2 — šaldytuvas ir šaldiklis',
  fridgeNiche:'Niša ≈ {h} × {w} mm', fridgeNote:'Fasadai tvirtinami prie šaldytuvo durų — be lankstų. Sekcijos aukštis = nišos aukštis + 2 plokštės (dugnas / lentyna); patikrinkite šaldytuvo instrukcijoje nurodytą nišą (dažniausiai 1772–1780 mm aukščio, ≥ 550 mm gylio). Nišos lentyna gale trumpesnė {v} mm — orui; cokolyje palikite groteles.', pDish:'Indaplovės fasadas', pEmpty:'Tuščia (lentynos)', pBox:'3D konstrukcija',
@@ -8253,7 +8262,7 @@ en:{
  project:'Project', projPh:'PROJECT_CODE',
  tCab:'Cabinets', tRes:'Parts & CNC', tDrw:'Drawings', drwTitle:'Drawings', drwLead:'Made automatically from the parts: furniture layout and wall elevations (when cabinets are placed in the Furniture tab), and for every cabinet its dimensioned views and an assembly diagram with the parts and hardware lists.', drwShow:'Show', drwAll:'All sheets', drwFurn:'Furniture layout only', drwPaper:'Paper', drwPdf:'⤓ Download PDF ({n} sheets)', drwOne:'⤓ PDF', drwView:'View', drwBuilding:'Making the PDF… {i} / {n}', drwDone:'PDF ready', drwFail:'Could not make the PDF: ', drwNone:'Nothing to draw — add a cabinet.', drwCab:'📐 Drawings', drwZip:'The PDF with all drawings also goes into the full ZIP.', drwClose:'Close', drwPrev:'‹ Previous', drwNext:'Next ›', drwSheets:'sheets', tSet:'Settings', projects:'Projects',
  cabs:'Cabinets', newCab:'＋ New cabinet', dup:'Duplicate', del:'Delete', delSure:'Really delete?',
- libT:'Library', libQ:'Search: name, size (600x720), material…', libCats:'Catalogues', libAll:'All', libNewCat:'New catalogue', libAddT:'Add this cabinet to the project (a copy)', libMove:'Move to a catalogue', libNone:'Nothing found — change the search or the catalogue.', libEmpty:'The library is empty. In the cabinet editor press "☆ Save to library" — the cabinet will be here in every project.', libNewT:'New from a template', libSave:'Save to library', libSaveT:'Keep this cabinet in the library — add it in any project. Later edits update the library copy.', libLinked:'In the library', libLinkedT:'This cabinet is in the library and its edits update it there. Click to unlink (the library copy stays as it is).', libSaved:'Saved in the library: {n} ({c})', libUnlinked:'Unlinked — the library copy no longer changes', libAdded:'Added from the library: {n}', pickTitle:'What are we building?', pickLead:'Pick the closest one — everything can be changed.', cancel:'Cancel',
+ sB:'Construction', sBl:'How the box is built: supports, bottom, top, sides, back, joints.', nB:'Construction', bgBase:'Supports and bottom', stepNext:'Next', stepBack:'Back', libT:'Library', libQ:'Search: name, size (600x720), material…', libCats:'Catalogues', libAll:'All', libNewCat:'New catalogue', libAddT:'Add this cabinet to the project (a copy)', libMove:'Move to a catalogue', libNone:'Nothing found — change the search or the catalogue.', libEmpty:'The library is empty. In the cabinet editor press "☆ Save to library" — the cabinet will be here in every project.', libNewT:'New from a template', libSave:'Save to library', libSaveT:'Keep this cabinet in the library — add it in any project. Later edits update the library copy.', libLinked:'In the library', libLinkedT:'This cabinet is in the library and its edits update it there. Click to unlink (the library copy stays as it is).', libSaved:'Saved in the library: {n} ({c})', libUnlinked:'Unlinked — the library copy no longer changes', libAdded:'Added from the library: {n}', pickTitle:'What are we building?', pickLead:'Pick the closest one — everything can be changed.', cancel:'Cancel',
  pDrawers:'Drawer cabinet', pDoors:'Door cabinet', pDrDoors:'Drawer + doors', pWall:'Wall cabinet', pTall:'Tall with oven', pFridge:'Fridge unit', kFridge:'Fridge', fridgeHinge:'Hinges', fridgeHandle:'Handle — {s}',
  ledAddL:'Add an LED:', ledT:'LED lighting', ledL2:'a groove for a recessed profile, 16 × 8, routed on the CNC', ledAt:'Where', ledBottom:'Bottom', ledTop:'Top', ledL:'Left side', ledR:'Right side', ledSide:'Face', ledIn:'Inside', ledOut:'Outside', ledFrom:'From the front', ledEnds:'Ends', ledOpen:'Through', ledClosed:'Closed', ledNone:'No LEDs. Add one here, or drag "LED strip" onto a cabinet in the Baldai tab.', ledNote:'Routed as step2xxl does: cutter T=96 Ø15.5, ramped entry over 30 mm, at least 2 mm left. "Through" — the groove runs the whole part (the profile slides in, the cable leaves at the end). A wall unit\'s bottom "Outside" lights the worktop below.', ledChip:'LED strip', ledChipS:'groove 16×8', ledAddT:'Drag onto a cabinet — near its bottom, top or a side', ledAdded:'LED added: {w}', ledMiss:'Drop it on a cabinet (front view)', rmLeds:'LED', visT:'Visible sides (in the front material)', sideFull:'Full-height sides (covering the top and the bottom)', topMount:'Top', topOn:'On the sides', topInside:'Between the sides', visL:'Left', visR:'Right', visB:'Bottom', visNote:'A ticked side is cut from the front material with the front edging; the others stay in the carcass material. In Baldai one button ticks the free sides from the layout.', fridgeSec:'Integrated fridge', fridgeN:'Fronts', fridge1:'1 — fridge only', fridge2:'2 — fridge and freezer',
  fridgeNiche:'Niche ≈ {h} × {w} mm', fridgeNote:'The fronts are screwed to the fridge\'s own doors — no hinges. Section height = niche height + 2 boards (bottom / shelf); check the niche in the fridge\'s manual (usually 1772–1780 mm high, ≥ 550 mm deep). The niche shelf stops {v} mm short of the back for the air; leave a grille in the plinth.', pDish:'Dishwasher front', pEmpty:'Empty (shelves)', pBox:'3D construction',
@@ -8773,6 +8782,16 @@ var app = document.getElementById('app');
 if (window.DBLook) window.DBLook.on(function () {   // a texture photo is decoded: draw again (only the 3-D views while someone types)
   var ae = document.activeElement; if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && ae.type !== 'file' && ae.type !== 'color') { mountAssembly(); if (S.tab === 'room') mountRoom(); } else render(); });
 function langBtns() { return '<span class="lang"><button data-act="lang" data-v="lt" class="' + (S.lang === 'lt' ? 'on' : '') + '">LT</button><button data-act="lang" data-v="en" class="' + (S.lang === 'en' ? 'on' : '') + '">EN</button></span>'; }
+/* long explanations in the editor: two lines, a click shows the rest (remembered while the page is open) */
+function clampNotes() {
+  S.notesOpen = S.notesOpen || {};
+  document.querySelectorAll('.editor p.note, .editor p.lead').forEach(function (p) {
+    var tx = p.textContent || ''; if (tx.length < 150 || p.querySelector('input,button,select,a')) return;
+    p.classList.add('clamp'); var k = tx.slice(0, 60); if (S.notesOpen[k]) p.classList.add('open');
+    p.title = S.lang === 'lt' ? 'Spustelėkite — visas tekstas' : 'Click for the whole text';
+    p.addEventListener('click', function () { p.classList.toggle('open'); S.notesOpen[k] = p.classList.contains('open'); });
+  });
+}
 function render() {
   if (typeof ptr !== 'undefined') ptr.pending = null;   // this redraw is the one that was waiting
   if (!S.proj) S.home = true;
@@ -8805,6 +8824,7 @@ function render() {
   var fx = document.activeElement && document.activeElement.id, ss = fx && document.activeElement.selectionStart;
   app.innerHTML = h;
   mountIso(); mountRoom(); mountAssembly();
+  clampNotes();
   if (fx) { var el = document.getElementById(fx); if (el) { el.focus(); try { if (ss != null) el.setSelectionRange(ss, ss); } catch (e) {} } }
 }
 function partCount(info) {   // rows of the parts list: the cabinets' parts, extra parts that are made, worktop pieces as cut
@@ -8829,33 +8849,55 @@ function viewCab(info) {
   }).join('') + '</div><button class="btn pri" data-act="pick">' + t('newCab') + '</button></aside>';
   if (S.picking || !cabs.length) return '<div class="ws">' + rail + '<section class="editor" style="grid-column:span 2">' + viewPick() + '</section></div>';
   var c = cur(), inf = info[S.sel];
-  return '<div class="ws">' + rail + '<section class="editor">' + stepNav(c, inf) + viewEditor(c) + '</section>' + viewSheet(c, inf) + '</div>';
+  return '<div class="ws">' + rail + '<section class="editor">' + (c.kind !== 'box' && c.kind !== 'panel' ? cabBar(c) : '') + stepNav(c, inf) + oneStep(viewEditor(c), c, inf) + '</section>' + viewSheet(c, inf) + '</div>';
 }
 /* where am I / what is left: the steps of this cabinet, with a mark where something needs attention */
 function needsWt(c) { return !!(c.worktop && c.worktop.on && !c.dishwasher && !String(c.worktop.mat || '').trim()); }   // the worktop's material is set in step 1, with the worktop
 function needsMats(c) { if (c.kind === 'panel') return !c.mat.carc; if (c.dishwasher) return !c.mat.facade; if (c.kind === 'box') return !c.mat.carc || (c.box && c.box.fronts && c.box.fronts.length > 0 && !c.mat.facade); return !c.mat.carc || (c.sections.some(function (s) { return s.kind === 'drawers' || s.kind === 'doors'; }) && !c.mat.facade); }
+/* the editor shows one step at a time (S.stepKey, kept while moving between cabinets of the same kind); the preview stays beside it */
+function curStep(keys) { return keys.indexOf(S.stepKey) >= 0 ? S.stepKey : keys[0]; }
+function oneStep(html, c, inf) {
+  if (typeof location !== 'undefined' && /[?&]allsteps\b/.test(location.search)) return html;   // all steps on one page (the old layout; the test pages use it)
+  var keys = [], re = /<div class="card step" id="st-([\w-]+)"/g, m; while ((m = re.exec(html))) keys.push(m[1]);
+  if (!keys.length) return html;
+  var cur = curStep(keys), k = keys.indexOf(cur), names = {}, st = (stepNav(c, inf).match(/data-v="[\w-]+"[^>]*><span class="sn">\d+<\/span><span class="sl">[^<]*/g) || []);
+  st.forEach(function (x) { var mm = /data-v="([\w-]+)".*class="sl">(.*)$/.exec(x); if (mm) names[mm[1]] = mm[2]; });
+  html = html.replace(/<div class="card step" id="st-([\w-]+)"/g, function (all, key) { return '<div class="card step' + (key === cur ? ' cur' : ' off') + '" id="st-' + key + '"'; });
+  return html + '<div class="stepfoot">' + (k > 0 ? '<button type="button" class="btn ghost" data-act="step" data-v="' + keys[k - 1] + '">← ' + (names[keys[k - 1]] || t('stepBack')) + '</button>' : '<span></span>') +
+    (k < keys.length - 1 ? '<button type="button" class="btn primary" data-act="step" data-v="' + keys[k + 1] + '">' + t('stepNext') + ': ' + (names[keys[k + 1]] || '') + ' →</button>' : '') + '</div>';
+}
+/* the cabinet's name and actions, above the steps */
+function cabBar(c) {
+  return '<div class="cabbar">' + fT(t('name'), 'c.name', c.name, null, 'grow') +
+    '<span class="cabact">' + (c.libId ? '<button class="btn ghost libon" data-act="libunlink" title="' + esc(t('libLinkedT')) + '">★ ' + t('libLinked') + '</button>' : '<button class="btn ghost" data-act="libsave" title="' + esc(t('libSaveT')) + '">☆ ' + t('libSave') + '</button>') +
+    '<button class="btn ghost" data-act="dup">' + t('dup') + '</button><button class="btn ghost danger" data-act="del">' + (S.confirm === 'del' ? t('delSure') : t('del')) + '</button></span></div>';
+}
 function stepNav(c, inf) {
   var dimW = /netinkami matmenys|per maži matmenys|per maža detalė|netelpa į stakles|matmenys per/i, secW = /^(sekcija|kolona|stalčius) [\d.]+|sekcijų aukščių suma/i;   // which step a problem belongs to
   var bad = inf.warnings.some(function (w) { return level(w) === 'bad' && !dimW.test(w) && !secW.test(w); }), dimBad = inf.warnings.some(function (w) { return dimW.test(w); }) || needsWt(c), secBad = inf.warnings.some(function (w) { return level(w) === 'bad' && !dimW.test(w) && secW.test(w); });
   var over = !c.dishwasher && c.kind !== 'box' && c.kind !== 'panel' && Array.from({ length:colsOf(c) }, function (_, k) { return k; }).some(function (k) { return zoneInfo(c, k).over; });   // each column against its own zone
   var st = c.kind === 'panel' ? [['dims', 1, t('pnS1'), dimBad || needsMats(c)]] : c.kind === 'box' ? [['dims', 1, t('n1'), dimBad], ['boards', 2, t('bxS2'), !inf.r.panels.length], ['inner', 3, t('bxS3')], ['fronts', 4, t('bxS5')], ['joints', 5, t('bxS4'), bad], ['mats', 6, t('n5'), needsMats(c)], ['extra', 7, t('n6')]] : c.dishwasher ? [['dims', 1, t('n1'), dimBad], ['mats', 2, t('n5'), needsMats(c)]]
-    : [['dims', 1, t('n1'), dimBad], ['secs', 2, t('n2'), over || !c.sections.length || secBad], ['ops', 3, t('n4'), bad], ['mats', 4, t('n5'), needsMats(c)], ['extra', 5, t('n6')]];
+    : [['dims', 1, t('n1'), dimBad], ['build', 2, t('nB'), needsWt(c)], ['secs', 3, t('n2'), over || !c.sections.length || secBad], ['ops', 4, t('n4'), bad], ['mats', 5, t('n5'), needsMats(c)], ['extra', 6, t('n6')]];
+  var cur = curStep(st.map(function (x) { return x[0]; }));
   return '<nav class="stepnav" aria-label="' + t('stepsNav') + '">' + st.map(function (x, i) {
-    return '<button type="button" class="' + (i === 0 ? 'on' : '') + (x[3] ? ' need' : '') + '" data-act="goto" data-v="st-' + x[0] + '"' + (x[3] ? ' title="' + t('stepNeed') + '"' : '') + '><span class="sn">' + x[1] + '</span><span class="sl">' + esc(x[2]) + '</span>' + (x[3] ? '<i class="sdot" aria-label="' + t('stepNeed') + '"></i>' : '') + '</button>';
+    return '<button type="button" class="' + (x[0] === cur ? 'on' : '') + (x[3] ? ' need' : '') + '" data-act="step" data-v="' + x[0] + '"' + (x[0] === cur ? ' aria-current="step"' : '') + (x[3] ? ' title="' + t('stepNeed') + '"' : '') + '><span class="sn">' + x[1] + '</span><span class="sl">' + esc(x[2]) + '</span>' + (x[3] ? '<i class="sdot" aria-label="' + t('stepNeed') + '"></i>' : '') + '</button>';
   }).join('') + '</nav>';
 }
 function gotoStep(id) {
   var el = document.getElementById(id); if (!el) return;
+  var card = el.closest ? el.closest('.card.step') : null;
+  if (card && card.classList.contains('off')) { S.stepKey = card.id.replace(/^st-/, ''); render(); el = document.getElementById(id); if (!el) return; if (el === document.getElementById('st-' + S.stepKey)) { window.scrollTo({ top:0, behavior:'smooth' }); return; } }
   var nav = document.querySelector('.stepnav'), top = document.querySelector('.top');
   var off = (top && getComputedStyle(top).position === 'sticky' ? top.offsetHeight : 0) + (nav ? nav.offsetHeight : 0) + 12;
   window.scrollTo({ top:el.getBoundingClientRect().top + window.scrollY - off, behavior:'smooth' });
   S.gotoAt = Date.now();   // keep the clicked step lit while the page scrolls (the last steps may not reach the top)
-  if (nav) nav.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-v') === id); });
+  var cd = el.closest ? el.closest('.card.step') : null, ck = cd ? cd.id : id;
+  if (nav) nav.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', 'st-' + b.getAttribute('data-v') === ck); });
 }
 window.addEventListener('scroll', function () {   // highlight the step being read
-  var nav = document.querySelector('.stepnav'); if (!nav || Date.now() - (S.gotoAt || 0) < 1200) return;
+  var nav = document.querySelector('.stepnav'); if (!nav || Date.now() - (S.gotoAt || 0) < 1200 || document.querySelector('.card.step.off')) return;   // one step at a time: nothing to follow
   var bs = nav.querySelectorAll('button'), y = (document.querySelector('.top') || {}).offsetHeight + nav.offsetHeight + 40, act = 0;
-  bs.forEach(function (b, i) { var el = document.getElementById(b.getAttribute('data-v')); if (el && el.getBoundingClientRect().top < y) act = i; });
+  bs.forEach(function (b, i) { var el = document.getElementById('st-' + b.getAttribute('data-v')); if (el && el.getBoundingClientRect().top < y) act = i; });
   if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) act = bs.length - 1;
   bs.forEach(function (b, i) { b.classList.toggle('on', i === act); });
 }, { passive:true });
@@ -8940,23 +8982,30 @@ function viewEditor(c) {
   if (c.kind === 'box') return boxEditor(c);
   if (c.kind === 'panel') return panelEditor(c);
   var b = 'c.', o = c.cnc, h = '';
-  /* 1 — dimensions */
+  /* 1 — dimensions: only the sizes (the name and the cabinet's actions are in the bar above the steps) */
   var bIn = o.bottom === 'inside';
-  var dims = '<div class="row">' + fT(t('name'), b + 'name', c.name, null, 'grow') + '</div>' +
-    (c.dishwasher ? '' : '<div class="row" style="margin-top:10px"><div class="f"><span>' + t('supL') + '</span>' + seg(b + 'cnc.support', !o.legs ? 'none' : o.feet ? 'feet' : 'legs', [['legs', t('supLegs')], ['feet', t('supFeet')], ['none', t('supNone')]]) + '</div>' +
-      (o.legs ? '<button type="button" class="btn ghost supgo" data-act="goto" data-v="st-ops">' + t('supEdit') + ' ↓</button>' : '') + '</div>') +
-    (c.dishwasher ? '' : '<div class="row bottomrow" style="margin-top:10px"><div class="f"><span>' + t('botMount') + '</span>' + seg(b + 'cnc.bottom', bIn ? 'inside' : 'under', [['under', t('botUnder')], ['inside', t('botInside')]]) + '</div>' +
-      (bIn ? fN(t('botZ'), b + 'cnc.bottomZ', o.bottomZ || 0, 's') : '') + botDepthField(c) + '<figure class="botpic" aria-hidden="true">' + bottomPic(bIn) + '</figure></div>') +
-    (c.dishwasher || o.top !== 'full' ? '' : '<div class="row bottomrow" style="margin-top:10px"><div class="f"><span>' + t('topMount') + '</span>' + seg(b + 'cnc.topMount', o.topMount === 'inside' ? 'inside' : 'over', [['over', t('topOn')], ['inside', t('topInside')]]) + '</div>' +
-      '<figure class="botpic" aria-hidden="true">' + topPic(o.topMount === 'inside') + '</figure></div>') +
-    '<div class="row" style="margin-top:10px">' +
+  var dims = '<div class="row">' +
     (c.dishwasher ? fN(t('dishW'), b + 'dishWidth', c.dishWidth) : fN(t('W'), b + 'W', c.W)) + fN(t('H'), b + 'H', c.H) + fN(t('D'), b + 'D', c.D) +
-    fN(t('thick'), b + 'thick', c.thick, 's') + fN(t('facT'), b + 'cnc.facadeT', o.facadeT, 's') +
-    '<span class="row" style="margin-left:auto;gap:6px">' + (c.libId ? '<button class="btn ghost libon" data-act="libunlink" title="' + esc(t('libLinkedT')) + '">★ ' + t('libLinked') + '</button>' : '<button class="btn ghost" data-act="libsave" title="' + esc(t('libSaveT')) + '">☆ ' + t('libSave') + '</button>') + '<button class="btn ghost" data-act="dup">' + t('dup') + '</button><button class="btn ghost danger" data-act="del">' + (S.confirm === 'del' ? t('delSure') : t('del')) + '</button></span></div>' +
-    visBlock(c) +
-    '<div class="mainset">' + (c.dishwasher ? '' : backBlock(c)) + worktopBlock(c) + '</div>';
+    fN(t('thick'), b + 'thick', c.thick, 's') + fN(t('facT'), b + 'cnc.facadeT', o.facadeT, 's') + '</div>' +
+    (c.dishwasher ? '<div class="mainset">' + worktopBlock(c) + '</div>' : '');   // a dishwasher has no construction step: its worktop is set here
+  /* 2 — construction: everything about how the box is built, in one place */
+  var build = c.dishwasher ? '' :
+    '<div class="bgrp"><div class="bgt">' + t('bgBase') + '</div>' +
+    '<div class="row"><div class="f"><span>' + t('supL') + '</span>' + seg(b + 'cnc.support', !o.legs ? 'none' : o.feet ? 'feet' : 'legs', [['legs', t('supLegs')], ['feet', t('supFeet')], ['none', t('supNone')]]) + '</div>' +
+      (o.legs ? '<button type="button" class="btn ghost supgo" data-act="goto" data-v="st-ops">' + t('supEdit') + ' →</button>' : '') + '</div>' +
+    '<div class="row bottomrow" style="margin-top:10px"><div class="f"><span>' + t('botMount') + '</span>' + seg(b + 'cnc.bottom', bIn ? 'inside' : 'under', [['under', t('botUnder')], ['inside', t('botInside')]]) + '</div>' +
+      (bIn ? fN(t('botZ'), b + 'cnc.bottomZ', o.bottomZ || 0, 's') : '') + botDepthField(c) + '<figure class="botpic" aria-hidden="true">' + bottomPic(bIn) + '</figure></div></div>' +
+    '<div class="bgrp"><div class="bgt">' + t('top') + '</div><div class="row">' + seg(b + 'cnc.top', o.top, [['rails', t('topRails')], ['full', t('topFull')]]) + '</div>' +
+      (o.top === 'full' ? '<div class="row bottomrow" style="margin-top:10px"><div class="f"><span>' + t('topMount') + '</span>' + seg(b + 'cnc.topMount', o.topMount === 'inside' ? 'inside' : 'over', [['over', t('topOn')], ['inside', t('topInside')]]) + '</div>' +
+        (o.topMount !== 'inside' ? chk(b + 'cnc.topOverFacade', o.topOverFacade, t('topOver')) : '') + '<figure class="botpic" aria-hidden="true">' + topPic(o.topMount === 'inside') + '</figure></div>' : railsEditor(c)) + '</div>' +
+    '<div class="bgrp">' + visBlock(c) + '</div>' +
+    '<div class="bgrp mainset">' + backBlock(c) + worktopBlock(c) + '</div>' +
+    '<div class="bgrp"><div class="lbl">' + t('jMain') + ' <span class="unit">· ' + t('jMainL') + '</span></div><div class="choices">' +
+      choice(b + 'cnc.joinery', o.joinery, 'confirmat', artOf('confirmat'), t('jConf'), t('jConfD')) +
+      choice(b + 'cnc.joinery', o.joinery, 'cam', artOf('cam'), t('jCam'), t('jCamD')) + '</div></div>';
   h += step(1, t('s1'), t('s1l'), dims, 'dims');
   if (c.dishwasher) { h += step(2, t('s5'), t('s5l'), matsBlock(c), 'mats'); return h; }
+  h += step(2, t('sB'), t('sBl'), build, 'build');
   /* 2 — sections, by column (pertvaros), each column with its own back */
   var nC = colsOf(c), cw = colWidths(c);
   var secs = '<div class="colbar"><div class="f"><span>' + t('parts2') + '</span>' + seg(b + 'cols', nC, [[1, t('part0')], [2, t('part1')], [3, t('part2')]]) + '</div>' +
@@ -8976,16 +9025,7 @@ function viewEditor(c) {
   }
   secs += '</div>';
 
-  /* 3 — construction */
-  var jo = '<div class="lbl">' + t('jMain') + ' <span class="unit">· ' + t('jMainL') + '</span></div><div class="choices">' +
-    choice(b + 'cnc.joinery', o.joinery, 'confirmat', artOf('confirmat'), t('jConf'), t('jConfD')) +
-    choice(b + 'cnc.joinery', o.joinery, 'cam', artOf('cam'), t('jCam'), t('jCamD')) + '</div><div class="sub">' +
-    '<div><div class="lbl">' + t('top') + '</div><div class="row">' + seg(b + 'cnc.top', o.top, [['rails', t('topRails')], ['full', t('topFull')]]) +
-      (o.top === 'full' && o.topMount !== 'inside' ? chk(b + 'cnc.topOverFacade', o.topOverFacade, t('topOver')) : '') + '</div></div>' +
-    (o.top === 'rails' ? railsEditor(c) : '') +
-    '</div>';
-  secs += '<details class="construction-settings" id="st-constr"' + (S.constrOpen ? ' open' : '') + '><summary>'+(S.lang==='lt'?'Konstrukcijos nustatymai · viršus, juostos, nugara':'Construction settings · top, rails, back')+'</summary><div>'+jo+'</div></details>';
-  h += step(2, t('s2'), t('s2l'), secs, 'secs');
+  h += step(3, t('s2'), t('s2l'), secs, 'secs');
   var rInfo = S._info && S._info[S.sel] ? S._info[S.sel].r : null;
   /* 4 — operations */
   var has = function (f) { return c.sections.some(f); };
@@ -8998,9 +9038,9 @@ function viewEditor(c) {
     opRow(b + 'cnc.hinges', o.hinges, t('oHinge'), t('oHingeD'), false, hasDoor, seg(b + 'cnc.hingeFix', o.hingeFix, [['screw', t('hfScrew')], ['press', t('hfPress')]])) +
     opRow(b + 'cnc.pinsOn', o.pins !== 'off', t('oPins'), t('oPinsD'), false, hasSh, seg(b + 'cnc.pins', o.pins, [['shelf', t('pinShelf')], ['row', t('pinRow')]])) +
     '</div>' + ledBlock(c);
-  h += step(3, t('s4'), t('s4l'), ops, 'ops');
-  h += step(4, t('s5'), t('s5l'), matsBlock(c), 'mats');
-  h += step(5, t('s6'), t('s6l'), extrasBlock(c), 'extra');
+  h += step(4, t('s4'), t('s4l'), ops, 'ops');
+  h += step(5, t('s5'), t('s5l'), matsBlock(c), 'mats');
+  h += step(6, t('s6'), t('s6l'), extrasBlock(c), 'extra');
   return h;
 }
 function jointsBlock(c, r) {
@@ -10370,6 +10410,7 @@ app.addEventListener('click', function (e) {
       S.settings.rules.hinge = clone(RULE_DEF.hinge); S.settings.rules.pins = clone(RULE_DEF.pins); store('dbKurejas.settings', S.settings); applyRules(); render();
       toast(t('rulesReset'), false, t('undoBtn'), function () { S.settings.rules.hinge = rPrev.hinge; S.settings.rules.pins = rPrev.pins; store('dbKurejas.settings', S.settings); applyRules(); render(); }); return; }
     case 'goto': gotoStep(v); return;
+    case 'step': S.stepKey = v; render(); { var ed = document.querySelector('.editor'); if (ed && ed.getBoundingClientRect().top < 0) window.scrollTo({ top:0, behavior:'smooth' }); } return;
     case 'fixcab': S.home = false; S.tab = 'cab'; S.sel = i; S.picking = false; render(); setTimeout(function () { if (v === 'wt') { var wf = document.getElementById('f-c-worktop-mat'); if (wf) { wf.scrollIntoView({ block:'center', behavior:'smooth' }); wf.focus({ preventScroll:true }); return; } v = 'dims'; } gotoStep('st-' + (v || 'mats')); }, 30); return;
     case 'fixname': { var pn = document.getElementById('projname'); if (pn) { pn.focus(); pn.scrollIntoView({ block:'center' }); } return; }
     case 'home': if (S.proj) { clearTimeout(libTimer); libSave(); } S.home = true; S.confirm = null; window.scrollTo(0, 0); break;
