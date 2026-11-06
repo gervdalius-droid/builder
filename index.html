@@ -3534,7 +3534,7 @@ function sampler(tx, ppm) {
     return ((d[p00] * w00 + d[p10] * w10 + d[p01] * w01 + d[p11] * w11) << 16) | ((d[p00 + 1] * w00 + d[p10 + 1] * w10 + d[p01 + 1] * w01 + d[p11 + 1] * w11) << 8) | (d[p00 + 2] * w00 + d[p10 + 2] * w10 + d[p01 + 2] * w01 + d[p11 + 2] * w11);
   };
 }
-function color(name) { var k = key(name), l = looks[k]; if (!l) return null; if (l.color) return l.color; if (l.tex) { var c = load(k, l); return c.ready ? c.avg : null; } return null; }
+function color(name) { var k = key(name), l = looks[k]; if (!l) return null; if (l.tex) { var c = load(k, l); if (c.ready && c.avg) return c.avg; } return l.color || null; }   // a texture photo wins over a colour set earlier (as in the 3-D views)
 function has(name) { var l = looks[key(name)]; return !!(l && l.tex); }
 /* where the photo lies on one face of a board: O its corner, U along the grain (the board's length unless turned), V across;
    axes: the board's own axes (unit vectors), g: which of them is its length, n: the face's normal */
@@ -6724,6 +6724,7 @@ function pbox(p) {   // a part's extent [x, y, z] in its cabinet (x right, y fro
   return [0, 1, 2].map(function (i) { return [Math.min.apply(null, pts.map(function (r) { return r[i]; })), Math.max.apply(null, pts.map(function (r) { return r[i]; }))]; });
 }
 function isFront(p) { return /^(FASADAS|DURYS)$/.test(p.role); }
+function lookFill(name, dflt) { var lk = typeof window !== 'undefined' && window.DBLook, lc = lk && name && lk.color(name); return lc && /^#[0-9a-f]{6}$/i.test(lc) ? lc : dflt; }
 function partFill(p) {   // the board's own look (its texture photo's average colour or its colour) when the project has one; else plain drawing colours
   var lk = typeof window !== 'undefined' && window.DBLook, lc = lk && p.mat && lk.color(p.mat);
   if (lc && /^#[0-9a-f]{6}$/i.test(lc)) return lc;
@@ -6745,7 +6746,7 @@ function cabBoxes(r, o) {
     var pe = [[pl.x0, pl.x1], [pl.y0, pl.y0 + pl.t], [pl.z0, pl.z1]];
     (r.panels || []).forEach(function (p) { if (!p.place || isFront(p)) return; var e = pbox(p);
       if (e[0][0] < pe[0][1] - 0.01 && e[0][1] > pe[0][0] + 0.01 && e[1][0] < pe[1][1] - 0.01 && e[1][1] > pe[1][0] + 0.01 && e[2][0] < pe[2][1]) pe[2][1] = Math.min(pe[2][1], Math.max(pe[2][0], e[2][0])); });
-    if (pe[2][1] - pe[2][0] > 1) out.push({ e:pe, fill:COL.front, plinth:true });
+    if (pe[2][1] - pe[2][0] > 1) out.push({ e:pe, fill:lookFill(pl.mat, COL.front), plinth:true });
   }
   if (o.worktop && r.worktop) { var w = r.worktop; out.push({ e:[[w.x0, w.x1], [w.y0, w.y1], [w.z0, w.z1]], fill:COL.top, worktop:true }); }   // only when asked: views of one cabinet
   if (o.fit) { var cb = out.filter(function (b) { return b.p && !b.front; }); if (o.fronts === false && !cb.length) cb = cabBoxes(r, { fronts:false, legs:false, plinth:false });
@@ -7456,10 +7457,10 @@ function roomScene(proj, infos, RM) {
       var ee = [0, 1, 2].map(function (k) { return [Math.min.apply(null, cs.map(function (q) { return q[k]; })), Math.max.apply(null, cs.map(function (q) { return q[k]; }))]; });
       out.push(Object.assign({ e:ee, cab:o.i, wall:it.wall }, extra)); };
     var bx = inf && inf.r && inf.r.panels && inf.r.panels.length ? cabBoxes(inf.r, {}) : [];
-    if (!bx.some(function (b) { return !b.leg; })) bx = bx.concat([{ e:[[0, RM.cabW(c)], [0, D0], [0, RM.cabH(c)]], fill:COL.front, front:true }]);   // a cabinet without placed parts (dishwasher): its outline
+    if (!bx.some(function (b) { return !b.leg; })) bx = bx.concat([{ e:[[0, RM.cabW(c)], [0, D0], [0, RM.cabH(c)]], fill:lookFill(c.mat && c.mat.facade, COL.front), front:true }]);   // a cabinet without placed parts (dishwasher): its outline
     bx.forEach(function (b) { add(b.e, { fill:b.fill, front:b.front, door:b.door, hingeLeft:b.hingeLeft, p:b.p, leg:b.leg }); });
-    var wt = Lo.worktop && (inf && inf.r && inf.r.worktop || RM.wtOf(c)); if (wt) add([[wt.x0, wt.x1], [wt.y0, wt.y1], [wt.z0, wt.z1]], { fill:COL.top, worktop:true });
-    (RM.sideP ? RM.sideP(c) : []).forEach(function (q) { add([[q.x0, q.x1], [q.y0, q.y1], [q.z0, q.z1]], { fill:COL.front, sidePanel:true }); });   // side panels (extra parts set beside it)
+    var wt = Lo.worktop && (inf && inf.r && inf.r.worktop || RM.wtOf(c)); if (wt) add([[wt.x0, wt.x1], [wt.y0, wt.y1], [wt.z0, wt.z1]], { fill:lookFill(wt.mat, COL.top), worktop:true });
+    (RM.sideP ? RM.sideP(c) : []).forEach(function (q) { add([[q.x0, q.x1], [q.y0, q.y1], [q.z0, q.z1]], { fill:lookFill(q.mat, COL.front), sidePanel:true }); });   // side panels (extra parts set beside it)
   });
   return out;
 }
