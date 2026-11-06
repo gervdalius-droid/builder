@@ -737,6 +737,13 @@ button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(
 .rm-op.bad .rm-opfr{stroke:#b4291f;stroke-width:2.6}
 .rm-op.act,.rm-op.ghost,.rm-pop.act,.rm-pop.ghost{opacity:.72;pointer-events:none}
 .rm-op.ghost .rm-opfr{stroke:#2448c9;stroke-width:2;stroke-dasharray:6 4}
+.ledblk{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.ledrow{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 10px;padding:8px 0;border-bottom:1px dashed var(--line)}
+.ledrow .ledno{align-self:center;width:22px;height:22px;border-radius:50%;background:#f3c64a;color:#3b2e00;font-size:12px;display:grid;place-items:center}
+.ledrow .btn.danger{margin-left:auto;align-self:center}
+.ledadd{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+.rm-led{fill:#ffd860;stroke:#c99a00;stroke-width:.6;pointer-events:none}
+.rm-ledl{display:flex;flex-direction:column;gap:4px}.rm-ledi{display:flex;align-items:center;gap:6px;font-size:12px}.rm-ledi b{width:18px;height:18px;border-radius:50%;background:#f3c64a;display:grid;place-items:center;font-size:11px}.rm-ledi .btn{margin-left:auto;padding:2px 8px;min-height:24px}
 .rm-toph{grid-column:1/-1;justify-self:end;margin-top:-2px;font-size:11.5px;color:var(--muted);text-align:right}
 .rm-visside{stroke:#2448c9;stroke-width:1;stroke-opacity:.55}
 .rm-visd .seg button{min-width:72px}
@@ -1179,6 +1186,10 @@ var R = {
      5 mm long-edge bores go to a separate program with the panel turned 90° (as step2xxl), panels up to machine.maxY. */
   drills: { top:[5,8,15,35], through:[5,8], xEnds:[5,8], yEdges:[8], edgeMax:35 },
   machine: { maxX:3050, maxY:900, minX:200, minY:80 },
+  /* routing as step2xxl / XXL Fix write it: the Ø15.5 diamond cutter T=96; never deeper than DZ − skin, never a vertical
+     plunge (ramp ≤ 30 mm along the path, back at full depth), never more than 20 mm outside the part (Maestro NC17050) */
+  rout: { T:96, dia:15.5, D:24, name:'DEIMANTAS 16MM  - NAUJA - ', feedCut:4000, feedPlunge:2000, safeZ:10, skin:2, ramp:30, leadIn:5, air:20 },
+  led: { w:16, depth:8, from:30, end:20 },   // LED profile groove: 16 wide, 8 deep, 30 from the front edge; closed ends 20 from the part's ends
   hdf: { t:3, inset:2, mat:'HDF 3 mm' }          // plaušo nugara: nailed on the back, 2 mm in from the carcass edges
 };
 var DRAWER_HW = ["BLUM TANDEM", "BLUM TANDEMBOX", "GTV KULKINIAI H45", "DTC KULKINIAI H45", "DTC PASLĖPTI"];
@@ -1260,6 +1271,7 @@ function rightHanded(p) {
   if (c[0]*q.n[0] + c[1]*q.n[1] + c[2]*q.n[2] > 0) return p;
   var W = p.W;
   p.holes.forEach(function (h) { h.y = W - h.y; });
+  (p.grooves || []).forEach(function (g) { var y0 = g.y0; g.y0 = W - g.y1; g.y1 = W - y0; });
   p.edges.forEach(function (e) { if (e.edge === 'y0') e.edge = 'y1'; else if (e.edge === 'y1') e.edge = 'y0'; else e.pos = W - e.pos; });
   var y0 = p.eb.y0; p.eb.y0 = p.eb.y1; p.eb.y1 = y0;
   p.place = { o:[q.o[0] + W*q.v[0], q.o[1] + W*q.v[1], q.o[2] + W*q.v[2]], u:q.u, v:neg(q.v), n:q.n };
@@ -1271,6 +1283,7 @@ function orient(p) {
   if (p.L >= p.W) return p;
   var L = p.L;
   p.holes.forEach(function (h) { var x = h.x, y = h.y; h.x = y; h.y = L - x; });
+  (p.grooves || []).forEach(function (g) { var x0 = g.x0, x1 = g.x1, y0 = g.y0, y1 = g.y1; g.x0 = y0; g.x1 = y1; g.y0 = L - x1; g.y1 = L - x0; });
   var map = { x0:'y1', x1:'y0', y0:'x0', y1:'x1' };
   p.edges.forEach(function (e) { e.edge = map[e.edge]; });
   p.edges.forEach(function (e) { if (e.edge === 'x0' || e.edge === 'x1') e.pos = L - e.pos; });
@@ -2158,6 +2171,30 @@ function buildCabinet(c, idx, projName) {
   var inS = hb > 0 && !legEff;   // the sides stand on the floor: the plinth goes between them
   var plX0 = inS ? t : 0, plX1 = inS ? W - t : W; if (plx && +plx.L < plX1 - plX0) { var plM = (plX0 + plX1) / 2; plX0 = plM - +plx.L / 2; plX1 = plM + +plx.L / 2; }   // a shorter plinth: as long as its row says, in the middle
   var plinth = plx ? { x0:plX0, x1:plX1, z0:-legEff, z1:-legEff + (+plx.W > 0 ? +plx.W : Math.max(40, legEff + hb - 2)), y0:inS ? 20 : 50, t:+plx.T || t, mat:plx.mat || mFac } : null;
+  /* ---- LED profile grooves (c.leds): in the bottom, the top or a side, along the part, a set distance from the front edge.
+     at: bottom | top | L | R; side: in (into the cabinet) | out; from: front edge → groove; ends: open (through the part's ends, the profile slides in) | closed */
+  var leds = [];
+  (Array.isArray(c.leds) ? c.leds : []).forEach(function (ld, li) {
+    if (!ld) return;
+    var at = ld.at, role = at === 'bottom' ? 'DUGNAS' : at === 'top' ? 'VIRSUS' : at === 'L' ? 'KAIRE' : at === 'R' ? 'DESINE' : null;
+    var lbl = 'LED ' + (li + 1), pl = role && out.filter(function (q) { return q.role === role; })[0];
+    if (!pl) { warn.push(lbl + ': ' + (at === 'top' ? 'spintelė be pilno viršaus (juostos) — LED griovelis nepadarytas' : 'nėra detalės ' + (role || at) + ' — LED griovelis nepadarytas')); return; }
+    var gw = +ld.w > 0 ? +ld.w : R.led.w, dep = +ld.depth > 0 ? +ld.depth : R.led.depth, from = +ld.from >= 0 && ld.from !== '' && ld.from != null ? +ld.from : R.led.from;
+    var dMax = pl.T - R.rout.skin; if (dep > dMax) { warn.push(lbl + ': griovelio gylis ' + num(dep) + ' > ' + num(dMax) + ' (paliekama ' + R.rout.skin + ' mm) — sumažinta'); dep = dMax; }
+    var inside = ld.side !== 'out', face = at === 'top' ? (inside ? 'B' : 'A') : (at === 'bottom' ? (inside ? 'A' : 'B') : (inside ? 'A' : 'B'));
+    var yOff = at === 'top' && tOver ? fT : 0, ya = from + yOff, yb = ya + gw;   // the part's y from its front edge (a top over the fronts starts fT further out)
+    if (at === 'R') { var Ds2 = pl.W; ya = Ds2 - (from + gw); yb = Ds2 - from; }   // the right side: its front edge is Y = DY
+    if (ya < 0 || yb > pl.W + 1e-6) { warn.push(lbl + ': griovelis (' + num(from) + ' + ' + num(gw) + ' mm nuo priekio) netelpa detalėje ' + num(pl.W) + ' mm — nepadarytas'); return; }
+    var closed = ld.ends === 'closed', e = closed ? Math.max(R.rout.dia / 2 + 1, +ld.end >= 0 && ld.end !== '' && ld.end != null ? +ld.end : R.led.end) : 0;
+    if (closed && pl.L - 2 * e < 60) { warn.push(lbl + ': per trumpa detalė uždaram grioveliui — nepadarytas'); return; }
+    var g = { x0:e, x1:pl.L - e, y0:ya, y1:yb, face:face, depth:dep, led:true, name:'LED_PROFILE_DRAG_ON_EDGE' };
+    var hit = pl.holes.some(function (h) { return !h.mark && (h.face === face || h.through) && h.x + h.d / 2 > g.x0 && h.x - h.d / 2 < g.x1 && h.y + h.d / 2 > g.y0 && h.y - h.d / 2 < g.y1; });
+    if (hit) warn.push(lbl + ': LED griovelis kerta jungčių ar kitas skyles (' + pl.role + ') — perkelkite jį (atstumas nuo priekio)');
+    (pl.grooves = pl.grooves || []).push(g); pl.note += ', LED griovelis ' + num(gw) + '×' + num(dep) + (face === 'A' ? '' : ' (kitoje pusėje)');
+    leds.push({ p:pl, g:g, at:at });
+  });
+  if (leds.length) hw.push({ item:'LED profilis 16 mm (įleidžiamas)', qty:Math.round(leds.reduce(function (a, q) { return a + (q.g.x1 - q.g.x0); }, 0)) / 1000, unit:'m' });
+
   if (hb) {   // lift the carcass: the sides' bottom edges stand at z = 0
     out.forEach(function (p) { if (p.place) p.place.o[2] += hb; });
     seams.forEach(function (sm) { sm.o[2] += hb; });
@@ -2191,7 +2228,13 @@ function buildCabinet(c, idx, projName) {
   if (anyInside && backType === 'confirmat' && backPanels.some(function (bp) { return Math.max(bp.L, bp.W) > R.machine.maxY && bp.edges.some(function (e) { return (e.edge === 'y0' || e.edge === 'y1') && e.d === cf.pilot.d; }); })) warn.push('nugaros viduje Ø5 skylės ilguose kraštuose negali būti gręžiamos CNC (> ' + R.machine.maxY + ' mm) — nugarai pasirinkite ekscentrikus arba kaiščius');
   if (unver.length) warn.push('naujos jungtys, dar nepatikrintos su SWOOD modeliu: ' + unver.join(', ') + ' — patikrinkite pirmą gaminį');
   hardwareFromHoles(out, o, hw);
-  return { panels:out, warnings:warn, hardware:mergeHw(hw), legs:legs, joints:jointsInfo, seams:seams, visual:{ doors:doors, drawers:facades, plinth:plinth, hb:hb }, dims:{ W:W, H:Htot, D:D, t:t } };
+  /* the LED strips for the pictures: a thin glowing box in each groove, in cabinet coordinates (after the parts were turned) */
+  var ledVis = leds.map(function (q) {
+    var pq = q.p.place, g = q.g; if (!pq) return null; var tA = g.face === 'A' ? 0 : q.p.T, tB = g.face === 'A' ? Math.min(2, g.depth) : q.p.T - Math.min(2, g.depth), pts = [];
+    [g.x0, g.x1].forEach(function (a2) { [g.y0 + 1, g.y1 - 1].forEach(function (b2) { [tA, tB].forEach(function (t2) { pts.push([0, 1, 2].map(function (k) { return pq.o[k] + a2 * pq.u[k] + b2 * pq.v[k] - t2 * pq.n[k]; })); }); }); });
+    return { at:q.at, e:[0, 1, 2].map(function (k) { return [Math.min.apply(null, pts.map(function (v) { return v[k]; })), Math.max.apply(null, pts.map(function (v) { return v[k]; }))]; }) };
+  }).filter(Boolean);
+  return { panels:out, warnings:warn, hardware:mergeHw(hw), legs:legs, joints:jointsInfo, seams:seams, visual:{ doors:doors, drawers:facades, plinth:plinth, hb:hb, leds:ledVis }, dims:{ W:W, H:Htot, D:D, t:t } };
 }
 
 /* ----------------------------------------------------------------- 3D construction (c.kind 'box')
@@ -2677,9 +2720,42 @@ function ascii(s) { return String(s).replace(/[^\x00-\x7F]/g, function (ch) {   
   var d = ch.normalize ? ch.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : ''; if (d && /^[\x00-\x7F]+$/.test(d)) return d;
   return { 'ß':'ss', 'ø':'o', 'Ø':'O', 'ł':'l', 'Ł':'L', 'æ':'ae', 'Æ':'AE', 'œ':'oe' }[ch] || '?'; }); }
 
+/* routing moves as step2xxl / XXL Fix make them: rapid above the start, down to the surface, down along the path over
+   ≤ 30 mm to full depth, back to the start at full depth, the path, lift. A groove ≤ cutter + 0.5 mm wide is one pass along
+   its wall nearer the middle of the part; wider ones are covered by parallel passes. Open ends start / stop leadIn + r outside. */
+function routeMoves(start, segs, depth, name) {
+  var C0 = R.rout, z = -depth, mv = [], poly = [[start[0], start[1]]];
+  segs.forEach(function (sg) { poly.push([sg.x, sg.y]); });
+  mv.push({ t:'G0', x:start[0], y:start[1], z:C0.safeZ });
+  mv.push({ t:'L', x:start[0], y:start[1], z:0, v:C0.feedPlunge });
+  var ramp = [], acc = 0;
+  for (var i = 1; i < poly.length && acc < C0.ramp - 1e-9; i++) {
+    var a = poly[i - 1], b = poly[i], Lg = Math.hypot(b[0] - a[0], b[1] - a[1]); if (Lg < 1e-9) continue;
+    if (acc + Lg >= C0.ramp) { var f = (C0.ramp - acc) / Lg; ramp.push([a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]); acc = C0.ramp; }
+    else { ramp.push(b); acc += Lg; }
+  }
+  var run = 0, prev = start;
+  ramp.forEach(function (q) { run += Math.hypot(q[0] - prev[0], q[1] - prev[1]); prev = q; mv.push({ t:'L', x:q[0], y:q[1], z:z * run / acc, v:C0.feedPlunge }); });
+  for (var k = ramp.length - 2; k >= 0; k--) mv.push({ t:'L', x:ramp[k][0], y:ramp[k][1], z:z, v:C0.feedCut });
+  mv.push({ t:'L', x:start[0], y:start[1], z:z, v:C0.feedCut });
+  var cur = start; segs.forEach(function (sg) { mv.push({ t:'L', x:sg.x, y:sg.y, z:z, v:C0.feedCut }); cur = [sg.x, sg.y]; });
+  mv.push({ t:'L', x:cur[0], y:cur[1], z:C0.safeZ, v:C0.feedCut });
+  return { name:name, moves:mv };
+}
+function groovePath(g, DX, DY, depth, name) {   // g in program coordinates: x0..x1 along X or Y (the longer side), y0..y1 across
+  var C0 = R.rout, r = C0.dia / 2, lead = C0.leadIn + r, alongX = (g.x1 - g.x0) >= (g.y1 - g.y0);
+  var a0 = alongX ? g.x0 : g.y0, a1 = alongX ? g.x1 : g.y1, c0 = alongX ? g.y0 : g.x0, c1 = alongX ? g.y1 : g.x1, along = alongX ? DX : DY, across = alongX ? DY : DX;
+  var Wd = c1 - c0, centres;
+  if (Wd <= C0.dia + 0.5 + 1e-9) { var mid = across / 2; centres = [Math.abs(c1 - mid) < Math.abs(c0 - mid) ? c1 - r : c0 + r]; }
+  else { var n = Math.ceil((Wd - C0.dia) / (C0.dia * 0.8)) + 1; centres = []; for (var k = 0; k < n; k++) centres.push(c0 + r + (Wd - C0.dia) * k / (n - 1)); }
+  var open0 = a0 <= 1e-6, open1 = a1 >= along - 1e-6, s0 = open0 ? -lead : a0 + r, s1 = open1 ? along + lead : a1 - r;
+  var P = function (al, ac) { return alongX ? [al, ac] : [ac, al]; }, mk = function (q) { return { x:q[0], y:q[1] }; };
+  var segs = []; centres.forEach(function (c, k) { var from = k % 2 ? s1 : s0, to = k % 2 ? s0 : s1; if (k) segs.push(mk(P(from, c))); segs.push(mk(P(to, c))); });
+  return routeMoves(P(s0, centres[0]), segs, depth, name);
+}
 function programs(p) {
-  var DX = p.L, DY = p.W, DZ = p.T; var w = [], M = R.machine;
-  var cnt = function (f) { return p.holes.filter(function (h) { return h.face === f && !h.through; }).length; };
+  var DX = p.L, DY = p.W, DZ = p.T; var w = [], M = R.machine, GR = p.grooves || [];
+  var cnt = function (f) { return p.holes.filter(function (h) { return h.face === f && !h.through; }).length + GR.filter(function (g) { return g.face === f; }).length; };
   var up1 = cnt('B') > cnt('A') ? 'B' : 'A', up2 = up1 === 'A' ? 'B' : 'A';
   var need2 = cnt(up2) > 0;
   var mach = function (h, up) { return { x:h.x, y:(up === 'A') ? h.y : DY - h.y }; };   // all holes are given as seen from face A; B up mirrors Y
@@ -2725,8 +2801,14 @@ function programs(p) {
     out.sort(function (a, b) { return (a.sx - b.sx) || (a.Y - b.Y); });
     return out;
   };
+  var routes = function (up) {   // grooves on the face that is up, in this program's coordinates (B up: Y mirrored)
+    return GR.filter(function (g) { return g.face === up; }).map(function (g) {
+      var y0 = up === 'A' ? g.y0 : DY - g.y1, y1 = up === 'A' ? g.y1 : DY - g.y0, dep = Math.min(g.depth, DZ - R.rout.skin);
+      return groovePath({ x0:g.x0, x1:g.x1, y0:y0, y1:y1 }, DX, DY, dep, g.name || 'GROOVE');
+    });
+  };
   var faceTxt = function (up) { return up === 'A' ? '' : ' -- THIS PROGRAM DRILLS THE OTHER FACE: panel turned over about X (long edge stays, Y mirrored)'; };
-  var text = function (bl, op, kind, up) {
+  var text = function (bl, op, kind, up, rts) {
     var dx = kind === 'rot' ? DY : DX, dy = kind === 'rot' ? DX : DY;
     var L = ['H DX=' + num(dx) + ' DY=' + num(dy) + ' DZ=' + num(DZ) + ' BX=0 BY=0 BZ=21 -EH T=0 *MM /"DEF" R=1 V=0',
       '; Machine Type:  ZapPZmN', ';Ensemble : ', ';Piece : ', ';Ref : ', ';Fichier : ' + p.name + '_' + op + 'OP', ';** Date codage : db-kurejas'];
@@ -2734,23 +2816,28 @@ function programs(p) {
     if (kind === 'rot') L.push('; ' + op + 'OP: ' + (op > 1 ? 'same face up as 1OP, ' : '') + 'panel ROTATED 90 deg counter-clockwise - the front edge (Y=0 of the POSITION below) becomes the left end (X=0), long side along Y');
     if (p.note) L.push('; POSITION (1OP): ' + p.note + (kind === 'rot' ? '' : faceTxt(up)));
     if (bl.length) { L.push('; ------ BP_SCM_DRILLING_BLOCK'); bl.forEach(function (b) { L.push(' XBO X=' + num(b.X) + ' Y=' + num(b.Y) + ' Z=' + num(b.Z) + ' D=' + num(b.D) + ' N="' + b.N + '" F=' + b.F + ' R=1#'); }); }
+    if (rts && rts.length) { var C0 = R.rout; L.push('; ------ ' + C0.name);
+      rts.forEach(function (rt) { L.push('; ***** ' + rt.name);
+        rt.moves.forEach(function (m) {
+          if (m.t === 'G0') L.push(' XG0 X=' + num(m.x) + ' Y=' + num(m.y) + ' Z=' + num(m.z) + ' T=' + C0.T + ' C=0 V=' + C0.feedPlunge + ' D=' + C0.D + ' F=1');
+          else L.push(' XL2P X=' + num(m.x) + ' Y=' + num(m.y) + ' Z=' + num(m.z) + ' V=' + m.v); }); }); }
     L.push(';**********************************************************', '.END', ';**********************************************************', ';FINEPROG');
     return ascii(L.join('\r\n') + '\r\n');
   };
-  var res = [], b1 = bores(up1), b2 = need2 ? bores(up2) : [], br = [];
+  var res = [], b1 = bores(up1), b2 = need2 ? bores(up2) : [], br = [], r1 = routes(up1), r2 = need2 ? routes(up2) : [];
   if (rotE.length) {
     if (DX > M.maxY + 1e-6) w.push(p.name + ': ' + rotE.length + ' ø' + rotE[0].d + ' skylės ilgame krašte — pasukti 90° negalima (ilgis ' + num(DX) + ' > ' + M.maxY + ' mm), NEPROGRAMUOTA');
     else { br = rotBores(); if (br.length && DY < M.minX) w.push(p.name + ': pasuktoje programoje X ilgis tik ' + num(DY) + ' mm (staklių min. ' + M.minX + ') — patikrinkite prispaudimą'); }
   }
   var tooBig = false;
-  if (b1.length || b2.length || br.length) {
+  if (b1.length || b2.length || br.length || r1.length || r2.length) {
     if (DY > M.maxY + 1e-6) { tooBig = true; w.push(p.name + ': plotis ' + num(DY) + ' mm > ' + M.maxY + ' — netelpa į stakles, NEPROGRAMUOTA'); }
     if (DX > M.maxX + 1e-6) { tooBig = true; w.push(p.name + ': ilgis ' + num(DX) + ' mm > ' + M.maxX + ' — netelpa į stakles, NEPROGRAMUOTA'); }
   }
-  if (tooBig) { b1 = []; b2 = []; br = []; }   // a part the machine cannot hold gets no program (drill it by hand)
-  var n = 0, add = function (bl, kind, up) { n++; res.push({ file:p.name + '_' + n + 'OP.XXL', id:p.name + '_' + n + 'OP', text:text(bl, n, kind, up), n:bl.length, up:up, kind:kind }); };
-  if (b1.length) add(b1, 'main', up1);
-  if (b2.length) add(b2, 'flip', up2);
+  if (tooBig) { b1 = []; b2 = []; br = []; r1 = []; r2 = []; }   // a part the machine cannot hold gets no program (drill it by hand)
+  var n = 0, add = function (bl, kind, up, rts) { n++; res.push({ file:p.name + '_' + n + 'OP.XXL', id:p.name + '_' + n + 'OP', text:text(bl, n, kind, up, rts), n:bl.length + (rts ? rts.length : 0), up:up, kind:kind }); };
+  if (b1.length || r1.length) add(b1, 'main', up1, r1);
+  if (b2.length || r2.length) add(b2, 'flip', up2, r2);
   if (br.length) add(br, 'rot', up1);
   return { files:res, warnings:w.concat(p.warnings) };
 }
@@ -3334,7 +3421,7 @@ function cabinetSVG(c,r){
               const cy=Math.max(y0+g+60+L/2,Math.min(y1-g-60-L/2,handleY));
               o+=handleBar(hx,cy-L/2,hx,cy+L/2);}
             return o;};
-          const wall=eq(c.type,'PAKABINAMOS');
+          const wall=c.hang===true||(c.hang!==false&&eq(c.type,'PAKABINAMOS'));
           const handleAt=(y0,y1,lowerLeaf,upperLeaf)=>wall?y0:(upperLeaf?y0:lowerLeaf?y1:Math.min(1050,y1));
           if(sec.doorSplit==='h'){
             const hL=hsV!=='right',YS=ySplit(sec,secH,n);
@@ -3544,6 +3631,7 @@ function build(THREE, PT, items) {
     var mats = {}, mat = function (it) {
       var kind = it.o.metal ? 'metal' : it.kind || 'part', tn = it.o.tex && it.o.tex.name, tx = tn && texs[tn], key = kind + '|' + (tx ? 'T' + tn : it.color);
       if (mats[key]) return mats[key];
+      if (kind === 'led') return (mats[key] = new THREE.MeshStandardMaterial({ color:0xfff3d0, emissive:new THREE.Color(0xffe3a0), emissiveIntensity:6, roughness:0.4 }));   // an LED strip: it lights
       var rough = { front:0.42, top:0.32, hdf:0.75, part:0.55, metal:0.35 }[kind] || 0.5;
       return (mats[key] = new THREE.MeshStandardMaterial({ color:tx ? 0xffffff : new THREE.Color(it.color || '#dddddd'), map:tx ? tx.t : null, roughness:rough, metalness:kind === 'metal' ? 0.7 : 0 }));
     };
@@ -5297,17 +5385,22 @@ function frontCab(c, i, it, bad, act) {
   if (art) {   // the same render as the cabinet's front view, at its place on the wall
     s += art.svg.replace('<svg class="fr-svg"', '<svg class="rm-art" x="' + x0.toFixed(1) + '" y="' + fY(z0 + h + 4).toFixed(1) + '" width="' + (w * k).toFixed(1) + '" height="' + (art.vbH * k).toFixed(1) + '" preserveAspectRatio="none"');
     s += '<rect class="rm-body art" x="' + x0.toFixed(1) + '" y="' + fY(z0 + h).toFixed(1) + '" width="' + (w * k).toFixed(1) + '" height="' + (h * k).toFixed(1) + '"/>';
-    fronts(i).forEach(function (f) { if (!f.door) return;   // door opening lines over the render (they meet on the handle side)
-      var fx = x0 + f.x0 * k, fy = fY(z0 + f.z1), fw = (f.x1 - f.x0) * k, fh = (f.z1 - f.z0) * k, hx = f.left ? fx + fw : fx, ox = f.left ? fx : fx + fw;
+    fronts(i).forEach(function (f) { if (!f.door) return;   // door opening lines over the render (they meet on the hinge side, as on the drawings)
+      var fx = x0 + f.x0 * k, fy = fY(z0 + f.z1), fw = (f.x1 - f.x0) * k, fh = (f.z1 - f.z0) * k, hx = f.left ? fx : fx + fw, ox = f.left ? fx + fw : fx;
       s += '<path class="rm-open art" d="M' + ox.toFixed(1) + ' ' + fy.toFixed(1) + ' L' + hx.toFixed(1) + ' ' + (fy + fh / 2).toFixed(1) + ' L' + ox.toFixed(1) + ' ' + (fy + fh).toFixed(1) + '"/>'; });
   } else s += '<rect class="rm-body' + (c.dishwasher ? ' dish' : c.kind === 'panel' ? ' panel' : '') + '" x="' + x0.toFixed(1) + '" y="' + fY(z0 + h).toFixed(1) + '" width="' + Math.max(1.2, w * k).toFixed(1) + '" height="' + (h * k).toFixed(1) + '"' + (c.kind === 'panel' && window.DBFront ? ' style="fill:' + window.DBFront.matColor(c.mat && c.mat.carc, '#d5cbbd') + '"' : '') + '/>';
   if (!art) fronts(i).forEach(function (f) {
     var fx = x0 + f.x0 * k, fy = fY(z0 + f.z1), fw = (f.x1 - f.x0) * k, fh = (f.z1 - f.z0) * k;
     s += '<rect class="rm-front" x="' + fx.toFixed(1) + '" y="' + fy.toFixed(1) + '" width="' + fw.toFixed(1) + '" height="' + fh.toFixed(1) + '"/>';
-    if (f.door) { var hx = f.left ? fx + fw : fx, ox = f.left ? fx : fx + fw;   // opening lines meet on the handle side (opposite the hinges): a pair hinged outside points to the middle
+    if (f.door) { var hx = f.left ? fx : fx + fw, ox = f.left ? fx + fw : fx;   // opening lines meet on the hinge side (as on the drawings): a pair hinged outside points to its sides
       s += '<path class="rm-open" d="M' + ox.toFixed(1) + ' ' + fy.toFixed(1) + ' L' + hx.toFixed(1) + ' ' + (fy + fh / 2).toFixed(1) + ' L' + ox.toFixed(1) + ' ' + (fy + fh).toFixed(1) + '"/>'; }
     else if (fw > 8) s += '<line class="rm-handle" x1="' + (fx + fw * 0.35).toFixed(1) + '" y1="' + (fy + Math.min(fh * 0.22, 40 * k + 3)).toFixed(1) + '" x2="' + (fx + fw * 0.65).toFixed(1) + '" y2="' + (fy + Math.min(fh * 0.22, 40 * k + 3)).toFixed(1) + '"/>';
   });
+  var inf0 = C.o.infos[i], lv = inf0 && inf0.r && inf0.r.visual && inf0.r.visual.leds;
+  if (lv) lv.forEach(function (q) { var e = q.e, lw = Math.max(2.5, (e[0][1] - e[0][0]) * k), lh = Math.max(2.5, (e[2][1] - e[2][0]) * k);   // LED strips: seen through the fronts
+    s += '<rect class="rm-led" x="' + (x0 + e[0][0] * k - (lw > (e[0][1] - e[0][0]) * k ? lw / 2 : 0)).toFixed(1) + '" y="' + (fY(z0 + e[2][1]) - (lh > (e[2][1] - e[2][0]) * k ? lh / 2 : 0)).toFixed(1) + '" width="' + lw.toFixed(1) + '" height="' + lh.toFixed(1) + '"/>'; });
+  if (D && D.mode === 'ledadd' && D.cand && D.cand.i === i) { var at = D.cand.at, gx = at === 'R' ? x0 + w * k - 6 : x0, gy = at === 'top' ? fY(z0 + h) : at === 'bottom' ? fY(z0) - 6 : fY(z0 + h);
+    s += '<rect class="rm-ghost" x="' + gx.toFixed(1) + '" y="' + gy.toFixed(1) + '" width="' + (at === 'L' || at === 'R' ? 6 : w * k).toFixed(1) + '" height="' + (at === 'L' || at === 'R' ? h * k : 6).toFixed(1) + '"/>'; }
   if (c.vis && !c.dishwasher && c.kind !== 'panel') {   // a visible side or bottom: a band in the front colour
     var vcol = window.DBFront ? window.DBFront.matColor((c.mat || {}).facade, '#d5cbbd') : '#d5cbbd', vw = Math.max(2.5, Math.min(5, (+c.thick || 18) * k));
     if (c.vis.L) s += '<rect class="rm-visside" x="' + x0.toFixed(1) + '" y="' + fY(z0 + h).toFixed(1) + '" width="' + vw.toFixed(1) + '" height="' + (h * k).toFixed(1) + '" style="fill:' + vcol + '"/>';
@@ -5520,6 +5613,7 @@ function items3d(proj, infos) {
     });
     else add(tr, 0, cabW(c), 0, D0, 0, cabH(c), c.dishwasher ? fac : carc, { cab:o.i, front:true, wood:R3WOOD.test(mat.facade || '') });
     if (inf && inf.r && inf.r.legs) inf.r.legs.forEach(function (lg) { var rr = Math.min(25, (lg.d || 32) / 2); add(tr, lg.x - rr, lg.x + rr, lg.y - rr, lg.y + rr, -legH(c), 0, '#343b3a', { cab:o.i, metal:true }, 'leg'); });
+    ((inf && inf.r && inf.r.visual && inf.r.visual.leds) || []).forEach(function (q) { var e = q.e; add(tr, e[0][0], e[0][1], e[1][0], e[1][1], e[2][0], e[2][1], '#fff1b8', { cab:o.i, led:true }, 'led'); });   // LED strips: they glow in the render
     var pl = inf && inf.r && inf.r.visual && inf.r.visual.plinth;
     if (pl) add(tr, pl.x0, pl.x1, pl.y0, pl.y0 + pl.t, pl.z0, pl.z1, r3mat(pl.mat, fac), { cab:o.i, front:true, wood:R3WOOD.test(pl.mat || ''), tex:{ name:pl.mat, g:0 } }, 'front');
     else if (c.dishwasher && legH(c)) add(tr, 0, cabW(c), 40, D0, -legH(c), 0, fac, opt);
@@ -5793,6 +5887,18 @@ var PT_ICON = {
   hot:'<circle cx="27" cy="30" r="9" fill="#c9442e" fill-opacity=".85"/><rect x="25" y="8" width="4" height="13" fill="currentColor"/><rect x="18" y="8" width="18" height="4" rx="2" fill="#c9442e"/>',
   drain:'<circle cx="27" cy="27" r="14" fill="#8b918d" fill-opacity=".8"/><circle cx="27" cy="27" r="8" fill="none" stroke="#fff" stroke-width="2"/>'
 };
+var LED_ICON = '<svg viewBox="0 0 54 54" aria-hidden="true"><rect x="8" y="12" width="38" height="26" rx="2" fill="#e9e5dc" stroke="#56635b" stroke-width="1.6"/><rect x="10" y="35" width="34" height="4" rx="1.5" fill="#ffd860" stroke="#c99a00"/><path d="M16 42l-3 6M27 42v7M38 42l3 6" stroke="#e0a800" stroke-width="2" stroke-linecap="round"/></svg>';
+/* where a dropped LED goes on cabinet i: the edge nearest the pointer (bottom, top, left or right side), in the front view */
+function ledSpot(e, m) {
+  if (V.view !== 'front' || !C.fr) return null;
+  var el = document.elementFromPoint(e.clientX, e.clientY), g = el && el.closest && el.closest('[data-cab]'); if (!g) return null;
+  var i = +g.getAttribute('data-cab'), proj = C.o.proj, L = proj.layout, c = proj.cabinets[i], it = c && L.items[c.id]; if (!c || !it || c.dishwasher || c.kind === 'panel' || c.kind === 'box') return null;
+  var along = (m[0] - C.fr.ox) / C.fr.k - C.fr.off[it.wall], z = zAt(m), w = cabW(c), h = cabH(c), z0 = z0Of(c, it, L);
+  var d = { bottom:z - z0, top:z0 + h - z, L:along - it.x, R:it.x + w - along }, at = 'bottom';
+  Object.keys(d).forEach(function (k) { if (d[k] < d[at]) at = k; });
+  return { i:i, at:at, side:at === 'bottom' && level(c) === 'wall' ? 'out' : 'in' };
+}
+function ledAtT(at) { return T({ bottom:'ledBottom', top:'ledTop', L:'ledL', R:'ledR' }[at]); }
 function ptIcon(t) { return '<svg viewBox="0 0 54 54" aria-hidden="true">' + (PT_ICON[t] || '') + '</svg>'; }
 function ptById(L, id) { return ptsOf(L).filter(function (o) { return o.id === id; })[0] || null; }
 function ptSym(pt, cx, cy, k, cls) {   // the symbol, in px at (cx, cy); k: px per mm
@@ -5837,6 +5943,12 @@ function autoSpotPt(proj, pt) {   // the wall shown; water and drain under a sin
   return { wall:wi, x:r1(Math.max(PT_DEF[pt.type].w / 2, Math.min(G[wi].len - PT_DEF[pt.type].w / 2, x))) };
 }
 function selectPt(id) { V.psel = id; V.osel = null; if (C.o.sel != null) C.o.onSelect(null); else attach(C.el, C.o); }
+function addLed(i, spot) {
+  var c = C.o.proj.cabinets[i]; if (!c) return;
+  var R0 = window.DBEngine && window.DBEngine.R && window.DBEngine.R.led || { from:30, w:16, depth:8 };
+  var ls = (c.leds || []).slice(); ls.push({ at:spot.at, side:spot.side || 'in', from:R0.from, ends:'open', w:R0.w, depth:R0.depth });
+  C.o.onCab(i, { leds:ls }); if (C.o.toast) C.o.toast(T('ledAdded').replace('{w}', cabName(c, i) + ' · ' + ledAtT(spot.at)));
+}
 function addPt(type, wall, x, z) {
   var proj = C.o.proj, L = proj.layout, pt = newPt(type);
   if (wall == null) { var sp = autoSpotPt(proj, pt); wall = sp.wall; x = sp.x; }
@@ -5940,6 +6052,11 @@ function onMove(e) {
     D.tip = { x:m[0], y:m[1], bad:D.pt.bad, lines:[ptName(C.o.proj.layout, D.pt) + ' → ' + T('rmWall') + ' ' + LETTER[wp.wall], T('rmFromStart').replace('{x}', fm(D.pt.x)) + ' · ' + T('ptZ') + ' ' + fm(D.pt.z)] };
     draw(); return;
   }
+  if (D.mode === 'ledadd') {
+    moveGhost(e); D.cand = null; D.tip = null;
+    if (inStage(e)) { var ls = ledSpot(e, m); if (ls) { D.cand = ls; D.tip = { x:m[0], y:m[1], lines:[cabName(C.o.proj.cabinets[ls.i], ls.i) + ' · LED', ledAtT(ls.at) + ' · ' + T(ls.side === 'out' ? 'ledOut' : 'ledIn')] }; } }
+    draw(); return;
+  }
   if (D.mode === 'ptadd') {
     moveGhost(e); D.cand = null; D.tip = null;
     if (inStage(e) && V.view !== '3d') { var wq = wallAt(m);
@@ -6012,6 +6129,10 @@ function onUp(e) {
     V.psel = d.id; V.osel = null; C.o.onLayout(function (proj) { var o = ptById(proj.layout, d.id); if (o) { o.wall = d.pt.wall; o.x = d.pt.x; o.z = d.pt.z; } }, { sel:null, msg:d.pt.bad ? T('opHitDrop') : '' });
     return;
   }
+  if (d.mode === 'ledadd') {
+    if (!d.cand) { draw(); if (d.moved && C.o.toast) C.o.toast(T('ledMiss')); return; }
+    addLed(d.cand.i, d.cand); return;
+  }
   if (d.mode === 'ptadd') {
     if (!d.cand) { draw(); if (d.moved && C.o.toast) C.o.toast(T(V.view === '3d' ? 'rmNo3dDrop' : 'rmMiss')); return; }
     addPt(d.type, d.cand.wall, d.cand.x, d.cand.z); return;
@@ -6049,7 +6170,8 @@ function palette() {
     '<div class="lbl" style="margin-top:10px">' + esc(T('rmOpAdd')) + '</div><div class="rm-pre">' + OP_T.map(function (t) {
       return '<button type="button" class="rm-chip rm-opchip" data-opadd="' + t + '" title="' + esc(T('opAddT')) + '">' + opIcon(t) + '<span><b>' + esc(opLabel(t)) + '</b><small>' + OP_DEF[t].w + '×' + OP_DEF[t].h + '</small></span></button>'; }).join('') + '</div>' +
     '<div class="lbl" style="margin-top:10px">' + esc(T('rmPtAdd')) + '</div><div class="rm-pre">' + PT_T.map(function (t) {
-      return '<button type="button" class="rm-chip rm-opchip" data-ptadd="' + t + '" title="' + esc(T('ptAddT')) + '">' + ptIcon(t) + '<span><b>' + esc(T(ptLabelKey(t))) + '</b><small>h ' + PT_DEF[t].z + '</small></span></button>'; }).join('') + '</div>' +
+      return '<button type="button" class="rm-chip rm-opchip" data-ptadd="' + t + '" title="' + esc(T('ptAddT')) + '">' + ptIcon(t) + '<span><b>' + esc(T(ptLabelKey(t))) + '</b><small>h ' + PT_DEF[t].z + '</small></span></button>'; }).join('') +
+      '<button type="button" class="rm-chip rm-opchip" data-ledadd="1" title="' + esc(T('ledAddT')) + '">' + LED_ICON + '<span><b>' + esc(T('ledChip')) + '</b><small>' + esc(T('ledChipS')) + '</small></span></button></div>' +
     (un.length ? '<div class="lbl" style="margin-top:10px">' + esc(T('rmUnplaced')) + '</div><div class="rm-un">' + un.map(function (o) {
       return '<div class="rm-unrow"><span>' + esc(cabName(o.c, o.i)) + '<small>' + fm(cabW(o.c)) + ' mm</small></span><button type="button" class="btn" data-rm="place" data-i="' + o.i + '">' + esc(T('rmPlace')) + '</button></div>'; }).join('') + '</div>' : '') +
     '</aside>';
@@ -6074,7 +6196,7 @@ function inspector() {
       (my.length ? '<p class="note bad">' + esc(T(my.every(function (p) { return /^(op|pt)/.test(p.kind); }) ? 'rmOpShort' : 'rmHitShort')) + '</p>' : '') +
       (pr.list.length > my.length ? '<p class="note bad">' + esc(T('rmOtherProbs').replace('{n}', pr.list.length - my.length)) + '</p>' : '') +
       (g && Math.abs(g.cw - cabW(c)) > 0.5 && g.cw >= 100 && g.cw <= 1200 && !c.dishwasher ? '<button type="button" class="btn rm-fill" data-rm="fill">↔ ' + esc(T('rmFill').replace('{w}', fm(g.cw))) + '</button>' : '') +
-      sideEditor(c, it, L) + visEditor(c, it, L) +
+      sideEditor(c, it, L) + visEditor(c, it, L) + ledList(c) +
       '<div class="rm-acts"><button type="button" class="btn pri" data-rm="edit">✎ ' + esc(T('rmEdit')) + '</button><button type="button" class="btn" data-rm="dup">⧉ ' + esc(T('rmDup')) + '</button>' +
       '<button type="button" class="btn ghost" data-rm="unplace">' + esc(T('rmUnplace')) + '</button><button type="button" class="btn ghost danger" data-rm="del">' + esc(C.o.confirmDel ? T('delSure') : T('del')) + '</button></div>' +
       '<p class="note">' + esc(T('rmKeys')) + '</p>' + (C.o.lookHTML ? C.o.lookHTML(i) : '') + '</aside>';
@@ -6137,6 +6259,12 @@ function exposedSides(proj, o) {
     out[sd] = z < va[1] - 5;   // some of it shows (a tall unit beside a base cabinet: above it)
   });
   return out;
+}
+function ledList(c) {   // this cabinet's LED grooves: where they are, remove one; the details in the cabinet's editor
+  if (c.dishwasher || c.kind === 'panel' || c.kind === 'box') return '';
+  var ls = c.leds || [];
+  return '<div class="rm-visd"><div class="lbl">' + esc(T('ledT')) + '</div>' + (ls.length ? '<div class="rm-ledl">' + ls.map(function (l, k) {
+    return '<span class="rm-ledi"><b>' + (k + 1) + '</b>' + esc(ledAtT(l.at) + ' · ' + T(l.side === 'out' ? 'ledOut' : 'ledIn') + ' · ' + fm(l.from) + ' mm') + '<button type="button" class="btn ghost" data-rm="leddel" data-v="' + k + '" aria-label="✕">✕</button></span>'; }).join('') + '</div>' : '<p class="note">' + esc(T('ledAddT')) + '</p>') + '</div>';
 }
 function visEditor(c, it, L) {
   if (c.dishwasher || c.kind === 'panel' || c.kind === 'box') return '';
@@ -6238,6 +6366,7 @@ function onClick(e) {
   if (a === 'dup') { C.o.onDup(i); return; }
   if (a === 'del') { C.o.onDelete(i); return; }
   if (a === 'unplace') { C.o.onLayout(function (p) { p.layout.items[c.id] = { wall:-1, x:0 }; }, { sel:null }); return; }
+  if (a === 'leddel') { var lk = (c.leds || []).slice(); lk.splice(+v, 1); C.o.onCab(i, { leds:lk }); return; }
   if (a === 'vis') { var vv = Object.assign({ L:false, R:false, B:false }, c.vis); vv[v] = !vv[v]; C.o.onCab(i, { vis:vv }); return; }
   if (a === 'visfit') { var ob = placed(proj).filter(function (q) { return q.c === c; })[0]; if (!ob) return; var exs = exposedSides(proj, ob); C.o.onCab(i, { vis:{ L:exs.L, R:exs.R, B:!!(c.vis && c.vis.B) } }); return; }
   if (a === 'fill') { var g = gapAround(proj, c); if (!g) return; C.o.onCab(i, { W:g.cw }, function (p) { p.layout.items[c.id].x = g.cx; }); return; }
@@ -6372,6 +6501,20 @@ function attach(el, o) {
   });
   stage.addEventListener('pointercancel', function (e) { if (e.pointerType === 'touch') { delete TP[e.pointerId]; PZ = null; } D = null; draw(); });
   stage.addEventListener('keydown', onKey);
+  el.querySelectorAll('[data-ledadd]').forEach(function (ch) {   // the LED strip: dragged onto a cabinet (a click: onto the selected one, at its bottom)
+    ch.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      D = { mode:'ledadd', x:e.clientX, y:e.clientY, moved:false };
+      var g = document.createElement('div'); g.className = 'rm-ghostcard'; g.innerHTML = LED_ICON + '<b>' + esc(T('ledChip')) + '</b>'; document.body.appendChild(g); D.ghost = g; moveGhost(e);
+      try { ch.setPointerCapture(e.pointerId); } catch (er) {} e.preventDefault();
+    });
+    ch.addEventListener('pointermove', function (e) { if (D && D.mode === 'ledadd') onMove(e); });
+    ch.addEventListener('pointerup', function (e) { if (!D || D.mode !== 'ledadd') return;
+      if (!D.moved) { if (D.ghost) D.ghost.remove(); D = null; var si = C.o.sel, sc = si != null && C.o.proj.cabinets[si];
+        if (sc && !sc.dishwasher && sc.kind !== 'panel' && sc.kind !== 'box') addLed(si, { at:'bottom', side:level(sc) === 'wall' ? 'out' : 'in' }); else if (C.o.toast) C.o.toast(T('ledMiss')); return; }
+      onUp(e); });
+    ch.addEventListener('pointercancel', function () { if (D && D.ghost) D.ghost.remove(); D = null; draw(); });
+  });
   el.querySelectorAll('[data-ptadd]').forEach(function (ch) {
     ch.addEventListener('pointerdown', function (e) {
       if (e.button !== 0 && e.pointerType === 'mouse') return;
@@ -7867,7 +8010,7 @@ lt:{
  cabs:'Spintelės', newCab:'＋ Nauja spintelė', dup:'Kopijuoti', del:'Ištrinti', delSure:'Tikrai ištrinti?',
  pickTitle:'Kokią spintelę kuriame?', pickLead:'Pasirinkite panašiausią — viską galėsite pakeisti.', cancel:'Atšaukti',
  pDrawers:'Stalčių spintelė', pDoors:'Durų spintelė', pDrDoors:'Stalčius + durys', pWall:'Pakabinama', pTall:'Aukšta su orkaite', pFridge:'Šaldytuvo spinta', kFridge:'Šaldytuvas', fridgeHinge:'Vyriai', fridgeHandle:'Rankena — {s}',
- visT:'Matomi šonai (iš fasado medžiagos)', sideFull:'Šonai per visą aukštį (dengia viršų ir dugną)', topMount:'Viršus', topOn:'Ant šonų', topInside:'Tarp šonų', visL:'Kairys', visR:'Dešinys', visB:'Apačia', visNote:'Pažymėtas šonas pjaunamas iš fasado medžiagos ir aplijuojamas fasado briauna; kiti lieka karkaso medžiagos. Baldų skirtuke — mygtukas, kuris pažymi laisvus šonus pagal išdėstymą.', fridgeSec:'Integruojamas šaldytuvas', fridgeN:'Fasadai', fridge1:'1 — vien šaldytuvas', fridge2:'2 — šaldytuvas ir šaldiklis',
+ ledAddL:'Pridėti LED:', ledT:'LED apšvietimas', ledL2:'įleidžiamo profilio griovelis 16 × 8, frezuojamas CNC', ledAt:'Kur', ledBottom:'Dugne', ledTop:'Viršuje', ledL:'Kairiame šone', ledR:'Dešiniame šone', ledSide:'Pusė', ledIn:'Viduje', ledOut:'Išorėje', ledFrom:'Nuo priekio', ledEnds:'Galai', ledOpen:'Kiaurai', ledClosed:'Uždari', ledNone:'LED nėra. Pridėkite čia arba Baldų skirtuke nutempkite „LED juostą“ ant spintelės.', ledNote:'Frezuojama kaip step2xxl: freza T=96 Ø15.5, įleidimas nuožulniai per 30 mm, paliekama ≥ 2 mm. „Kiaurai“ — griovelis per visą detalę (profilis įstumiamas, laidas išeina gale). Pakabinamos dugne „Išorėje“ — šviečia žemyn ant stalviršio.', ledChip:'LED juosta', ledChipS:'griovelis 16×8', ledAddT:'Nutempkite ant spintelės — prie jos apačios, viršaus ar šono', ledAdded:'LED pridėtas: {w}', ledMiss:'Paleiskite ant spintelės (vaizdas iš priekio)', rmLeds:'LED', visT:'Matomi šonai (iš fasado medžiagos)', sideFull:'Šonai per visą aukštį (dengia viršų ir dugną)', topMount:'Viršus', topOn:'Ant šonų', topInside:'Tarp šonų', visL:'Kairys', visR:'Dešinys', visB:'Apačia', visNote:'Pažymėtas šonas pjaunamas iš fasado medžiagos ir aplijuojamas fasado briauna; kiti lieka karkaso medžiagos. Baldų skirtuke — mygtukas, kuris pažymi laisvus šonus pagal išdėstymą.', fridgeSec:'Integruojamas šaldytuvas', fridgeN:'Fasadai', fridge1:'1 — vien šaldytuvas', fridge2:'2 — šaldytuvas ir šaldiklis',
  fridgeNiche:'Niša ≈ {h} × {w} mm', fridgeNote:'Fasadai tvirtinami prie šaldytuvo durų — be lankstų. Sekcijos aukštis = nišos aukštis + 2 plokštės (dugnas / lentyna); patikrinkite šaldytuvo instrukcijoje nurodytą nišą (dažniausiai 1772–1780 mm aukščio, ≥ 550 mm gylio). Nišos lentyna gale trumpesnė {v} mm — orui; cokolyje palikite groteles.', pDish:'Indaplovės fasadas', pEmpty:'Tuščia (lentynos)', pBox:'3D konstrukcija',
  bxS1l:'Išoriniai matmenys. Plokštes dėliokite modelyje (▣ Plokštės) arba žemiau.', bxS2:'Plokštės', bxS2l:'Kurios plokštės yra, kiek įleistos ir kuri kurią dengia kampuose.', bxS3:'Vidus', bxS3l:'Pertvaros — per visą aukštį tarp apačios ir viršaus; lentynos — skyriuje tarp pertvarų.', bxS4:'Jungtys', bxS4l:'Kiekvienas galas, atsiremiantis į kitos plokštės plokštumą, sujungiamas — rūšis, kiekis ir vietos kiekvienam mazgui.',
  bx_bottom:'Apačia', bx_top:'Viršus', bx_left:'Kairė', bx_right:'Dešinė', bx_back:'Nugara', bx_front:'Priekis', bxInset:'Įleista', bxT:'Storis', bxCorners:'Kampai — kuri plokštė dengia kurią', bxCovers:'dengia', bxForced:'įleista plokštė visada viduje', bxWith:'su',
@@ -8015,7 +8158,7 @@ en:{
  cabs:'Cabinets', newCab:'＋ New cabinet', dup:'Duplicate', del:'Delete', delSure:'Really delete?',
  pickTitle:'What are we building?', pickLead:'Pick the closest one — everything can be changed.', cancel:'Cancel',
  pDrawers:'Drawer cabinet', pDoors:'Door cabinet', pDrDoors:'Drawer + doors', pWall:'Wall cabinet', pTall:'Tall with oven', pFridge:'Fridge unit', kFridge:'Fridge', fridgeHinge:'Hinges', fridgeHandle:'Handle — {s}',
- visT:'Visible sides (in the front material)', sideFull:'Full-height sides (covering the top and the bottom)', topMount:'Top', topOn:'On the sides', topInside:'Between the sides', visL:'Left', visR:'Right', visB:'Bottom', visNote:'A ticked side is cut from the front material with the front edging; the others stay in the carcass material. In Baldai one button ticks the free sides from the layout.', fridgeSec:'Integrated fridge', fridgeN:'Fronts', fridge1:'1 — fridge only', fridge2:'2 — fridge and freezer',
+ ledAddL:'Add an LED:', ledT:'LED lighting', ledL2:'a groove for a recessed profile, 16 × 8, routed on the CNC', ledAt:'Where', ledBottom:'Bottom', ledTop:'Top', ledL:'Left side', ledR:'Right side', ledSide:'Face', ledIn:'Inside', ledOut:'Outside', ledFrom:'From the front', ledEnds:'Ends', ledOpen:'Through', ledClosed:'Closed', ledNone:'No LEDs. Add one here, or drag "LED strip" onto a cabinet in the Baldai tab.', ledNote:'Routed as step2xxl does: cutter T=96 Ø15.5, ramped entry over 30 mm, at least 2 mm left. "Through" — the groove runs the whole part (the profile slides in, the cable leaves at the end). A wall unit\'s bottom "Outside" lights the worktop below.', ledChip:'LED strip', ledChipS:'groove 16×8', ledAddT:'Drag onto a cabinet — near its bottom, top or a side', ledAdded:'LED added: {w}', ledMiss:'Drop it on a cabinet (front view)', rmLeds:'LED', visT:'Visible sides (in the front material)', sideFull:'Full-height sides (covering the top and the bottom)', topMount:'Top', topOn:'On the sides', topInside:'Between the sides', visL:'Left', visR:'Right', visB:'Bottom', visNote:'A ticked side is cut from the front material with the front edging; the others stay in the carcass material. In Baldai one button ticks the free sides from the layout.', fridgeSec:'Integrated fridge', fridgeN:'Fronts', fridge1:'1 — fridge only', fridge2:'2 — fridge and freezer',
  fridgeNiche:'Niche ≈ {h} × {w} mm', fridgeNote:'The fronts are screwed to the fridge\'s own doors — no hinges. Section height = niche height + 2 boards (bottom / shelf); check the niche in the fridge\'s manual (usually 1772–1780 mm high, ≥ 550 mm deep). The niche shelf stops {v} mm short of the back for the air; leave a grille in the plinth.', pDish:'Dishwasher front', pEmpty:'Empty (shelves)', pBox:'3D construction',
  bxS1l:'Outer size. Place the boards in the model (▣ Boards) or below.', bxS2:'Boards', bxS2l:'Which boards there are, how far they are set in, and which covers which at the corners.', bxS3:'Inside', bxS3l:'Partitions run the full height between bottom and top; shelves sit in one compartment.', bxS4:'Joints', bxS4l:'Every end that meets another board\'s face is joined — type, count and positions per joint.',
  bx_bottom:'Bottom', bx_top:'Top', bx_left:'Left', bx_right:'Right', bx_back:'Back', bx_front:'Front', bxInset:'Set in', bxT:'Thickness', bxCorners:'Corners — which board covers which', bxCovers:'covers', bxForced:'a set-in board always sits inside', bxWith:'with',
@@ -8311,7 +8454,9 @@ function normCab(c) {
   c.cnc.joints = (c.cnc.joints && typeof c.cnc.joints === 'object') ? c.cnc.joints : {};
   c.sections = (c.sections || []).map(function (s) { return Object.assign(newSection(s.kind || 'doors'), s); });
   c.sections.forEach(function (s) { if (s.fridge && s.kind === 'doors') { s.doorSplit = 'h'; s.hinge = 'BE FURNITŪROS'; } else if (s.fridge) delete s.fridge; });
-  c.vis = { L:!!(c.vis && c.vis.L), R:!!(c.vis && c.vis.R), B:!!(c.vis && c.vis.B) };   // visible sides / bottom: in the front material
+  c.vis = { L:!!(c.vis && c.vis.L), R:!!(c.vis && c.vis.R), B:!!(c.vis && c.vis.B) };
+  c.leds = (Array.isArray(c.leds) ? c.leds : []).filter(function (l) { return l && /^(bottom|top|L|R)$/.test(l.at); }).map(function (l) {   // LED profile grooves
+    return { at:l.at, side:l.side === 'out' ? 'out' : 'in', from:num(l.from) >= 0 && l.from !== '' && l.from != null ? num(l.from) : E.R.led.from, ends:l.ends === 'closed' ? 'closed' : 'open', w:num(l.w) > 0 ? num(l.w) : E.R.led.w, depth:num(l.depth) > 0 ? num(l.depth) : E.R.led.depth }; });   // visible sides / bottom: in the front material
   fixCols(c);
   if (c.kind === 'box') { E.boxDefaults(c); c.cnc.legs = false; c.cnc.feet = false; }
   if (c.kind === 'panel') { c.cnc.legs = false; c.cnc.feet = false; c.sections = []; c.cols = 1; c.pe = Object.assign({ e1:true, e2:true, e3:true, e4:true }, c.pe && typeof c.pe === 'object' ? c.pe : {}); }
@@ -8625,7 +8770,7 @@ function botDepthField(c) {
     (v !== '' && v < full ? '<span class="h">' + esc(t('botDGap').replace('{g}', fmt(full - v))) + '</span>' : '');
 }
 function hbOf(c) { return c.cnc && c.cnc.bottom === 'inside' ? Math.max(0, num(c.cnc.bottomZ) || 0) : 0; }
-function cabKind(c) { if (c.hang === true) return 'PAKABINAMOS'; if (c.hang === false) return num(c.H) > 1000 ? 'ŪKINĖ' : 'PASTATOMOS'; return c.type; }
+function cabKind(c) { if (c.hang === true) return 'PAKABINAMOS'; if (c.hang === false || c.type !== 'PAKABINAMOS') return num(c.H) > 1000 ? 'ŪKINĖ' : 'PASTATOMOS'; return c.type; }   // by its height: a door cabinet made 2300 high is a tall one (handle at hand height)
 /* the cabinet's front render (DBFront) with its columns, ovens and legs */
 function frontArtOf(c, r, extra) {
   var nC = colsOf(c), cw = colWidths(c), W = num(c.W), H = num(c.H), t_ = num(c.thick) || 18, bnd = [0]; cw.forEach(function (w, k) { bnd.push(bnd[k] + w); }); bnd[nC] = W;
@@ -8719,7 +8864,7 @@ function viewEditor(c) {
     opRow(b + 'cnc.tbOn', o.tbFront !== 'off', t('oTb'), o.tbFront === 'hole' ? t('oTbD') : t('oTbDm'), true, hasTb, seg(b + 'cnc.tbFront', o.tbFront === 'off' ? 'mark' : o.tbFront, [['mark', t('tbMark')], ['hole', t('tbHole')]])) +
     opRow(b + 'cnc.hinges', o.hinges, t('oHinge'), t('oHingeD'), false, hasDoor, seg(b + 'cnc.hingeFix', o.hingeFix, [['screw', t('hfScrew')], ['press', t('hfPress')]])) +
     opRow(b + 'cnc.pinsOn', o.pins !== 'off', t('oPins'), t('oPinsD'), false, hasSh, seg(b + 'cnc.pins', o.pins, [['shelf', t('pinShelf')], ['row', t('pinRow')]])) +
-    '</div>';
+    '</div>' + ledBlock(c);
   h += step(3, t('s4'), t('s4l'), ops, 'ops');
   h += step(4, t('s5'), t('s5l'), matsBlock(c), 'mats');
   h += step(5, t('s6'), t('s6l'), extrasBlock(c), 'extra');
@@ -8948,6 +9093,20 @@ function legPlanSVG(c, r) {
 }
 function artOf(type) { return window.DBArt ? '<span class="cart">' + window.DBArt.pic(type, t('isoT_' + type)) + '</span>' : ico(type === 'cam' ? 'cam' : 'conf'); }
 function choice(bind, val, v, icon, title, desc) { return '<button type="button" class="choice' + (val === v ? ' on' : '') + '" data-act="set" data-bind="' + bind + '" data-v="' + v + '" aria-pressed="' + (val === v) + '">' + icon + '<span><b>' + title + '</b><small>' + desc + '</small></span></button>'; }
+/* LED profile grooves: where, which face, how far from the front, open or closed ends — routed as step2xxl does (T=96, ramp, 2 mm skin) */
+function ledAtName(at) { return t({ bottom:'ledBottom', top:'ledTop', L:'ledL', R:'ledR' }[at]); }
+function ledBlock(c) {
+  var b = 'c.leds.', ls = c.leds || [];
+  return '<div class="ledblk" id="st-led"><div class="lbl">' + t('ledT') + ' <span class="unit">· ' + t('ledL2') + '</span></div>' +
+    (ls.length ? ls.map(function (l, k) {
+      return '<div class="ledrow"><b class="ledno">' + (k + 1) + '</b>' + fS(t('ledAt'), b + k + '.at', l.at, [['bottom', t('ledBottom')], ['top', t('ledTop')], ['L', t('ledL')], ['R', t('ledR')]]) +
+        '<div class="f"><span>' + t('ledSide') + '</span>' + seg(b + k + '.side', l.side, [['in', t('ledIn')], ['out', t('ledOut')]]) + '</div>' +
+        fN(t('ledFrom'), b + k + '.from', l.from, 's') +
+        '<div class="f"><span>' + t('ledEnds') + '</span>' + seg(b + k + '.ends', l.ends, [['open', t('ledOpen')], ['closed', t('ledClosed')]]) + '</div>' +
+        '<button type="button" class="btn ghost danger" data-act="leddel" data-i="' + k + '" aria-label="' + esc(t('del')) + '">✕</button></div>'; }).join('') : '<p class="note" style="margin:2px 0 6px">' + t('ledNone') + '</p>') +
+    '<div class="ledadd"><span class="unit">' + t('ledAddL') + '</span>' + ['bottom', 'top', 'L', 'R'].map(function (at) { return '<button type="button" class="btn" data-act="ledadd" data-v="' + at + '">＋ ' + esc(ledAtName(at)) + '</button>'; }).join('') + '</div>' +
+    '<p class="note" style="margin:6px 0 0">' + t('ledNote') + '</p></div>';
+}
 function opRow(bind, on, title, desc, verified, applies, more) {
   var id = 'f-' + bind.replace(/\./g, '-');
   return '<div class="op' + (on ? '' : ' off') + (applies ? '' : ' na') + '"><input id="' + id + '" type="checkbox" data-bind="' + bind + '"' + (on ? ' checked' : '') + '>' +
@@ -9546,6 +9705,9 @@ function panelSVG(p, up) {
     else { var yy = my(e.edge === 'y0' ? 0 : W); x1 = x2 = X(e.pos); y1 = Y(yy); y2 = yy === 0 ? y1 - dpx : y1 + dpx; }
     s += '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" stroke="#2f7d55" stroke-width="' + (2 * r).toFixed(1) + '" stroke-opacity="0.8"/>';
   });
+  (p.grooves || []).forEach(function (g) {   // routed grooves (LED profile): filled on the face up, dashed on the other
+    var ya = my(g.y0), yb = my(g.y1), on = g.face === up;
+    s += '<rect x="' + X(g.x0).toFixed(1) + '" y="' + Y(Math.max(ya, yb)).toFixed(1) + '" width="' + ((g.x1 - g.x0) * k).toFixed(1) + '" height="' + Math.max(2, Math.abs(yb - ya) * k).toFixed(1) + '" fill="' + (on ? '#ffd860' : 'none') + '" fill-opacity=".8" stroke="#c99a00" stroke-width="1.2"' + (on ? '' : ' stroke-dasharray="4 3"') + '/>'; });
   p.holes.forEach(function (h) {
     var cx = X(h.x), cy = Y(my(h.y)), r = Math.max(h.mark ? 1.6 : 2, h.d * k / 2);
     if (h.mark) s += '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + r.toFixed(1) + '" fill="#9a6a00"/>';
@@ -9845,7 +10007,7 @@ function numOrNull(v) {
   return null;
 }
 var NUM_LIMITS = [   // [binding, min, max, whole number]
-  [/^c\.(W|H|D|dishWidth)$/, 50, 6000], [/^c\.thick$/, 6, 60], [/^c\.cnc\.facadeT$/, 6, 60], [/^c\.legH$/, 0, 400], [/^c\.cnc\.bottomZ$/, 0, 2000], [/^c\.cnc\.bottomD$/, 0, 2000], [/^c\.cnc\.railW$/, 30, 400],
+  [/^c\.(W|H|D|dishWidth)$/, 50, 6000], [/^c\.thick$/, 6, 60], [/^c\.cnc\.facadeT$/, 6, 60], [/^c\.legH$/, 0, 400], [/^c\.cnc\.bottomZ$/, 0, 2000], [/^c\.cnc\.bottomD$/, 0, 2000], [/^c\.leds\.\d+\.from$/, 0, 3000], [/^c\.cnc\.railW$/, 30, 400],
   [/^c\.colW\.\d+$/, 50, 6000], [/^c\.sections\.\d+\.nDrawers$/, 1, 12, true], [/^c\.sections\.\d+\.nDoors$/, 1, 6, true], [/^c\.sections\.\d+\.shelves$/, 0, 12, true], [/^c\.sections\.\d+\.height$/, 0, 6000],
   [/^c\.sections\.\d+\.frontH\.\d+$/, 0, 3000], [/^c\.sections\.\d+\.shelfPos\.\d+$/, 0, 6000],
   [/^c\.box\.fronts\.\d+\.nDrawers$/, 1, 8, true], [/^c\.box\.boards\.\w+\.inset$/, 0, 3000], [/^c\.box\.boards\.\w+\.T$/, 3, 60], [/^c\.box\.inner\.\d+\.T$/, 3, 60], [/^c\.box\.inner\.\d+\.(x|z)$/, 0, 6000],
@@ -9953,6 +10115,8 @@ app.addEventListener('click', function (e) {
       toast(t('cabRemoved').replace('{n}', dg.name || (di + 1)), false, t('undoBtn'), function () { if (S.proj !== dp || S.proj.cabinets.some(function (x) { return x.id === dg.id; })) return; S.proj.cabinets.splice(Math.min(di, S.proj.cabinets.length), 0, dg); S.sel = Math.min(di, S.proj.cabinets.length - 1); S.home = false; S.tab = 'cab'; S.picking = false; save(); render(); });
       return; }
     case 'set': assign(el.getAttribute('data-bind'), v); after(el.getAttribute('data-bind'), true); return;
+    case 'ledadd': { var lc = cur(); lc.leds = lc.leds || []; lc.leds.push({ at:v, side:v === 'bottom' && cabKind(lc) === 'PAKABINAMOS' ? 'out' : 'in', from:E.R.led.from, ends:'open', w:E.R.led.w, depth:E.R.led.depth }); save(); break; }
+    case 'leddel': { var lc2 = cur(); if (lc2.leds) lc2.leds.splice(i, 1); save(); break; }
     case 'addsec': { var ns = newSection(v); ns.col = isNaN(i) ? 0 : i; S.colSel = ns.col; cur().sections.push(ns); save(); break; }
     case 'colsel': S.colSel = +v; break;
     case 'lookrot': lookSet(v, function (l) { l.rot = !l.rot; }); return;
