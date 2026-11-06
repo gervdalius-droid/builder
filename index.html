@@ -734,6 +734,7 @@ button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(
 .rm-op.bad .rm-opfr{stroke:#b4291f;stroke-width:2.6}
 .rm-op.act,.rm-op.ghost,.rm-pop.act,.rm-pop.ghost{opacity:.72;pointer-events:none}
 .rm-op.ghost .rm-opfr{stroke:#2448c9;stroke-width:2;stroke-dasharray:6 4}
+.rm-toph{display:block;margin-top:3px;font-size:11.5px;color:var(--muted);white-space:nowrap}
 .rm-visside{stroke:#2448c9;stroke-width:1;stroke-opacity:.55}
 .rm-visd .seg button{min-width:72px}
 .rm-visall{margin-top:10px}
@@ -5984,7 +5985,9 @@ function inspector() {
       '<label for="rm-x">' + esc(T('rmX')) + '</label><span><input id="rm-x" type="text" inputmode="decimal" data-rmf="x" value="' + fm(it.x) + '"> mm</span>' +
       '<label for="rm-wall">' + esc(T('rmWall')) + '</label><select id="rm-wall" data-rmf="wall">' + wOpts + '</select>' +
       (c.dishwasher ? '' : '<label for="rm-hang">' + esc(T('rmHang')) + '</label><span><input id="rm-hang" type="checkbox" data-rmf="hang"' + (level(c) === 'wall' ? ' checked' : '') + '></span>') +
-      (level(c) === 'wall' ? '<label for="rm-z">' + esc(T('rmZ')) + '</label><span><input id="rm-z" type="text" inputmode="decimal" data-rmf="z" value="' + fm(z0Of(c, it, L)) + '"> mm</span>' : '') + '</div>' +
+      (level(c) === 'wall' ? '<label for="rm-z">' + esc(T('rmZ')) + '</label><span><input id="rm-z" type="text" inputmode="decimal" data-rmf="z" value="' + fm(z0Of(c, it, L)) + '"> mm</span>' : '') +
+      (c.dishwasher ? '' : '<label for="rm-top">' + esc(T('rmTop')) + '</label><span><input id="rm-top" type="text" inputmode="decimal" data-rmf="top" value="' + fm(z0Of(c, it, L) + cabH(c)) + '"> mm' +   // where its top is: the carcass height follows
+        '<small class="rm-toph">' + esc((legH(c) && level(c) !== 'wall' ? T('rmTopLegs') : T('rmTopZ')).replace('{h}', fm(cabH(c))).replace('{l}', fm(z0Of(c, it, L)))) + '</small></span>') + '</div>' +
       (my.length ? '<p class="note bad">' + esc(T(my.every(function (p) { return /^(op|pt)/.test(p.kind); }) ? 'rmOpShort' : 'rmHitShort')) + '</p>' : '') +
       (pr.list.length > my.length ? '<p class="note bad">' + esc(T('rmOtherProbs').replace('{n}', pr.list.length - my.length)) + '</p>' : '') +
       (g && Math.abs(g.cw - cabW(c)) > 0.5 && g.cw >= 100 && g.cw <= 1200 && !c.dishwasher ? '<button type="button" class="btn rm-fill" data-rm="fill">↔ ' + esc(T('rmFill').replace('{w}', fm(g.cw))) + '</button>' : '') +
@@ -6204,6 +6207,8 @@ function onChange(e) {
   if (fld === 'x') { var x = num(el.value); if (x == null || Math.abs(x) > 20000) { el.value = fm(L.items[c.id].x); C.o.toast(T('rmBadVal'), true); return; } C.o.onLayout(function (p) { p.layout.items[c.id].x = x; }, { sel:i }); return; }
   if (fld === 'wall') { C.o.onLayout(function (p) { var s; p.layout.items[c.id] = { wall:+el.value, x:0, z:p.layout.items[c.id].z }; var ends = neighbours(p, c, +el.value).map(function (o) { return o.it.x + cabW(o.c); }); p.layout.items[c.id].x = r1(Math.max(cornerIn(p, +el.value, c, c.id), ends.length ? Math.max.apply(null, ends) : 0)); }, { sel:i }); return; }
   if (fld === 'hang') { C.o.onCab(i, { hang:!!el.checked }); return; }
+  if (fld === 'top') { var tp = num(el.value), z0t = z0Of(c, L.items[c.id], L), nh = tp == null ? null : r1(tp - z0t);   // the top from the floor: the carcass gets the height between its bottom and there
+    if (nh == null || nh < 100 || nh > 6000) { el.value = fm(z0t + cabH(c)); C.o.toast(T('rmBadVal'), true); return; } C.o.onCab(i, { H:nh }); return; }
   if (fld === 'z') { var z = num(el.value); if ((z == null && el.value.trim() !== '') || (z != null && (z < 0 || z > 10000))) { el.value = fm(z0Of(c, L.items[c.id], L)); C.o.toast(T('rmBadVal'), true); return; } C.o.onLayout(function (p) { p.layout.items[c.id].z = z == null ? null : z; }, { sel:i }); }
 }
 function onKey(e) {
@@ -7863,7 +7868,7 @@ lt:{
  xxlAll:'⤓ Visos .XXL atskirai ({n})', xxlAllT:'Kiekviena programa atskiru failu, be ZIP', xxlCab:'⤓ Šios spintelės ({n})', xxlPart:'⤓ Visos šios detalės ({n})', xxlOne:'Atsisiųsti', xxlRot:'pasukta', xxlSaving:'Atsisiunčiama failų: {n}…',
  reqNote:'privaloma — be to detalių sąraše nebus medžiagos', tRoom:'Baldai', rmTitle:'Visi baldai', rmWall:'Siena', rmWalls:'Sienos', rmVFront:'Iš priekio', rmVPlan:'Planas', rmAllWalls:'Visos sienos',
  rm3Hint:'Tempkite — sukasi. Spustelėkite spintelę — pažymite.', rmAdd:'Pridėti spintelę', rmAddT:'Nutempkite ant sienos (vaizdas „Iš priekio“ arba „Planas“) arba spustelėkite — atsiras po paskutine',
- rmUnplaced:'Nepastatytos', rmPlace:'Pastatyti', rmX:'Nuo sienos pradžios', rmZ:'Apačia nuo grindų', rmHang:'Kabo ant sienos', rmHitShort:'Kliūna už kitos spintelės arba išeina už sienos — patraukite arba pakeiskite plotį.',
+ rmUnplaced:'Nepastatytos', rmPlace:'Pastatyti', rmX:'Nuo sienos pradžios', rmZ:'Apačia nuo grindų', rmHang:'Kabo ant sienos', rmTop:'Viršus nuo grindų', rmTopLegs:'karkasas {h} + kojelės {l}', rmTopZ:'karkasas {h}, apačia {l} nuo grindų', rmHitShort:'Kliūna už kitos spintelės arba išeina už sienos — patraukite arba pakeiskite plotį.',
  rmFill:'Užpildyti tarpą: {w} mm',
  rrBtn:'Realus vaizdas', rrBtnT:'Fotorealistiškas visos patalpos vaizdas (skaičiuojamas vaizdo plokštėje)', rrTitle:'Realus vaizdas', rrLoading:'Kraunamas 3D variklis…', rrBuilding:'Ruošiama scena…', rrProg:'Skaičiuojama: {n} / {m}', rrDone:'Paruošta · {m} kadrų',
  rrCabT:'Fotorealistiškas šios spintelės vaizdas (skaičiuojamas vaizdo plokštėje)', rrQ:'Kokybė', rrQ_fast:'Greitai', rrQ_good:'Gerai', rrQ_best:'Labai gerai', rrDl:'Atsisiųsti PNG', rrHint:'Tempkite į šonus — eikite aplink, aukštyn ir žemyn — akių aukštis · ratukas — arčiau / toliau · „Greitai“ — peržiūrai, „Labai gerai“ — pilna raiška atsisiuntimui. Spalvos ir tekstūros — iš „Išvaizda 3D vaizde“.',
@@ -8011,7 +8016,7 @@ en:{
  xxlAll:'⤓ All .XXL separately ({n})', xxlAllT:'Each program as its own file, no ZIP', xxlCab:'⤓ This cabinet ({n})', xxlPart:'⤓ All of this part ({n})', xxlOne:'Download', xxlRot:'turned', xxlSaving:'Downloading {n} files…',
  reqNote:'required — otherwise the part list has no material', tRoom:'Furniture', rmTitle:'All furniture', rmWall:'Wall', rmWalls:'Walls', rmVFront:'Front', rmVPlan:'Plan', rmAllWalls:'All walls',
  rm3Hint:'Drag to turn. Click a cabinet to select it.', rmAdd:'Add a cabinet', rmAddT:'Drag onto a wall (Front or Plan view) or click — it goes after the last one',
- rmUnplaced:'Not placed', rmPlace:'Place', rmX:'From the wall start', rmZ:'Bottom from the floor', rmHang:'Hangs on the wall', rmHitShort:'Hits another cabinet or runs past the wall — move it or change the width.',
+ rmUnplaced:'Not placed', rmPlace:'Place', rmX:'From the wall start', rmZ:'Bottom from the floor', rmHang:'Hangs on the wall', rmTop:'Top from the floor', rmTopLegs:'carcass {h} + legs {l}', rmTopZ:'carcass {h}, bottom {l} from the floor', rmHitShort:'Hits another cabinet or runs past the wall — move it or change the width.',
  rmFill:'Fill the gap: {w} mm',
  rrBtn:'Realistic image', rrBtnT:'A photo-like picture of the whole room (rendered on the graphics card)', rrTitle:'Realistic image', rrLoading:'Loading the 3D engine…', rrBuilding:'Preparing the scene…', rrProg:'Rendering: {n} / {m}', rrDone:'Ready · {m} samples',
  rrCabT:'A photo-like picture of this cabinet (rendered on the graphics card)', rrQ:'Quality', rrQ_fast:'Fast', rrQ_good:'Good', rrQ_best:'Best', rrDl:'Download PNG', rrHint:'Drag sideways to walk round, up and down for eye height · wheel to come nearer or step back · “Fast” to look around, “Best” for full resolution to download. Colours and textures come from “Look in the 3D views”.',
