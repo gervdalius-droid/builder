@@ -114,6 +114,7 @@ main{padding-block:18px 40px}
 .seg button:last-child{border-right:0}
 .seg button.on{background:var(--ink);color:var(--panel)}
 .chk{display:flex;gap:8px;align-items:center;cursor:pointer}
+.visrow{margin-top:12px}.visrow .lbl{display:block;margin-bottom:4px}.vischk{display:flex;flex-wrap:wrap;gap:6px 22px}.visrow .note{margin:6px 0 0}
 .chk input{width:18px;height:18px;accent-color:var(--accent)}
 
 /* presets */
@@ -8514,6 +8515,13 @@ function zoneInfo(c, col) {
 function activeCol(c) { var n = colsOf(c); return Math.min(n - 1, Math.max(0, S.colSel || 0)); }
 /* front view of the cabinet, drawn from its real parts (DBFront): click a column to edit it */
 /* the bottom's depth from the front: empty = as deep as the sides; shorter leaves room behind for a sink's pipes */
+/* which carcass sides show (in the front material): in a row under the sizes */
+function visBlock(c) {
+  if (c.dishwasher || c.kind === 'box' || c.kind === 'panel') return '';
+  var b = 'c.', v = c.vis || {};
+  return '<div class="visrow"><span class="lbl">' + t('visT') + '</span><div class="vischk">' + chk(b + 'vis.L', v.L, t('visL')) + chk(b + 'vis.R', v.R, t('visR')) +
+    (c.type === 'PAKABINAMOS' || c.hang ? chk(b + 'vis.B', v.B, t('visB')) : '') + '</div><p class="note">' + t('visNote') + '</p></div>';
+}
 function botDepthField(c) {
   var o = c.cnc || {}, full = num(c.D), v = num(o.bottomD) > 0 ? num(o.bottomD) : '', id = 'f-c-cnc-bottomD';
   return '<label class="f n s" for="' + id + '"><span>' + t('botD') + '</span><input id="' + id + '" inputmode="decimal" type="text" data-bind="c.cnc.bottomD" data-num="1" data-empty="1" value="' + esc(v === '' ? '' : fmt(v)) + '" placeholder="' + t('botDFull') + '" autocomplete="off"></label>' +
@@ -8568,6 +8576,7 @@ function viewEditor(c) {
     (c.dishwasher ? fN(t('dishW'), b + 'dishWidth', c.dishWidth) : fN(t('W'), b + 'W', c.W)) + fN(t('H'), b + 'H', c.H) + fN(t('D'), b + 'D', c.D) +
     fN(t('thick'), b + 'thick', c.thick, 's') + fN(t('facT'), b + 'cnc.facadeT', o.facadeT, 's') +
     '<span class="row" style="margin-left:auto;gap:6px"><button class="btn ghost" data-act="dup">' + t('dup') + '</button><button class="btn ghost danger" data-act="del">' + (S.confirm === 'del' ? t('delSure') : t('del')) + '</button></span></div>' +
+    visBlock(c) +
     '<div class="mainset">' + (c.dishwasher ? '' : backBlock(c)) + worktopBlock(c) + '</div>';
   h += step(1, t('s1'), t('s1l'), dims, 'dims');
   if (c.dishwasher) { h += step(2, t('s5'), t('s5l'), matsBlock(c), 'mats'); return h; }
@@ -8851,8 +8860,6 @@ function matsBlock(c) {
   var req = function (html, val) { return html.replace('<span>', '<span>').replace('</span>', ' <i class="req" aria-hidden="true">*</i></span>').replace('type="text"', 'type="text" required' + (val ? '' : ' aria-invalid="true"')); };
   return '<p class="note reqnote"><i class="req">*</i> ' + t('reqNote') + '</p><div class="row">' + (c.dishwasher ? fT(t('mCarc'), b + 'mat.carc', c.mat.carc, 'dl-mat') : req(fT(t('mCarc'), b + 'mat.carc', c.mat.carc, 'dl-mat'), c.mat.carc)) + (hasFront ? req(fT(t('mFac'), b + 'mat.facade', c.mat.facade, 'dl-mat'), c.mat.facade) : fT(t('mFac'), b + 'mat.facade', c.mat.facade, 'dl-mat')) + (c.dishwasher ? '' : fT(t('mBack'), b + 'mat.back', c.mat.back, 'dl-mat')) + '</div>' +
     '<div class="row" style="margin-top:10px">' + fT(t('eCarc'), b + 'edge.carc', c.edge.carc, 'dl-edge') + fT(t('eFac'), b + 'edge.facade', c.edge.facade, 'dl-edge') + '</div>' +
-    (c.dishwasher || c.kind === 'box' || c.kind === 'panel' ? '' : '<div class="visrow"><span class="lbl">' + t('visT') + '</span>' + chk(b + 'vis.L', c.vis && c.vis.L, t('visL')) + chk(b + 'vis.R', c.vis && c.vis.R, t('visR')) +
-      (c.type === 'PAKABINAMOS' || c.hang ? chk(b + 'vis.B', c.vis && c.vis.B, t('visB')) : '') + '<p class="note">' + t('visNote') + '</p></div>') +
     '<div class="lookwrap"><h4>' + t('lookT') + '</h4><p class="note">' + t('lookL') + '</p>' + lookBlock(lookNames([c])) + '</div>';
 }
 /* how the board materials look in the 3-D views: a texture photo or a colour, per material name (S.proj.look, see DBLook) */
