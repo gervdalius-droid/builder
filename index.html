@@ -733,6 +733,18 @@ button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(
 .rm-op.bad .rm-opfr{stroke:#b4291f;stroke-width:2.6}
 .rm-op.act,.rm-op.ghost,.rm-pop.act,.rm-pop.ghost{opacity:.72;pointer-events:none}
 .rm-op.ghost .rm-opfr{stroke:#2448c9;stroke-width:2;stroke-dasharray:6 4}
+.rm-pt{cursor:grab}
+.rm-pt .rm-ptplate{fill:#fbfbf8;stroke:#4f5550;stroke-width:1.1}
+.rm-pt .rm-ptsock{fill:none;stroke:#4f5550;stroke-width:1}
+.rm-pt .rm-ptpin{fill:#3d413e}
+.rm-pt .rm-ptw{stroke:#fff;stroke-width:1.2}
+.rm-pt .rm-ptw.cold{fill:#2f6fc4}.rm-pt .rm-ptw.hot{fill:#c9442e}.rm-pt .rm-ptw.drain{fill:#7d847f}
+.rm-pt .rm-ptin{fill:none;stroke:#fff;stroke-width:1.1}
+.rm-pt .rm-pthit{fill:transparent;stroke:none}
+.rm-pt .rm-ptring{fill:rgba(36,72,201,.10);stroke:#2448c9;stroke-width:1.8}
+.rm-pt.bad .rm-ptring{fill:rgba(180,41,31,.10);stroke:#b4291f}
+.rm-pt.act,.rm-pt.ghost{opacity:.8;pointer-events:none}
+.rm-pt.ghost .rm-ptring{stroke-dasharray:4 3}
 .rm-pop{cursor:grab}
 .rm-pop .rm-ophit{fill:transparent;stroke:none}
 .rm-pop .rm-opgap{fill:var(--paper);stroke:none}
@@ -3541,6 +3553,10 @@ function build(THREE, PT, items) {
       var boxW = function (x0, x1, y0, y1, z0, z1, mat) { var m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, z1 - z0, y1 - y0), mat); m.matrix.makeBasis(d, up, zx); m.matrix.setPosition(W((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2)); m.matrixAutoUpdate = false; m.matrixWorldNeedsUpdate = true; grp.add(m); };
       (RMd.wallPieces ? RMd.wallPieces(L, wi, -100, g.len + 100, H) : [[-100, g.len + 100, 0, H]]).forEach(function (pc) { boxW(pc[0], pc[1], 0, 100, pc[2], pc[3], wallMat); });
       (RMd.opsOf ? RMd.opsOf(L) : []).forEach(function (op) { if (op.wall !== wi) return; RMd.opParts(op, 100).forEach(function (q) { var e = q.e; boxW(e[0], e[1], e[2], e[3], e[4], e[5], opMat(q)); }); });
+      (RMd.ptsOf ? RMd.ptsOf(L) : []).forEach(function (pt) { if (pt.wall !== wi) return; RMd.ptParts(pt).forEach(function (q) { var e = q.e;   // sockets: plates; pipes: round, out of the wall into the room
+        if (q.kind === 'pipe' || q.kind === 'drain') { var rr = (e[1] - e[0]) / 2, len = e[3] - e[2], cy = new THREE.Mesh(new THREE.CylinderGeometry(rr, rr, len, 24), opMat({ kind:q.kind === 'pipe' ? 'metal' : 'sill', color:q.color }));
+          cy.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), n); cy.position.copy(W((e[0] + e[1]) / 2, (e[2] + e[3]) / 2, (e[4] + e[5]) / 2)); cy.updateMatrix(); cy.matrixAutoUpdate = false; grp.add(cy); }
+        else boxW(e[0], e[1], e[2], e[3], e[4], e[5], opMat({ kind:q.kind === 'cap' ? 'leaf' : 'sill', color:q.color })); }); });
       grp.userData.n = n; grp.userData.c = W(g.len / 2, 50, H / 2); return grp; });
     /* light: a big soft panel over the room (like a bright ceiling) and the sky */
     var size = rb.getSize(new THREE.Vector3()), ctr = rb.getCenter(new THREE.Vector3());
@@ -4950,6 +4966,31 @@ function normOps(L) {   // keeps only sound openings on existing walls, with num
     out.push({ id:id, type:t, wall:w, x:n(o.x, 0), w:Math.max(200, n(o.w, d.w)), h:Math.max(200, n(o.h, d.h)), z:t === 'window' ? Math.max(0, n(o.z, d.z)) : 0, hinge:o.hinge === 'R' ? 'R' : 'L', swing:o.swing === 'out' ? 'out' : 'in', color:/^#[0-9a-f]{6}$/i.test(o.color || '') ? o.color : d.color }); });
   var ch = JSON.stringify(out) !== JSON.stringify(opsOf(L)); L.openings = out; return ch;
 }
+/* ---------------------------------------------------------------- sockets and water pipes on the walls: layout.points
+   { id, type:'socket' | 'socket2' (double) | 'cold' | 'hot' (water) | 'drain', wall, x: its middle along the wall, z: its middle above the floor } */
+var PT_T = ['socket', 'socket2', 'cold', 'hot', 'drain'];
+var PT_DEF = { socket:{ z:1100, w:80, h:80 }, socket2:{ z:1100, w:152, h:80 }, cold:{ z:550, w:40, h:40 }, hot:{ z:550, w:40, h:40 }, drain:{ z:450, w:60, h:60 } };
+function ptsOf(L) { return L && Array.isArray(L.points) ? L.points : []; }
+function ptBox(pt) { var d = PT_DEF[pt.type] || PT_DEF.socket; return { a:pt.x - d.w / 2, b:pt.x + d.w / 2, z0:pt.z - d.h / 2, z1:pt.z + d.h / 2 }; }
+function ptLabelKey(t) { return { socket:'ptSocket', socket2:'ptSocket2', cold:'ptCold', hot:'ptHot', drain:'ptDrain' }[t] || 'ptSocket'; }
+function ptName(L, pt) { var n = 0, k = 0; ptsOf(L).forEach(function (o) { if (o.type === pt.type) { n++; if (o.id === pt.id) k = n; } }); return T(ptLabelKey(pt.type)) + ' ' + (k || n + 1); }
+function newPt(type) { var d = PT_DEF[type] ? type : 'socket'; return { id:'p' + Math.random().toString(36).slice(2, 9), type:d, wall:0, x:0, z:PT_DEF[d].z }; }
+function normPts(L) {
+  var out = [], seen = {};
+  ptsOf(L).forEach(function (o) { if (!o || typeof o !== 'object') return; var t = PT_DEF[o.type] ? o.type : 'socket', w = +o.wall; if (!(w >= 0 && w < L.walls.length) || Math.floor(w) !== w) return;
+    var id = typeof o.id === 'string' && o.id && !seen[o.id] ? o.id : newPt(t).id; seen[id] = 1;
+    out.push({ id:id, type:t, wall:w, x:isFinite(+o.x) ? +o.x : 0, z:isFinite(+o.z) ? +o.z : PT_DEF[t].z }); });
+  var ch = JSON.stringify(out) !== JSON.stringify(ptsOf(L)); L.points = out; return ch;
+}
+/* its parts in the wall's coordinates (as opParts): a socket's plate, a water pipe with its valve, the drain's pipe end */
+function ptParts(pt) {
+  var x = pt.x, z = pt.z, P = [], add = function (x0, x1, y0, y1, z0, z1, kind, color) { P.push({ e:[x0, x1, y0, y1, z0, z1], kind:kind, color:color }); };
+  if (pt.type === 'socket' || pt.type === 'socket2') { var d = PT_DEF[pt.type]; add(x - d.w / 2, x + d.w / 2, -10, 0, z - d.h / 2, z + d.h / 2, 'plate', '#f6f6f3');
+    (pt.type === 'socket2' ? [x - 36, x + 36] : [x]).forEach(function (cx) { add(cx - 22, cx + 22, -13, -10, z - 22, z + 22, 'plate', '#ecebe6'); }); }
+  else if (pt.type === 'drain') add(x - 25, x + 25, -60, 0, z - 25, z + 25, 'drain', '#9aa09c');
+  else { add(x - 9, x + 9, -55, 0, z - 9, z + 9, 'pipe', '#b8bbbd'); add(x - 16, x + 16, -75, -55, z - 16, z + 16, 'pipe', '#c9cbcd'); add(x - 6, x + 6, -95, -75, z - 30, z + 4, 'cap', pt.type === 'hot' ? '#c9442e' : '#2f6fc4'); }
+  return P;
+}
 /* the wall round its openings: pieces [x0, x1, z0, z1] along the wall from a to b and up to H (a window's hole starts under its sill) */
 function wallPieces(L, wi, a, b, H) {
   var holes = opsOf(L).filter(function (o) { return o.wall === wi; }).map(function (o) { var z0 = isDoor(o) ? 0 : o.z - 25; return [Math.max(a, o.x), Math.min(b, o.x + o.w), Math.max(0, z0), Math.min(H, o.z + o.h)]; })
@@ -5098,7 +5139,21 @@ function problems(proj) {
       if (sweep && ((cross(ra, sweep) && vOverlap([va[0], top], [0, op.h])) || sa.some(function (s2) { return cross(s2, sweep) && vOverlap(s2.v, [0, op.h]); }))) { out.push({ kind:'opswing', op:op.id, a:a.i }); badOp[op.id] = 1; bad[a.c.id] = 1; }
     });
   });
-  return { list:out, bad:bad, badOp:badOp };
+  /* sockets and pipes: off the wall, in a door or window, behind a cabinet's side (or its side panel), in the worktop */
+  var badPt = {};
+  ptsOf(L).forEach(function (pt) {
+    var g = G[pt.wall]; if (!g) return; var bx = ptBox(pt), zr = [bx.z0, bx.z1];
+    if (bx.a < -0.5 || bx.b > g.len + 0.5 || bx.z0 < -0.5 || bx.z1 > roomH + 0.5) { out.push({ kind:'ptout', pt:pt.id }); badPt[pt.id] = 1; return; }
+    OPS.forEach(function (op) { var r = opRange(op); if (op.wall === pt.wall && Math.min(r.b, bx.b) - Math.max(r.a, bx.a) > 0 && vOverlap([r.z0, r.z1], zr)) { out.push({ kind:'pthit', pt:pt.id, op:op.id }); badPt[pt.id] = 1; } });
+    ps.forEach(function (a) {
+      if (a.it.wall !== pt.wall || a.c.dishwasher || a.c.kind === 'box') return;
+      var c = a.c, x0 = a.it.x, w = cabW(c), t = +c.thick || 18, va = vRange(c, a.it, L), wa = wtRect(c, a.it, G, L);
+      var sides = c.kind === 'panel' ? [[fx0(c, x0), fx1(c, x0)]] : [[fx0(c, x0), x0 + t], [x0 + w - t, fx1(c, x0)]];
+      if (vOverlap(va, zr) && sides.some(function (sd) { return Math.min(sd[1], bx.b) - Math.max(sd[0], bx.a) > 0; })) { out.push({ kind:'ptside', pt:pt.id, a:a.i }); badPt[pt.id] = 1; return; }
+      if (wa && vOverlap(wa.v, zr) && Math.min(fx1(c, x0), bx.b) - Math.max(fx0(c, x0), bx.a) > 0) { out.push({ kind:'ptwt', pt:pt.id, a:a.i }); badPt[pt.id] = 1; }
+    });
+  });
+  return { list:out, bad:bad, badOp:badOp, badPt:badPt };
 }
 /* first free place for a cabinet: after the last one at its height on the first wall with room, else at the end of wall A */
 function autoSpot(proj, c) {
@@ -5126,6 +5181,7 @@ function ensure(proj) {
   Object.keys(L.items).forEach(function (id) { if (!proj.cabinets.some(function (c) { return c.id === id; })) { delete L.items[id]; changed = true; } });
   if (refit(proj)) changed = true;
   if (normOps(L)) changed = true;
+  if (normPts(L)) changed = true;
   return changed;
 }
 
@@ -5179,6 +5235,9 @@ function drawFront() {
     s += frontCab(o.c, o.i, it, prob.bad[o.c.id] || (drag && drag.id === o.c.id && drag.bad), drag && drag.id === o.c.id);
   });
   if (D && D.mode === 'add' && D.cand && F.ws.indexOf(D.cand.wall) >= 0) s += frontGhost(D.cand);
+  ptsOf(L).forEach(function (pt) { if (F.ws.indexOf(pt.wall) >= 0 && !(D && D.mode === 'ptmove' && D.id === pt.id)) s += frontPt(pt, prob); });   // sockets and pipes: seen through the cabinets
+  if (D && D.mode === 'ptmove' && F.ws.indexOf(D.pt.wall) >= 0) s += frontPt(D.pt, prob, 'act');
+  if (D && D.mode === 'ptadd' && D.cand && F.ws.indexOf(D.cand.wall) >= 0) s += frontPt(D.cand, prob, 'ghost');
   if (D && D.mode === 'opmove' && F.ws.indexOf(D.op.wall) >= 0) s += frontOp(D.op, prob, 'act');
   if (D && D.mode === 'opadd' && D.cand && F.ws.indexOf(D.cand.wall) >= 0) s += frontOp(D.cand, prob, 'ghost');
   // worktop over floor cabinets
@@ -5267,6 +5326,9 @@ function drawPlan() {
       s += '<text class="rm-pn" x="' + cx.toFixed(1) + '" y="' + (cy + 4).toFixed(1) + '" text-anchor="middle">' + (o.i + 1) + '</text>';
     s += '<title>' + esc(cabName(o.c, o.i) + ' · ' + fm(cabW(o.c))) + '</title></g>';
   });
+  ptsOf(L).forEach(function (pt) { if (!(D && D.mode === 'ptmove' && D.id === pt.id)) s += planPt(pt, prob); });
+  if (D && D.mode === 'ptmove') s += planPt(D.pt, prob, 'act');
+  if (D && D.mode === 'ptadd' && D.cand) s += planPt(D.cand, prob, 'ghost');
   if (D && D.mode === 'opmove') s += planOp(D.op, prob, 'act');
   if (D && D.mode === 'opadd' && D.cand) s += planOp(D.cand, prob, 'ghost');
   if (D && D.mode === 'add' && D.cand) {
@@ -5372,7 +5434,7 @@ function faces3d() {
   var W3 = function (p) { return [p[0], -p[1], p[2]]; };
   var face = function (pts, color, o, tx) {   // pts in plan coords + height
     var w = pts.map(W3), n = r3unit(r3cross(r3sub(w[1], w[0]), r3sub(w[2], w[0])));
-    F.push({ p:pts, n:n, color:color, cab:o.cab, op:o.op, alpha:o.alpha || 0, wood:!!o.wood, front:!!o.front, metal:!!o.metal, tx:tx || null });
+    F.push({ p:pts, n:n, color:color, cab:o.cab, op:o.op != null ? o.op : o.pt != null ? 10000 + o.pt : null, alpha:o.alpha || 0, wood:!!o.wood, front:!!o.front, metal:!!o.metal, tx:tx || null });
   };
   var LK = window.DBLook || null;
   var box = function (tr, x0, x1, y0, y1, z0, z1, color, o) {   // o.tex: { name, g: the cabinet axis of the board's grain } — a photo of that material is laid on it
@@ -5395,6 +5457,7 @@ function faces3d() {
     wallPieces(L, wi, 0, g.len, H).forEach(function (pc) { box(tr, pc[0], pc[1], 0, t, pc[2], pc[3], '#f7f5ef', {}); });   // the wall round its doors and windows
     opsOf(L).forEach(function (op, k) { if (op.wall !== wi) return;
       opParts(op, t).forEach(function (q) { var e = q.e; box(tr, e[0], e[1], e[2], e[3], e[4], e[5], q.color, { op:k, alpha:q.kind === 'glass' ? 0.38 : 0, metal:q.kind === 'metal' }); }); });
+    ptsOf(L).forEach(function (pt, k) { if (pt.wall !== wi) return; ptParts(pt).forEach(function (q) { var e = q.e; box(tr, e[0], e[1], e[2], e[3], e[4], e[5], q.color, { pt:k, metal:q.kind === 'pipe' }); }); });
   });
   items3d(proj, C.o.infos).forEach(function (q) { box(q.tr, q.e[0], q.e[1], q.e[2], q.e[3], q.e[4], q.e[5], q.color, q.o); });
   return { faces:F, depthDir:depthDir, H:H, G:G };
@@ -5472,6 +5535,12 @@ function render3d(st) {
     if (r3dot([g.n[0], -g.n[1], 0], sc.depthDir) > -0.05) return;   // its wall is left out of this view
     var r = opRange(op), pts = []; [r.a, r.b].forEach(function (x) { [-20, 60].forEach(function (y) { [isDoor(op) ? 0 : op.z - 25, r.z1].forEach(function (z) { pts.push(P3(g.P[0] + g.d[0] * x - g.n[0] * y, g.P[1] + g.d[1] * x - g.n[1] * y, z)); }); }); });
     s += '<polygon class="rm3-sel' + (op.id === V.osel ? '' : ' bad') + '" points="' + r3hull(pts).map(function (q) { return q[0].toFixed(1) + ',' + q[1].toFixed(1); }).join(' ') + '"/>';
+  });
+  ptsOf(L).forEach(function (pt) {
+    var g = G[pt.wall]; if (!g || !(pt.id === V.psel || (prob.badPt && prob.badPt[pt.id]))) return;
+    if (r3dot([g.n[0], -g.n[1], 0], sc.depthDir) > -0.05) return;
+    var b2 = ptBox(pt), pts = []; [b2.a - 40, b2.b + 40].forEach(function (x) { [-100, 0].forEach(function (y) { [b2.z0 - 40, b2.z1 + 40].forEach(function (z) { pts.push(P3(g.P[0] + g.d[0] * x - g.n[0] * y, g.P[1] + g.d[1] * x - g.n[1] * y, z)); }); }); });
+    s += '<polygon class="rm3-sel' + (pt.id === V.psel ? '' : ' bad') + '" points="' + r3hull(pts).map(function (q) { return q[0].toFixed(1) + ',' + q[1].toFixed(1); }).join(' ') + '"/>';
   });
   s += '<text class="rm-legend" x="10" y="' + (h - 8) + '">' + esc(T('rm3Leg')) + '</text>';
   if (D && D.tip) s += tip(D.tip);
@@ -5584,11 +5653,11 @@ function autoSpotOp(proj, op) {
   }
   return { wall:order[0], x:r1(Math.max(0, (G[order[0]].len - op.w) / 2)) };
 }
-function selectOp(id) { V.osel = id; if (C.o.sel != null) C.o.onSelect(null); else attach(C.el, C.o); }
+function selectOp(id) { V.osel = id; V.psel = null; if (C.o.sel != null) C.o.onSelect(null); else attach(C.el, C.o); }
 function addOp(type, wall, x) {
   var proj = C.o.proj, L = proj.layout, op = newOp(type);
   if (wall == null) { var sp = autoSpotOp(proj, op); wall = sp.wall; x = sp.x; }
-  op.wall = wall; op.x = x; V.osel = op.id;
+  op.wall = wall; op.x = x; V.osel = op.id; V.psel = null;
   var name = opName({ openings:opsOf(L).concat([op]) }, op);
   C.o.onLayout(function (p) { p.layout.openings = opsOf(p.layout).concat([op]); }, { sel:null, msg:T('opAdded').replace('{o}', name) });
 }
@@ -5614,6 +5683,82 @@ function opInspector(op, L, pr) {
     '<p class="note">' + esc(T(door ? 'opNoteD' : 'opNoteW')) + '</p>' +
     '<div class="rm-acts"><button type="button" class="btn ghost danger" data-rm="opdel">' + esc(T('del')) + '</button></div>' +
     '<p class="note">' + esc(T('opKeys')) + '</p></aside>';
+}
+
+/* ---------------------------------------------------------------- sockets and pipes: drawing, moving, adding */
+var PT_ICON = {
+  socket:'<rect x="13" y="13" width="28" height="28" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="27" cy="27" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="24" cy="27" r="1.5" fill="currentColor"/><circle cx="30" cy="27" r="1.5" fill="currentColor"/>',
+  socket2:'<rect x="4" y="15" width="46" height="24" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="27" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="38" cy="27" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="13.5" cy="27" r="1.3" fill="currentColor"/><circle cx="18.5" cy="27" r="1.3" fill="currentColor"/><circle cx="35.5" cy="27" r="1.3" fill="currentColor"/><circle cx="40.5" cy="27" r="1.3" fill="currentColor"/>',
+  cold:'<circle cx="27" cy="30" r="9" fill="#2f6fc4" fill-opacity=".85"/><rect x="25" y="8" width="4" height="13" fill="currentColor"/><rect x="18" y="8" width="18" height="4" rx="2" fill="#2f6fc4"/>',
+  hot:'<circle cx="27" cy="30" r="9" fill="#c9442e" fill-opacity=".85"/><rect x="25" y="8" width="4" height="13" fill="currentColor"/><rect x="18" y="8" width="18" height="4" rx="2" fill="#c9442e"/>',
+  drain:'<circle cx="27" cy="27" r="14" fill="#8b918d" fill-opacity=".8"/><circle cx="27" cy="27" r="8" fill="none" stroke="#fff" stroke-width="2"/>'
+};
+function ptIcon(t) { return '<svg viewBox="0 0 54 54" aria-hidden="true">' + (PT_ICON[t] || '') + '</svg>'; }
+function ptById(L, id) { return ptsOf(L).filter(function (o) { return o.id === id; })[0] || null; }
+function ptSym(pt, cx, cy, k, cls) {   // the symbol, in px at (cx, cy); k: px per mm
+  var d = PT_DEF[pt.type] || PT_DEF.socket, f1 = function (v) { return v.toFixed(1); }, s = '';
+  if (pt.type === 'socket' || pt.type === 'socket2') {
+    var w = Math.max(pt.type === 'socket2' ? 18 : 10, d.w * k), h = Math.max(10, d.h * k), r = h * 0.3;
+    s += '<rect class="rm-ptplate" x="' + f1(cx - w / 2) + '" y="' + f1(cy - h / 2) + '" width="' + f1(w) + '" height="' + f1(h) + '" rx="' + f1(h * 0.12) + '"/>';
+    (pt.type === 'socket2' ? [cx - w / 4, cx + w / 4] : [cx]).forEach(function (sx) { s += '<circle class="rm-ptsock" cx="' + f1(sx) + '" cy="' + f1(cy) + '" r="' + f1(r) + '"/><circle class="rm-ptpin" cx="' + f1(sx - r * 0.38) + '" cy="' + f1(cy) + '" r="' + f1(Math.max(0.8, r * 0.16)) + '"/><circle class="rm-ptpin" cx="' + f1(sx + r * 0.38) + '" cy="' + f1(cy) + '" r="' + f1(Math.max(0.8, r * 0.16)) + '"/>'; });
+  } else { var rr = Math.max(pt.type === 'drain' ? 5.5 : 4.5, d.w / 2 * k); s += '<circle class="rm-ptw ' + pt.type + '" cx="' + f1(cx) + '" cy="' + f1(cy) + '" r="' + f1(rr) + '"/><circle class="rm-ptin" cx="' + f1(cx) + '" cy="' + f1(cy) + '" r="' + f1(rr * 0.45) + '"/>'; }
+  return s;
+}
+function frontPt(pt, prob, mode) {
+  var L = C.o.proj.layout, k = C.fr.k, cx = fX(pt.wall, pt.x), cy = fY(pt.z), bad = mode ? !!pt.bad : !!(prob.badPt && prob.badPt[pt.id]), sel = !mode && V.psel === pt.id, d = PT_DEF[pt.type] || PT_DEF.socket;
+  var hr = Math.max(10, Math.max(d.w, d.h) / 2 * k + 4);
+  return '<g class="rm-pt ' + pt.type + (sel ? ' sel' : '') + (bad ? ' bad' : '') + (mode ? ' ' + mode : '') + '"' + (mode ? '' : ' data-pt="' + esc(pt.id) + '"') + '>' +
+    (sel || bad || mode ? '<circle class="rm-ptring" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + hr.toFixed(1) + '"/>' : '') + ptSym(pt, cx, cy, k) +
+    '<circle class="rm-pthit" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + hr.toFixed(1) + '"/><title>' + esc(ptName(L, pt) + ' · ' + T('rmFromStart').replace('{x}', fm(pt.x)) + ' · ' + T('ptZ') + ' ' + fm(pt.z)) + '</title></g>';
+}
+function planPt(pt, prob, mode) {
+  var L = C.o.proj.layout, g = geo(L)[pt.wall]; if (!g) return '';
+  var q = [g.P[0] + g.d[0] * pt.x + g.n[0] * 30, g.P[1] + g.d[1] * pt.x + g.n[1] * 30], cx = pX(q[0]), cy = pY(q[1]), bad = mode ? !!pt.bad : !!(prob.badPt && prob.badPt[pt.id]), sel = !mode && V.psel === pt.id;
+  var sym = pt.type === 'socket' || pt.type === 'socket2' ? '<rect class="rm-ptplate" x="' + (cx - (pt.type === 'socket2' ? 7 : 4.5)).toFixed(1) + '" y="' + (cy - 4.5).toFixed(1) + '" width="' + (pt.type === 'socket2' ? 14 : 9) + '" height="9" rx="1.5"/>' :
+    '<circle class="rm-ptw ' + pt.type + '" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + (pt.type === 'drain' ? 5.5 : 4.5) + '"/>';
+  return '<g class="rm-pt ' + pt.type + (sel ? ' sel' : '') + (bad ? ' bad' : '') + (mode ? ' ' + mode : '') + '"' + (mode ? '' : ' data-pt="' + esc(pt.id) + '"') + '>' + (sel || bad || mode ? '<circle class="rm-ptring" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="10"/>' : '') + sym +
+    '<circle class="rm-pthit" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="11"/><title>' + esc(ptName(L, pt) + ' · ' + T('rmFromStart').replace('{x}', fm(pt.x)) + ' · ' + T('ptZ') + ' ' + fm(pt.z)) + '</title></g>';
+}
+/* where a socket or pipe snaps: the middle of a cabinet on that wall or of the wall, in line with another point, its usual height */
+function ptSnap(proj, pt, wi, x, z, thr) {
+  var L = proj.layout, g = geo(L)[wi], xs = [[g.len / 2, 'mid']], zs = [[PT_DEF[pt.type].z, 'std']];
+  placed(proj).forEach(function (o) { if (o.it.wall === wi && o.c.kind !== 'panel') xs.push([o.it.x + cabW(o.c) / 2, 'cab']); });
+  ptsOf(L).forEach(function (o) { if (o.id === pt.id) return; if (o.wall === wi) xs.push([o.x, 'pt']); zs.push([o.z, 'pt']); });
+  var bx = null, bz = null; xs.forEach(function (c2) { var d = Math.abs(c2[0] - x); if (d <= thr && (!bx || d < bx.d)) bx = { v:c2[0], d:d, why:c2[1] }; });
+  zs.forEach(function (c2) { var d = Math.abs(c2[0] - z); if (d <= thr && (!bz || d < bz.d)) bz = { v:c2[0], d:d, why:c2[1] }; });
+  return { x:bx ? r1(bx.v) : Math.round(x / 5) * 5, z:bz ? r1(bz.v) : Math.round(z / 5) * 5, why:bx ? bx.why : bz ? bz.why : '' };
+}
+function probsWithPt(proj, pt) { var L = proj.layout, keep = L.points, has = ptsOf(L).some(function (o) { return o.id === pt.id; }); L.points = ptsOf(L).map(function (o) { return o.id === pt.id ? pt : o; }).concat(has ? [] : [pt]); var pr = problems(proj); L.points = keep; return pr; }
+function autoSpotPt(proj, pt) {   // the wall shown; water and drain under a sink if there is one, else the wall's middle; clear of the other points
+  var L = proj.layout, G = geo(L), wi = V.view === 'front' && V.wall >= 0 && V.wall < G.length ? V.wall : 0, x = G[wi].len / 2;
+  if (pt.type === 'cold' || pt.type === 'hot' || pt.type === 'drain') { var sink = placed(proj).filter(function (o) { return /kriaukl|sink|plautuv/i.test(o.c.name || ''); })[0]; if (sink) { wi = sink.it.wall; x = sink.it.x + cabW(sink.c) / 2 + (pt.type === 'cold' ? -100 : pt.type === 'hot' ? 100 : 0); } }
+  var d0 = PT_DEF[pt.type], taken = function (xx) { return ptsOf(L).some(function (o) { var d1 = PT_DEF[o.type]; return o.wall === wi && Math.abs(o.x - xx) < (d0.w + d1.w) / 2 + 40 && Math.abs(o.z - pt.z) < (d0.h + d1.h) / 2 + 40; }); };
+  for (var k = 0; k < 12 && taken(x); k++) x += 160;
+  return { wall:wi, x:r1(Math.max(PT_DEF[pt.type].w / 2, Math.min(G[wi].len - PT_DEF[pt.type].w / 2, x))) };
+}
+function selectPt(id) { V.psel = id; V.osel = null; if (C.o.sel != null) C.o.onSelect(null); else attach(C.el, C.o); }
+function addPt(type, wall, x, z) {
+  var proj = C.o.proj, L = proj.layout, pt = newPt(type);
+  if (wall == null) { var sp = autoSpotPt(proj, pt); wall = sp.wall; x = sp.x; }
+  pt.wall = wall; pt.x = x; if (z != null) pt.z = z; V.psel = pt.id; V.osel = null;
+  var name = ptName({ points:ptsOf(L).concat([pt]) }, pt);
+  C.o.onLayout(function (p2) { p2.layout.points = ptsOf(p2.layout).concat([pt]); }, { sel:null, msg:T('opAdded').replace('{o}', name) });
+}
+function zAt(m) { return C.fr ? (C.fr.base - m[1]) / C.fr.k : 0; }
+function startPtMove(e, id) {
+  var pt = ptById(C.o.proj.layout, id); if (!pt) return; var m = local(e), w = wallAt(m);
+  D = { mode:'ptmove', id:id, pt:clone(pt), gx:w && w.wall === pt.wall ? w.along - pt.x : 0, gz:V.view === 'front' ? zAt(m) - pt.z : 0, x:e.clientX, y:e.clientY, moved:false };
+}
+function ptInspector(pt, L, pr) {
+  var my = pr.list.filter(function (p2) { return p2.pt === pt.id; });
+  var inp = function (id, f, v) { return '<span><input id="' + id + '" type="text" inputmode="decimal" data-rmp="' + f + '" value="' + fm(v) + '"> mm</span>'; };
+  var sel = function (id, f, opts, v) { return '<select id="' + id + '" data-rmp="' + f + '">' + opts.map(function (o) { return '<option value="' + o[0] + '"' + (String(o[0]) === String(v) ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select>'; };
+  return '<aside class="rm-ins"><div class="rm-ih"><b>' + esc(ptName(L, pt)) + '</b><button type="button" class="btn ghost" data-rm="ptdesel" aria-label="' + esc(T('close')) + '">✕</button></div>' +
+    '<div class="rm-f"><label for="rm-pty">' + esc(T('opType')) + '</label>' + sel('rm-pty', 'type', PT_T.map(function (t) { return [t, T(ptLabelKey(t))]; }), pt.type) +
+    '<label for="rm-ptx">' + esc(T('ptX')) + '</label>' + inp('rm-ptx', 'x', pt.x) + '<label for="rm-ptz">' + esc(T('ptZ')) + '</label>' + inp('rm-ptz', 'z', pt.z) +
+    '<label for="rm-ptw">' + esc(T('rmWall')) + '</label>' + sel('rm-ptw', 'wall', L.walls.map(function (w, k) { return [k, T('rmWall') + ' ' + LETTER[k] + ' · ' + fm(w.len)]; }), pt.wall) + '</div>' +
+    (my.length ? '<p class="note bad">' + esc(T('ptProbShort')) + '</p>' : '') + '<p class="note">' + esc(T('ptNote')) + '</p>' +
+    '<div class="rm-acts"><button type="button" class="btn ghost danger" data-rm="ptdel">' + esc(T('del')) + '</button></div><p class="note">' + esc(T('ptKeys')) + '</p></aside>';
 }
 /* ---------------------------------------------------------------- zoom: wheel, touchpad pinch, two fingers, the ± buttons
    Front view and plan: screen = z · fitted picture + p, never smaller than the fitted picture; kept per view (and per wall shown).
@@ -5687,6 +5832,20 @@ function onMove(e) {
     D.tip = { x:m[0], y:m[1], bad:D.op.bad, lines:[opName(C.o.proj.layout, D.op) + ' → ' + T('rmWall') + ' ' + LETTER[wo.wall], T('rmFromStart').replace('{x}', fm(sno.x)) + (sno.why ? ' · ' + T('rmSnap_' + sno.why) : '')] };
     draw(); return;
   }
+  if (D.mode === 'ptmove') {   // a socket or pipe: along the wall (and up and down in the front view)
+    if (!D.moved) return; var wp = wallAt(m); if (!wp) return;
+    var zp = V.view === 'front' ? zAt(m) - D.gz : D.pt.z, snp = ptSnap(C.o.proj, D.pt, wp.wall, wp.along - (wp.wall === D.pt.wall ? D.gx : 0), zp, thrMm());
+    D.pt.wall = wp.wall; D.pt.x = snp.x; D.pt.z = V.view === 'front' ? snp.z : D.pt.z; D.pt.bad = !!probsWithPt(C.o.proj, D.pt).badPt[D.pt.id];
+    D.tip = { x:m[0], y:m[1], bad:D.pt.bad, lines:[ptName(C.o.proj.layout, D.pt) + ' → ' + T('rmWall') + ' ' + LETTER[wp.wall], T('rmFromStart').replace('{x}', fm(D.pt.x)) + ' · ' + T('ptZ') + ' ' + fm(D.pt.z)] };
+    draw(); return;
+  }
+  if (D.mode === 'ptadd') {
+    moveGhost(e); D.cand = null; D.tip = null;
+    if (inStage(e) && V.view !== '3d') { var wq = wallAt(m);
+      if (wq && (V.view === 'front' || wq.dist < 1200)) { var npt = newPt(D.type); npt.id = '__new'; npt.wall = wq.wall; var snq = ptSnap(C.o.proj, npt, wq.wall, wq.along, V.view === 'front' ? zAt(m) : npt.z, thrMm()); npt.x = snq.x; npt.z = V.view === 'front' ? snq.z : npt.z;
+        npt.bad = !!probsWithPt(C.o.proj, npt).badPt.__new; D.cand = npt; D.tip = { x:m[0], y:m[1], bad:npt.bad, lines:[T(ptLabelKey(D.type)) + ' → ' + T('rmWall') + ' ' + LETTER[wq.wall], T('rmFromStart').replace('{x}', fm(npt.x)) + ' · ' + T('ptZ') + ' ' + fm(npt.z)] }; } }
+    draw(); return;
+  }
   if (D.mode === 'opadd') {
     moveGhost(e); D.cand = null; D.tip = null;
     if (inStage(e) && V.view !== '3d') { var wa = wallAt(m);
@@ -5740,6 +5899,15 @@ function onUp(e) {
     C.o.onLayout(function (proj) { proj.layout.items[d.id] = { wall:d.it.wall, x:d.it.x, z:d.orig.z }; }, { sel:d.i, msg:d.bad ? T('rmHitDrop') : '' });
     return;
   }
+  if (d.mode === 'ptmove') {
+    if (!d.moved) { selectPt(d.id); return; }
+    V.psel = d.id; V.osel = null; C.o.onLayout(function (proj) { var o = ptById(proj.layout, d.id); if (o) { o.wall = d.pt.wall; o.x = d.pt.x; o.z = d.pt.z; } }, { sel:null, msg:d.pt.bad ? T('opHitDrop') : '' });
+    return;
+  }
+  if (d.mode === 'ptadd') {
+    if (!d.cand) { draw(); if (d.moved && C.o.toast) C.o.toast(T(V.view === '3d' ? 'rmNo3dDrop' : 'rmMiss')); return; }
+    addPt(d.type, d.cand.wall, d.cand.x, d.cand.z); return;
+  }
   if (d.mode === 'opmove') {
     if (!d.moved) { selectOp(d.id); return; }
     V.osel = d.id; C.o.onLayout(function (proj) { var o = opById(proj.layout, d.id); if (o) { o.wall = d.op.wall; o.x = d.op.x; } }, { sel:null, msg:d.op.bad ? T('opHitDrop') : '' });
@@ -5772,14 +5940,17 @@ function palette() {
       return '<button type="button" class="rm-chip" data-pre="' + i + '" title="' + esc(T('rmAddT')) + '">' + p.icon + '<span><b>' + esc(p.name) + '</b><small>' + p.W + '×' + p.H + '×' + p.D + '</small></span></button>'; }).join('') + '</div>' +
     '<div class="lbl" style="margin-top:10px">' + esc(T('rmOpAdd')) + '</div><div class="rm-pre">' + OP_T.map(function (t) {
       return '<button type="button" class="rm-chip rm-opchip" data-opadd="' + t + '" title="' + esc(T('opAddT')) + '">' + opIcon(t) + '<span><b>' + esc(opLabel(t)) + '</b><small>' + OP_DEF[t].w + '×' + OP_DEF[t].h + '</small></span></button>'; }).join('') + '</div>' +
+    '<div class="lbl" style="margin-top:10px">' + esc(T('rmPtAdd')) + '</div><div class="rm-pre">' + PT_T.map(function (t) {
+      return '<button type="button" class="rm-chip rm-opchip" data-ptadd="' + t + '" title="' + esc(T('ptAddT')) + '">' + ptIcon(t) + '<span><b>' + esc(T(ptLabelKey(t))) + '</b><small>h ' + PT_DEF[t].z + '</small></span></button>'; }).join('') + '</div>' +
     (un.length ? '<div class="lbl" style="margin-top:10px">' + esc(T('rmUnplaced')) + '</div><div class="rm-un">' + un.map(function (o) {
       return '<div class="rm-unrow"><span>' + esc(cabName(o.c, o.i)) + '<small>' + fm(cabW(o.c)) + ' mm</small></span><button type="button" class="btn" data-rm="place" data-i="' + o.i + '">' + esc(T('rmPlace')) + '</button></div>'; }).join('') + '</div>' : '') +
     '</aside>';
 }
 function inspector() {
   var proj = C.o.proj, L = proj.layout, G = geo(L), i = C.o.sel, c = i != null ? proj.cabinets[i] : null, it = c ? L.items[c.id] : null;
-  var pr = problems(proj), osel = !c && V.osel ? opById(L, V.osel) : null;
+  var pr = problems(proj), osel = !c && V.osel ? opById(L, V.osel) : null, psel = !c && V.psel ? ptById(L, V.psel) : null;
   if (osel) return opInspector(osel, L, pr);
+  if (psel) return ptInspector(psel, L, pr);
   if (c && it && it.wall >= 0 && it.wall < G.length) {
     var g = gapAround(proj, c), wOpts = L.walls.map(function (w, k) { return '<option value="' + k + '"' + (k === it.wall ? ' selected' : '') + '>' + esc(T('rmWall')) + ' ' + LETTER[k] + ' · ' + fm(w.len) + '</option>'; }).join('');
     var my = pr.list.filter(function (p) { return p.a === i || p.b === i; });
@@ -5790,7 +5961,7 @@ function inspector() {
       '<label for="rm-wall">' + esc(T('rmWall')) + '</label><select id="rm-wall" data-rmf="wall">' + wOpts + '</select>' +
       (c.dishwasher ? '' : '<label for="rm-hang">' + esc(T('rmHang')) + '</label><span><input id="rm-hang" type="checkbox" data-rmf="hang"' + (level(c) === 'wall' ? ' checked' : '') + '></span>') +
       (level(c) === 'wall' ? '<label for="rm-z">' + esc(T('rmZ')) + '</label><span><input id="rm-z" type="text" inputmode="decimal" data-rmf="z" value="' + fm(z0Of(c, it, L)) + '"> mm</span>' : '') + '</div>' +
-      (my.length ? '<p class="note bad">' + esc(T(my.every(function (p) { return /^op/.test(p.kind); }) ? 'rmOpShort' : 'rmHitShort')) + '</p>' : '') +
+      (my.length ? '<p class="note bad">' + esc(T(my.every(function (p) { return /^(op|pt)/.test(p.kind); }) ? 'rmOpShort' : 'rmHitShort')) + '</p>' : '') +
       (pr.list.length > my.length ? '<p class="note bad">' + esc(T('rmOtherProbs').replace('{n}', pr.list.length - my.length)) + '</p>' : '') +
       (g && Math.abs(g.cw - cabW(c)) > 0.5 && g.cw >= 100 && g.cw <= 1200 && !c.dishwasher ? '<button type="button" class="btn rm-fill" data-rm="fill">↔ ' + esc(T('rmFill').replace('{w}', fm(g.cw))) + '</button>' : '') +
       sideEditor(c, it, L) +
@@ -5810,6 +5981,8 @@ function inspector() {
     '<label for="rm-wt">' + esc(T('rmWorktop')) + '</label><span><input id="rm-wt" type="checkbox" data-rml="worktop"' + (L.worktop ? ' checked' : '') + '></span></div>' +
     (proj.cabinets.some(function (c) { return wtOf(c); }) ? '' : '<p class="note">' + esc(T('rmWtHint')) + '</p>') +
     (pr.list.length ? '<div class="rm-probs"><div class="lbl">' + esc(T('rmProbs')) + '</div>' + pr.list.map(function (p) {
+      if (p.pt) { var pp = ptById(L, p.pt), pn = pp ? ptName(L, pp) : '', po = p.op ? opById(L, p.op) : null;
+        return '<button type="button" class="rm-prob" data-rm="ptsel" data-v="' + esc(p.pt) + '">' + esc(T({ ptout:'rmProbPtOut', pthit:'rmProbPtHit', ptside:'rmProbPtSide', ptwt:'rmProbPtWt' }[p.kind]).replace('{o}', pn).replace('{p}', po ? opName(L, po) : '').replace('{a}', p.a + 1)) + '</button>'; }
       if (p.op) { var o1 = opById(L, p.op), o2 = p.op2 ? opById(L, p.op2) : null, on = o1 ? opName(L, o1) : '', on2 = o2 ? opName(L, o2) : '';
         return '<button type="button" class="rm-prob" data-rm="opsel" data-v="' + esc(p.op) + '">' + esc(T({ opout:'rmProbOpOut', opceil:'rmProbOpCeil', ophit:'rmProbOpHit', opblock:'rmProbOpBlock', opswing:'rmProbOpSwing' }[p.kind]).replace('{o}', on).replace('{p}', on2).replace('{a}', p.a + 1)) + '</button>'; }
       return '<button type="button" class="rm-prob" data-rm="sel" data-i="' + p.a + '">' + esc(p.kind === 'out' ? T('rmProbOut').replace('{a}', p.a + 1) : p.kind === 'ceil' ? T('rmProbCeil').replace('{a}', p.a + 1) : p.kind === 'floor' ? T('rmProbFloor').replace('{a}', p.a + 1) : T('rmProbHit').replace('{a}', p.a + 1).replace('{b}', p.b + 1)) + '</button>'; }).join('') + '</div>'
@@ -5826,7 +5999,7 @@ function panelInspector(c, i, it, L, wOpts, my, pr) {
     '<label for="rm-pz">' + esc(T('rmZ')) + '</label>' + inp('rm-pz', 'pz', z0) +
     '<label for="rm-pm">' + esc(T('rmPMat')) + '</label><span><input id="rm-pm" class="rm-pm" type="text" list="dl-mat" data-rmf="pmat" value="' + esc((c.mat && c.mat.carc) || '') + '" autocomplete="off"></span></div>' +
     '<div class="rm-acts">' + (Math.abs(z0 + cabH(c) - H) > 0.5 ? '<button type="button" class="btn" data-rm="pceil">⤒ ' + esc(T('rmToCeil')) + '</button>' : '') + (z0 > 0.5 ? '<button type="button" class="btn" data-rm="pfloor">⤓ ' + esc(T('rmToFloor')) + '</button>' : '') + '</div>' +
-    (my.length ? '<p class="note bad">' + esc(T(my.every(function (p) { return /^op/.test(p.kind); }) ? 'rmOpShort' : 'rmHitShort')) + '</p>' : '') +
+    (my.length ? '<p class="note bad">' + esc(T(my.every(function (p) { return /^(op|pt)/.test(p.kind); }) ? 'rmOpShort' : 'rmHitShort')) + '</p>' : '') +
     (pr.list.length > my.length ? '<p class="note bad">' + esc(T('rmOtherProbs').replace('{n}', pr.list.length - my.length)) + '</p>' : '') +
     '<p class="note">' + esc(T('rmPanelNote')) + '</p>' +
     '<div class="rm-acts"><button type="button" class="btn pri" data-rm="edit">✎ ' + esc(T('rmEditP')) + '</button><button type="button" class="btn" data-rm="dup">⧉ ' + esc(T('rmDup')) + '</button>' +
@@ -5907,11 +6080,14 @@ function onClick(e) {
   if (a === 'desel') { C.o.onSelect(null); return; }
   if (a === 'sel') { C.o.onSelect(+b.getAttribute('data-i')); return; }
   if (a === 'opsel') { selectOp(v); return; }
+  if (a === 'ptsel') { selectPt(v); return; }
+  if (a === 'ptdesel') { V.psel = null; attach(C.el, C.o); return; }
+  if (a === 'ptdel') { var pd = ptById(L, V.psel); if (!pd) return; var pdn = ptName(L, pd); V.psel = null; C.o.onLayout(function (p2) { p2.layout.points = ptsOf(p2.layout).filter(function (o) { return o.id !== pd.id; }); }, { sel:null, msg:T('opDeleted').replace('{o}', pdn) }); return; }
   if (a === 'opdesel') { V.osel = null; attach(C.el, C.o); return; }
   if (a === 'opdel') { var od = opById(L, V.osel); if (!od) return; var odn = opName(L, od); V.osel = null; C.o.onLayout(function (p) { p.layout.openings = opsOf(p.layout).filter(function (o) { return o.id !== od.id; }); }, { sel:null, msg:T('opDeleted').replace('{o}', odn) }); return; }
   if (a === 'place') { var k = +b.getAttribute('data-i'), cc = proj.cabinets[k]; C.o.onLayout(function (p) { var old = p.layout.items[cc.id], z = old && old.z; delete p.layout.items[cc.id]; var s = autoSpot(p, cc); p.layout.items[cc.id] = { wall:s.wall, x:s.x, z:z }; }, { sel:k }); return; }   // a wall cabinet keeps its height
   if (a === 'wadd') { C.o.onLayout(function (p) { p.layout.walls.push({ len:2400 }); }, {}); return; }
-  if (a === 'wdel') { C.o.onLayout(function (p) { var last = p.layout.walls.length - 1; p.layout.walls.pop(); Object.keys(p.layout.items).forEach(function (id) { if (p.layout.items[id].wall === last) p.layout.items[id].wall = -1; }); p.layout.openings = opsOf(p.layout).filter(function (o) { return o.wall !== last; }); }, { msg:T('rmWallDelDone') }); return; }
+  if (a === 'wdel') { C.o.onLayout(function (p) { var last = p.layout.walls.length - 1; p.layout.walls.pop(); Object.keys(p.layout.items).forEach(function (id) { if (p.layout.items[id].wall === last) p.layout.items[id].wall = -1; }); p.layout.openings = opsOf(p.layout).filter(function (o) { return o.wall !== last; }); p.layout.points = ptsOf(p.layout).filter(function (o) { return o.wall !== last; }); }, { msg:T('rmWallDelDone') }); return; }
   if (!c) return;
   if (a === 'edit') { C.o.onEdit(i); return; }
   if (a === 'dup') { C.o.onDup(i); return; }
@@ -5937,6 +6113,14 @@ function onChange(e) {
   if (el.hasAttribute('data-rmwall')) { var k = +el.getAttribute('data-rmwall'), n = num(el.value); if (n == null || n < 300 || n > 20000) { el.value = fm(L.walls[k].len); C.o.toast(T('rmBadVal'), true); return; } C.o.onLayout(function (p) { p.layout.walls[k].len = n; }, {}); return; }
   if (el.hasAttribute('data-rml')) { var f = el.getAttribute('data-rml'); if (f === 'worktop') { C.o.onLayout(function (p) { p.layout.worktop = el.checked; }, {}); return; }
     var n2 = num(el.value); if (n2 == null || n2 < 0 || (f === 'roomH' && n2 < 1000) || (f === 'wallZ' && n2 <= 0)) { el.value = fm(L[f]); C.o.toast(T('rmBadVal'), true); return; } C.o.onLayout(function (p) { p.layout[f] = n2; }, {}); return; }
+  if (el.hasAttribute('data-rmp')) {   // a socket's or pipe's field
+    var ptc = ptById(L, V.psel); if (!ptc) return; var fp = el.getAttribute('data-rmp'), vp = el.value, pp2 = {};
+    if (fp === 'type') { if (!PT_DEF[vp]) return; pp2.type = vp; if (Math.abs(ptc.z - PT_DEF[ptc.type].z) < 0.5) pp2.z = PT_DEF[vp].z; }
+    else if (fp === 'wall') { var wn2 = +vp, g2 = geo(L)[wn2]; if (!g2) return; pp2.wall = wn2; pp2.x = r1(Math.max(0, Math.min(ptc.x, g2.len))); }
+    else { var np2 = num(vp), lp = { x:[-20000, 20000], z:[0, 5000] }[fp]; if (!lp) return;
+      if (np2 == null || np2 < lp[0] || np2 > lp[1]) { el.value = fm(ptc[fp]); C.o.toast(T('rmBadVal'), true); return; } pp2[fp] = np2; }
+    C.o.onLayout(function (p2) { var o = ptById(p2.layout, ptc.id); if (o) Object.assign(o, pp2); }, { sel:null }); return;
+  }
   if (el.hasAttribute('data-rmo')) {   // a door's or window's field
     var op = opById(L, V.osel); if (!op) return; var fo = el.getAttribute('data-rmo'), vo = el.value, patch = {};
     if (fo === 'type') { if (!OP_DEF[vo]) return; patch.type = vo; if ((vo === 'window') !== (op.type === 'window')) { patch.w = OP_DEF[vo].w; patch.h = OP_DEF[vo].h; patch.z = OP_DEF[vo].z; } if (op.color === OP_DEF[op.type].color) patch.color = OP_DEF[vo].color; }
@@ -5962,6 +6146,13 @@ function onChange(e) {
   if (fld === 'z') { var z = num(el.value); if ((z == null && el.value.trim() !== '') || (z != null && (z < 0 || z > 10000))) { el.value = fm(z0Of(c, L.items[c.id], L)); C.o.toast(T('rmBadVal'), true); return; } C.o.onLayout(function (p) { p.layout.items[c.id].z = z == null ? null : z; }, { sel:i }); }
 }
 function onKey(e) {
+  if (C && C.o.sel == null && V.psel && !/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) {   // a socket or pipe: arrows move it, Delete takes it away
+    var pk = ptById(C.o.proj.layout, V.psel); if (!pk) return;
+    if (e.key === 'Delete') { e.preventDefault(); var pkn = ptName(C.o.proj.layout, pk); V.psel = null; C.o.onLayout(function (p2) { p2.layout.points = ptsOf(p2.layout).filter(function (o) { return o.id !== pk.id; }); }, { sel:null, msg:T('opDeleted').replace('{o}', pkn) }); return; }
+    var dxk = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0, dzk = e.key === 'ArrowUp' ? 1 : e.key === 'ArrowDown' ? -1 : 0; if (!dxk && !dzk) return; e.preventDefault();
+    var stp = e.shiftKey ? 100 : 10, pnx = r1(pk.x + dxk * stp), pnz = r1(Math.max(0, pk.z + dzk * stp));
+    C.o.onLayout(function (p2) { var o = ptById(p2.layout, pk.id); if (o) { o.x = pnx; o.z = pnz; } }, { sel:null, focus:true }); return;
+  }
   if (C && C.o.sel == null && V.osel && !/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) {
     var op = opById(C.o.proj.layout, V.osel); if (!op) return;
     if (e.key === 'Delete') { e.preventDefault(); var dn = opName(C.o.proj.layout, op); V.osel = null; C.o.onLayout(function (p) { p.layout.openings = opsOf(p.layout).filter(function (o) { return o.id !== op.id; }); }, { sel:null, msg:T('opDeleted').replace('{o}', dn) }); return; }
@@ -5980,7 +6171,7 @@ function onKey(e) {
 /* ---------------------------------------------------------------- mount */
 function attach(el, o) {
   if (!el) { C = null; return; }
-  C = { el:el, o:o }; if (o.sel != null) V.osel = null;
+  C = { el:el, o:o }; if (o.sel != null) { V.osel = null; V.psel = null; }
   el.innerHTML = bar() + '<div class="rm-main">' + palette() + '<div class="rm-stage" tabindex="0" aria-label="' + esc(T('rmTitle')) + '"></div>' + inspector() + '</div>';
   draw();
   var stage = el.querySelector('.rm-stage');
@@ -5995,8 +6186,9 @@ function attach(el, o) {
         try { stage.setPointerCapture(e.pointerId); } catch (er) {} e.preventDefault(); return;
       }
     }
-    var cab = e.target.closest('[data-cab]'), opEl = e.target.closest('[data-op]');
+    var cab = e.target.closest('[data-cab]'), opEl = e.target.closest('[data-op]'), ptEl = e.target.closest('[data-pt]');
     if (V.view === '3d') { var k3 = pick3d(e); D = { mode:'orbit', x:e.clientX, y:e.clientY, th:V.th, ph:V.ph, moved:false, cab:k3 }; }
+    else if (ptEl) startPtMove(e, ptEl.getAttribute('data-pt'));   // drawn over the cabinets: picked first
     else if (cab) startMove(e, +cab.getAttribute('data-cab'));
     else if (opEl) startOpMove(e, opEl.getAttribute('data-op'));
     else D = { mode:'bg', x:e.clientX, y:e.clientY, moved:false, px0:zf().px, py0:zf().py };
@@ -6022,14 +6214,25 @@ function attach(el, o) {
   stage.addEventListener('gestureend', function (e) { e.preventDefault(); GZ = null; });
   stage.addEventListener('pointerup', function (e) {
     if (e.pointerType === 'touch') { delete TP[e.pointerId]; if (PZ) { if (Object.keys(TP).length < 2) { PZ = null; D = null; } return; } }
-    if (D && D.mode === 'orbit' && !D.moved && D.cab != null) { var k = D.cab; D = null; if (k >= 10000) { var o3 = opsOf(C.o.proj.layout)[k - 10000]; if (o3) selectOp(o3.id); return; } C.o.onSelect(k); return; }
-    if (D && D.mode === 'bg') { var mv = D.moved; D = null; if (mv) return; V.osel = null;
+    if (D && D.mode === 'orbit' && !D.moved && D.cab != null) { var k = D.cab; D = null; if (k >= 20000) { var p3 = ptsOf(C.o.proj.layout)[k - 20000]; if (p3) selectPt(p3.id); return; } if (k >= 10000) { var o3 = opsOf(C.o.proj.layout)[k - 10000]; if (o3) selectOp(o3.id); return; } C.o.onSelect(k); return; }
+    if (D && D.mode === 'bg') { var mv = D.moved; D = null; if (mv) return; V.osel = null; V.psel = null;
       var now = Date.now(); if (LT && now - LT.t < 400 && Math.hypot(e.clientX - LT.x, e.clientY - LT.y) < 14) { LT = null; zoomFit(); return; }   // a double click on the background: the whole drawing again
       LT = { t:now, x:e.clientX, y:e.clientY }; C.o.onSelect(null); return; }
     onUp(e);
   });
   stage.addEventListener('pointercancel', function (e) { if (e.pointerType === 'touch') { delete TP[e.pointerId]; PZ = null; } D = null; draw(); });
   stage.addEventListener('keydown', onKey);
+  el.querySelectorAll('[data-ptadd]').forEach(function (ch) {
+    ch.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      var t = ch.getAttribute('data-ptadd'); D = { mode:'ptadd', type:t, x:e.clientX, y:e.clientY, moved:false };
+      var g = document.createElement('div'); g.className = 'rm-ghostcard'; g.innerHTML = ptIcon(t) + '<b>' + esc(T(ptLabelKey(t))) + '</b>'; document.body.appendChild(g); D.ghost = g; moveGhost(e);
+      try { ch.setPointerCapture(e.pointerId); } catch (er) {} e.preventDefault();
+    });
+    ch.addEventListener('pointermove', function (e) { if (D && D.mode === 'ptadd') onMove(e); });
+    ch.addEventListener('pointerup', function (e) { if (!D || D.mode !== 'ptadd') return; if (!D.moved) { var t = D.type; if (D.ghost) D.ghost.remove(); D = null; addPt(t, null, null, null); return; } onUp(e); });
+    ch.addEventListener('pointercancel', function () { if (D && D.ghost) D.ghost.remove(); D = null; draw(); });
+  });
   el.querySelectorAll('[data-opadd]').forEach(function (ch) {
     ch.addEventListener('pointerdown', function (e) {
       if (e.button !== 0 && e.pointerType === 'mouse') return;
@@ -6068,7 +6271,8 @@ function attach(el, o) {
 
 var api = { attach:attach, ensure:ensure, problems:problems, geo:geo, items3d:items3d, snap:snap, gapAround:gapAround, autoSpot:autoSpot, cabW:cabW, cabD:cabD, cabH:cabH, legH:legH, z0Of:z0Of, wtOf:wtOf, placed:placed, level:level, view:V,
             sideP:sideP, sideW:sideW, sideRects:sideRects, addSide:addSide, sideFit:sideFit, refit:refit, makeRoom:makeRoom, _state:function () { return { C:C, D:D }; },
-            opsOf:opsOf, opRange:opRange, wallPieces:wallPieces, opParts:opParts, isDoor:isDoor, normOps:normOps, OP_CAS:OP_CAS, OP_JAMB:OP_JAMB };
+            opsOf:opsOf, opRange:opRange, wallPieces:wallPieces, opParts:opParts, isDoor:isDoor, normOps:normOps, OP_CAS:OP_CAS, OP_JAMB:OP_JAMB,
+            ptsOf:ptsOf, ptParts:ptParts, ptBox:ptBox, normPts:normPts, PT_DEF:PT_DEF };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.DBRoom = api;
 })(typeof window !== 'undefined' ? window : this);
 
@@ -6096,7 +6300,7 @@ var COL = { line:'#1d2320', thin:'#3d4641', dim:'#2a5d8f', front:'#f1f0eb', carc
 var TX = {
   lt:{ front:'Vaizdas iš priekio', inner:'Be fasadų', left:'Vaizdas iš kairės', top:'Vaizdas iš viršaus', iso:'Surinkta', expl:'Surinkimo schema', parts:'Detalės', hw:'Furnitūra',
        pos:'Poz.', part:'Detalė', size:'L × W × T', mat:'Medžiaga', edge:'Kraštai', qty:'Kiekis', scale:'Mastelis', date:'Data', sheet:'Lapas', project:'Projektas', drawing:'Brėžinys',
-       cab:'Spintelė', layout:'Baldų išdėstymas', plan:'Planas', wall:'Siena', elev:'Sienos vaizdas', door:'Durys', window:'Langas', sillH:'palangė', list:'Spintelės', nts:'be mastelio', company:'DĖDĖS BALDAI', format:'Formatas',
+       cab:'Spintelė', layout:'Baldų išdėstymas', plan:'Planas', wall:'Siena', elev:'Sienos vaizdas', door:'Durys', window:'Langas', sillH:'palangė', pt_socket:'R', pt_socket2:'RR', pt_cold:'ŠV', pt_hot:'KV', pt_drain:'KAN', ptLegend:'R — rozetė, RR — dviguba rozetė, ŠV / KV — šaltas / karštas vanduo, KAN — kanalizacija; skaičius — taško vidurio aukštis nuo grindų, mm. Apačioje — atstumai nuo sienos pradžios iki taškų vidurio.', list:'Spintelės', nts:'be mastelio', company:'DĖDĖS BALDAI', format:'Formatas',
        views:'vaizdai ir matmenys', assembly:'surinkimas', allFronts:'Visi baldai', name:'Pavadinimas', type:'Tipas', place:'Vieta', nParts:'Detalių', unit:'Vnt.',
        base:'pastatoma', wallc:'pakabinama', tall:'aukšta', box:'3D konstrukcija', dish:'indaplovės fasadas', legs:'Kojelės', feet:'Pėdutės', frontEdge:'PRIEKIS',
        made:'Spintelių kūrėjas', firstAngle:'Projekcija E (ISO)', conn:'Jungtys:', cConf:'konfirmatai', cCam:'ekscentrikai', cDowel:'kaiščiai', extra:'papildoma',
@@ -6104,7 +6308,7 @@ var TX = {
        fromStart:'nuo sienos pradžios', fromS:'Nuo pradžios', worktop:'stalviršis', wtPart:'Stalviršis', cont:'tęsinys', contNext:'Tęsinys kitame lape →', more:'daugiau — žr. spintelių lapus', noLayout:'Spintelės nesudėliotos Baldų skirtuke — rodomi visi fasadai iš eilės.', clear:'šviesos', wallLen:'Siena' },
   en:{ front:'Front view', inner:'Without fronts', left:'View from the left', top:'View from above', iso:'Assembled', expl:'Assembly diagram', parts:'Parts', hw:'Hardware',
        pos:'Pos.', part:'Part', size:'L × W × T', mat:'Material', edge:'Edges', qty:'Qty', scale:'Scale', date:'Date', sheet:'Sheet', project:'Project', drawing:'Drawing',
-       cab:'Cabinet', layout:'Furniture layout', plan:'Plan', wall:'Wall', elev:'Wall elevation', door:'Door', window:'Window', sillH:'sill', list:'Cabinets', nts:'not to scale', company:'DĖDĖS BALDAI', format:'Format',
+       cab:'Cabinet', layout:'Furniture layout', plan:'Plan', wall:'Wall', elev:'Wall elevation', door:'Door', window:'Window', sillH:'sill', pt_socket:'S', pt_socket2:'SS', pt_cold:'CW', pt_hot:'HW', pt_drain:'DR', ptLegend:'S — socket, SS — double socket, CW / HW — cold / hot water, DR — drain; the number is the height of the point\'s middle above the floor, mm. Below — distances from the wall start to the middle of each point.', list:'Cabinets', nts:'not to scale', company:'DĖDĖS BALDAI', format:'Format',
        views:'views and dimensions', assembly:'assembly', allFronts:'All furniture', name:'Name', type:'Type', place:'Position', nParts:'Parts', unit:'Unit',
        base:'base', wallc:'wall', tall:'tall', box:'3D construction', dish:'dishwasher front', legs:'Legs', feet:'Feet', frontEdge:'FRONT',
        made:'Cabinet creator', firstAngle:'Projection E (ISO)', conn:'Joints:', cConf:'confirmats', cCam:'cams', cDowel:'dowels', extra:'extra',
@@ -6966,6 +7170,19 @@ function sheetWall(proj, infos, RM, wi, meta) {
       (op.w > 1000 ? [[x0 + f, (x0 + x1) / 2 - 40], [(x0 + x1) / 2 + 40, x1 - f]] : [[x0 + f, x1 - f]]).forEach(function (qq) { svg += R2(qq[0], qq[1], z0 + f, z1 - f, { w:0.2, fill:'#e6eff3', stroke:COL.dim }); }); }
   });
   var order = solve(boxes, V); svg += drawBoxes(order, m, { lw:0.3 }) + frontMarks(order, m, V, { sizes:false });
+  var PTS = (RM.ptsOf ? RM.ptsOf(Lo) : []).filter(function (pt) { return pt.wall === wi; }).sort(function (a, b) { return a.x - b.x; });
+  PTS.forEach(function (pt) {   // sockets and pipes over the cabinets (they are in the wall behind): a symbol, its code and height
+    var c = P(pt.x, pt.z), d = RM.PT_DEF[pt.type] || { w:80, h:80 }, sym = '';
+    if (pt.type === 'socket' || pt.type === 'socket2') { var p0 = P(pt.x - d.w / 2, pt.z + d.h / 2), p1 = P(pt.x + d.w / 2, pt.z - d.h / 2); sym = rect(p0[0], p0[1], p1[0] - p0[0], p1[1] - p0[1], { w:0.25, fill:'#ffffff' });
+      (pt.type === 'socket2' ? [pt.x - 36, pt.x + 36] : [pt.x]).forEach(function (sx) { var q = P(sx, pt.z); sym += '<circle cx="' + f2(q[0]) + '" cy="' + f2(q[1]) + '" r="' + f2(Math.max(0.6, 25 * s)) + '" fill="none" stroke="' + COL.thin + '" stroke-width="0.2"/>'; }); }
+    else sym = '<circle cx="' + f2(c[0]) + '" cy="' + f2(c[1]) + '" r="' + f2(Math.max(0.8, d.w / 2 * s)) + '" fill="' + (pt.type === 'cold' ? '#2f6fc4' : pt.type === 'hot' ? '#c9442e' : '#7d847f') + '" stroke="#ffffff" stroke-width="0.15"/>';
+    svg += sym + txt(c[0] + Math.max(1.6, d.w / 2 * s + 0.8), c[1] - 1.2, L['pt_' + pt.type] + ' ' + nm(pt.z), 1.9, { fill:'#36403a', bold:true });
+  });
+  if (PTS.length) {   // a chain from the wall start to each point, under the wall's own dimensions, and what the codes mean
+    var xs0 = [0]; PTS.forEach(function (pt) { if (Math.abs(pt.x - xs0[xs0.length - 1]) > 0.5) xs0.push(pt.x); });
+    svg += dimChain(xs0.map(function (v) { var q = P(v, 0); return [q[0], q[1], v]; }), [0, 1], 23, { size:2.1 });
+    var lg = P(0, 0); svg += txt(lg[0], lg[1] + 31, L.ptLegend, 2, { fill:'#55605a' });
+  }
   OPS.forEach(function (op) {   // where it is and how big: from the wall start to it and its width over it, the sill height and its own height beside it
     var top = RM.isDoor(op) ? op.h + (RM.OP_CAS || 70) : op.z + op.h, z0 = RM.isDoor(op) ? 0 : op.z;
     svg += dimChain([0, op.x, op.x + op.w].map(function (v) { var q = P(v, top); return [q[0], q[1], v]; }), [0, -1], 3.5, { size:2.1 });
@@ -7607,6 +7824,11 @@ lt:{
  rmZoom:'Mastelis', rmZoomIn:'Artinti', rmZoomOut:'Tolinti', rmZoomFit:'Visas vaizdas (dukart spustelėkite tuščią vietą)',
  rmHint:'Spintelę tempkite išilgai sienos ar į kitą sieną — ji prisitraukia prie sienos galo, kampo ar kaimynės. Spustelėkite spintelę — dešinėje pakeisite plotį, užpildysite tarpą, atidarysite redagavimą.',
  rmFromStart:'{x} mm nuo sienos pradžios', rmLeftRight:'kairėje {l} · dešinėje {r}', rmSnap_wall:'prie sienos galo', rmSnap_corner:'prie kampo', rmSnap_nb:'prie kaimynės', rmSnap_op:'prie durų ar lango', rmSnap_mid:'sienos viduryje',
+ rmPtAdd:'Rozetės ir vamzdžiai', ptSocket:'Rozetė', ptSocket2:'Dviguba rozetė', ptCold:'Šaltas vanduo', ptHot:'Karštas vanduo', ptDrain:'Kanalizacija',
+ ptAddT:'Nutempkite ant sienos (vaizdas „Iš priekio“ — ir į aukštį) arba spustelėkite', ptX:'Vidurys nuo sienos pradžios', ptZ:'Aukštis nuo grindų',
+ ptNote:'Matmenys — iki taško vidurio. Brėžiniuose sienos vaizde rodomi su atstumais nuo sienos pradžios ir aukščiais — montuotojui ir elektrikui / santechnikui.',
+ ptKeys:'← → ↑ ↓ stumia po 10 mm (Shift — 100 mm), Delete — ištrina. Vaizde „Iš priekio“ tempkite ir į šonus, ir aukštyn.', ptProbShort:'Už spintelės šono, durų ar lango angoje, stalviršyje arba už sienos ribų — patraukite.',
+ rmProbPtOut:'{o} už sienos ribų', rmProbPtHit:'{o} durų ar lango angoje: {p}', rmProbPtSide:'{o} už spintelės {a} šono', rmProbPtWt:'{o} stalviršio aukštyje (spintelė {a})',
  rmOpAdd:'Durys ir langai', opKeys:'← → stumia po 10 mm (Shift — 100 mm), Delete — ištrina. Tempkite — perkelsite, ir į kitą sieną.', opDoor:'Medinės durys', opGDoor:'Durys su stiklu', opWin:'Langas', opDoorN:'Durys {n}', opWinN:'Langas {n}',
  opAddT:'Nutempkite ant sienos (vaizdas „Iš priekio“ arba „Planas“) arba spustelėkite — atsiras laisvoje vietoje', opType:'Tipas', opW:'Angos plotis', opH:'Angos aukštis', opZ:'Palangės aukštis',
  opHinge:'Vyriai', opHL:'kairėje', opHR:'dešinėje', opSwing:'Atsidaro', opIn:'į patalpą', opOut:'į kitą pusę', opColor:'Spalva',
@@ -7748,6 +7970,11 @@ en:{
  rmZoom:'Zoom', rmZoomIn:'Zoom in', rmZoomOut:'Zoom out', rmZoomFit:'Whole drawing (or double-click an empty spot)',
  rmHint:'Drag a cabinet along a wall or to another wall — it snaps to the wall end, corner or neighbour. Click a cabinet to change its width, fill a gap or open it for editing on the right.',
  rmFromStart:'{x} mm from the wall start', rmLeftRight:'left {l} · right {r}', rmSnap_wall:'at the wall end', rmSnap_corner:'at the corner', rmSnap_nb:'at the neighbour', rmSnap_op:'at a door or window', rmSnap_mid:'centred on the wall',
+ rmPtAdd:'Sockets and pipes', ptSocket:'Socket', ptSocket2:'Double socket', ptCold:'Cold water', ptHot:'Hot water', ptDrain:'Drain',
+ ptAddT:'Drag onto a wall (in the Front view also up and down) or click', ptX:'Middle from the wall start', ptZ:'Height from the floor',
+ ptNote:'Sizes are to the middle of the point. On the wall elevations in the drawings they are dimensioned from the wall start, with their heights — for the fitter, the electrician and the plumber.',
+ ptKeys:'← → ↑ ↓ move it 10 mm (Shift — 100 mm), Delete removes it. In the Front view drag it sideways and up and down.', ptProbShort:'Behind a cabinet side, in a door or window, at worktop height, or off the wall — move it.',
+ rmProbPtOut:'{o} is off the wall', rmProbPtHit:'{o} is in an opening: {p}', rmProbPtSide:'{o} is behind a side of cabinet {a}', rmProbPtWt:'{o} is at worktop height (cabinet {a})',
  rmOpAdd:'Doors and windows', opKeys:'← → moves it 10 mm (Shift — 100 mm), Delete removes it. Drag it along the wall or to another one.', opDoor:'Wooden door', opGDoor:'Door with glass', opWin:'Window', opDoorN:'Door {n}', opWinN:'Window {n}',
  opAddT:'Drag onto a wall (Front or Plan view) or click — it goes into a free spot', opType:'Type', opW:'Opening width', opH:'Opening height', opZ:'Sill height',
  opHinge:'Hinges', opHL:'left', opHR:'right', opSwing:'Opens', opIn:'into the room', opOut:'away from the room', opColor:'Colour',

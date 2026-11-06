@@ -40,6 +40,19 @@ const kinds = pr => pr.list.map(p => p.kind).sort().join(',');
   q.layout.openings = [{ id:'s', type:'door', wall:0, x:3000 - 880 - 70, w:880, h:2070, z:0, hinge:'R', swing:'in', color:'#ffffff' }];
   pr = RM.problems(q); if (!/opswing|opblock/.test(kinds(pr))) B('SWEEP ' + kinds(pr));
   q.layout.openings[0].swing = 'out'; pr = RM.problems(q); if (/opswing/.test(kinds(pr))) B('SWEEP OUT ' + kinds(pr)); N.probs += 9; }
+/* 2b. sockets and pipes: kept sound, off the wall, behind a cabinet side, in an opening, fine in the middle of a cabinet's back */
+{ const p = room([3000, 2400]); p.cabinets.push(cab(9, 'base', 600)); RM.ensure(p); p.layout.items.c9 = { wall:0, x:1000 };
+  p.layout.points = [{ type:'cold', wall:0, x:'1300', z:550 }, { type:'bogus', wall:0, x:200 }, { type:'drain', wall:7, x:0 }, null];
+  RM.ensure(p); const q0 = p.layout.points;
+  if (q0.length !== 2 || q0[0].x !== 1300 || q0[1].type !== 'socket' || q0[1].z !== RM.PT_DEF.socket.z) B('PT NORM ' + JSON.stringify(q0));
+  let pr = RM.problems(p); if (pr.list.some(x => x.pt)) B('PT FINE ' + kinds(pr));
+  p.layout.points[0].x = 1005; pr = RM.problems(p); if (!pr.list.some(x => x.kind === 'ptside') || !pr.badPt[q0[0].id]) B('PT SIDE ' + kinds(pr));
+  p.layout.points[0].x = 2990; pr = RM.problems(p); if (!pr.list.some(x => x.kind === 'ptout')) B('PT OUT ' + kinds(pr));
+  p.layout.points[0].x = 2400; p.layout.points[0].z = 1500; p.layout.openings = [{ id:'w', type:'window', wall:0, x:2000, w:800, h:1000, z:1000, hinge:'L', swing:'in', color:'#ffffff' }];
+  pr = RM.problems(p); if (!pr.list.some(x => x.kind === 'pthit')) B('PT HIT ' + kinds(pr));
+  p.layout.points.forEach(pt => RM.ptParts(pt).forEach(q => { const e = q.e; if (!(e[1] > e[0] && e[3] > e[2] && e[5] > e[4])) B('PT PART ' + e); }));
+  /* a wall taken away takes its points */
+  p.layout.walls.pop(); p.layout.points.push({ id:'z', type:'hot', wall:1, x:100, z:500 }); RM.ensure(p); if (p.layout.points.some(x => x.wall > 0)) B('PT WALL GONE'); N.probs += 5; }
 /* 3. random rooms: the wall pieces and holes tile the wall; parts are sound; sheets are made */
 for (let run = 0; run < RUNS; run++) {
   const nw = pick([1, 2, 3, 4]), p = room(Array.from({ length:nw }, () => pick([1800, 2400, 3000, 3600])), pick([2400, 2600, 2800]));
@@ -49,6 +62,7 @@ for (let run = 0; run < RUNS; run++) {
   G.forEach((g, wi) => { let x = 100 + Math.floor(rnd() * 300); while (x < g.len - 700 && rnd() < 0.7) { const t = pick(['door', 'gdoor', 'window']), w = pick([600, 800, 900, 1200, 1500]); if (x + w + 100 > g.len) break;
     L.openings.push({ id:'o' + run + '_' + wi + '_' + x, type:t, wall:wi, x, w, h:t === 'window' ? pick([600, 1200, 1400]) : pick([2000, 2070]), z:t === 'window' ? pick([300, 900, 1000]) : 0, hinge:pick(['L', 'R']), swing:pick(['in', 'out']), color:'#a0a0a0' });
     x += w + 200 + Math.floor(rnd() * 400); } });
+  G.forEach((g, wi) => { for (let k = 0; k < 3; k++) if (rnd() < 0.5) L.points.push({ id:'p' + run + '_' + wi + '_' + k, type:pick(['socket', 'socket2', 'cold', 'hot', 'drain']), wall:wi, x:100 + rnd() * (g.len - 200), z:pick([300, 450, 550, 1100]) }); });
   RM.ensure(p);
   G.forEach((g, wi) => {
     const pcs = RM.wallPieces(L, wi, -100, g.len + 100, H); N.pieces += pcs.length;
