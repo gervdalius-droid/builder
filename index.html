@@ -5277,11 +5277,11 @@ function drawFront() {
 function frontCab(c, i, it, bad, act) {
   var L = C.o.proj.layout, k = C.fr.k, w = cabW(c), h = cabH(c), z0 = z0Of(c, it, L), x0 = fX(it.wall, it.x), sel = C.o.sel === i;
   var s = '<g class="rm-cab lv-' + level(c) + (sel ? ' sel' : '') + (bad ? ' bad' : '') + (act ? ' act' : '') + '" data-cab="' + i + '">';
-  var lh = legH(c), art = !c.dishwasher && C.o.frontArt ? C.o.frontArt(i) : null;
+  var lh = legH(c), art = C.o.frontArt ? C.o.frontArt(i) : null;
   sideP(c).forEach(function (q) { var col = window.DBFront ? window.DBFront.matColor(q.mat, '#d5cbbd') : '#d5cbbd';
     s += '<rect class="rm-side" x="' + (x0 + q.x0 * k).toFixed(1) + '" y="' + fY(z0 + q.z1).toFixed(1) + '" width="' + Math.max(1.2, (q.x1 - q.x0) * k).toFixed(1) + '" height="' + ((q.z1 - q.z0) * k).toFixed(1) + '" style="fill:' + col + '"/>'; });
   if (lh && !c.dishwasher && !art) [55, w - 55].forEach(function (lx) { s += '<rect class="rm-leg" x="' + (x0 + (lx - 15) * k).toFixed(1) + '" y="' + fY(lh).toFixed(1) + '" width="' + Math.max(1.5, 30 * k).toFixed(1) + '" height="' + (lh * k).toFixed(1) + '"/>'; });
-  if (c.dishwasher && lh) s += '<rect class="rm-plinth" x="' + x0.toFixed(1) + '" y="' + fY(lh).toFixed(1) + '" width="' + (w * k).toFixed(1) + '" height="' + (lh * k).toFixed(1) + '"/>';
+  if (c.dishwasher && lh) s += '<rect class="rm-plinth" x="' + x0.toFixed(1) + '" y="' + fY(lh).toFixed(1) + '" width="' + (w * k).toFixed(1) + '" height="' + (lh * k).toFixed(1) + '" style="fill:' + (window.DBFront ? window.DBFront.matColor((c.mat || {}).facade, '#9aa39c') : '#9aa39c') + '"/>';   // its plinth: in the front colour, as in 3D
   if (art) {   // the same render as the cabinet's front view, at its place on the wall
     s += art.svg.replace('<svg class="fr-svg"', '<svg class="rm-art" x="' + x0.toFixed(1) + '" y="' + fY(z0 + h + 4).toFixed(1) + '" width="' + (w * k).toFixed(1) + '" height="' + (art.vbH * k).toFixed(1) + '" preserveAspectRatio="none"');
     s += '<rect class="rm-body art" x="' + x0.toFixed(1) + '" y="' + fY(z0 + h).toFixed(1) + '" width="' + (w * k).toFixed(1) + '" height="' + (h * k).toFixed(1) + '"/>';
@@ -9650,7 +9650,7 @@ function mountRoom(focus) {
   roomSelSync();
   RM.attach(el, { proj:S.proj, infos:S._info || [], sel:S.roomSel, t:t, toast:toast, presets:roomPresets(), canUndo:S.roomUndo.length > 0, focusStage:!!focus, confirmDel:S.confirm === 'rmdel' + S.roomSel,
     lookHTML:function (i) { return '<div class="rm-look"><div class="lbl" title="' + esc(t('lookL')) + '">' + t('lookT') + '</div>' + lookBlock(lookNames(i == null ? S.proj.cabinets : [S.proj.cabinets[i]]), true) + '</div>'; },
-    frontArt:function (i) { var c = S.proj.cabinets[i], inf = (S._info || [])[i]; if (!c || c.kind === 'panel' || !inf || !inf.r || !inf.r.panels || !inf.r.panels.length) return null; var a = frontArtOf(c, inf.r, { noHit:true, over:[] }); return a.svg ? a : null; },
+    frontArt:function (i) { var c = S.proj.cabinets[i], inf = (S._info || [])[i]; if (!c || c.kind === 'panel' || !inf || !inf.r || !inf.r.panels || !inf.r.panels.length) return null; var a = frontArtOf(c, inf.r, c.dishwasher ? { noHit:true, over:[], legs:false, legH:0 } : { noHit:true, over:[] }); if (c.dishwasher) a.vbH = num(c.H) + 14; return a.svg ? a : null; },
     onSelect:function (i) { setRoomSel(i); S.confirm = null; if (i != null) S.sel = i; mountRoom(true); },
     onLayout:function (fn, o) { o = o || {}; roomUndoPush(); fn(S.proj); if (o.sel !== undefined) setRoomSel(o.sel); save(); render(); if (o.focus) mountRoom(true); if (o.msg) toast(o.msg); },
     onCab:function (i, patch, after) { roomUndoPush(); var cc0 = S.proj.cabinets[i], oldW = num(cc0.W);
