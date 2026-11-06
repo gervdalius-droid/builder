@@ -119,6 +119,15 @@ main{padding-block:18px 40px}
 
 /* presets */
 .presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.lib{margin:0 0 18px;padding:12px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg,#f6f5f1)}
+.libh{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.libh h4{margin:0;font:600 18px var(--f-display)}.libh input{flex:1;min-width:200px;border:1px solid var(--line2);border-radius:8px;padding:8px 10px;font-size:14px;background:var(--panel)}
+.libcats{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}.libcats>button,.libcat{border:1px solid var(--line2);background:var(--panel);border-radius:999px;font-size:12.5px}
+.libcats>button,.libcat>button{padding:5px 10px;background:none;border-radius:999px;cursor:pointer;font:inherit;color:inherit}.libcat>button{border:0}.libcat{display:inline-flex;align-items:center}
+.libcats>button.on,.libcat.on{background:var(--ink,#1b211e);color:#fff;border-color:var(--ink,#1b211e)}.libcats i{font-style:normal;opacity:.6;margin-left:2px}
+.libcat .x{padding:5px 8px 5px 0;opacity:.6}.libnew{display:inline-flex;gap:4px}.libnew input{width:150px;border:1px solid var(--line2);border-radius:999px;padding:4px 10px;font-size:12.5px}.libnew .btn{min-height:28px;padding:2px 10px}
+.libgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}.libitem{display:flex;flex-direction:column;gap:4px}.libitem .preset{width:100%}
+.libact{display:flex;gap:4px}.libact select{flex:1;min-width:0;border:1px solid var(--line2);border-radius:6px;padding:3px 5px;font-size:12px;background:var(--panel)}.libact .btn{min-height:26px;padding:2px 8px}
+.libsub{margin:6px 0 10px;font:600 16px var(--f-display)}.btn.libon{color:#9a6a00}
 .preset{border:1px solid var(--line);background:var(--panel);border-radius:var(--r);padding:12px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:8px}
 .preset:hover{border-color:var(--accent)}
 .preset svg{width:54px;height:54px;color:var(--ink)}
@@ -799,6 +808,12 @@ button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(
 .rr-sp{flex:1}
 .rr-q button{font-size:12.5px;padding:6px 10px}
 .rr-stage{position:relative;flex:1;min-height:0;background:#e9e7e2;cursor:grab;touch-action:none}
+.rr-pick{position:absolute;z-index:3;width:280px;background:var(--panel);border:1px solid var(--line2);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.22);padding:8px 10px;cursor:default}
+.rr-pk-h{display:flex;align-items:center;gap:6px}.rr-pk-h small{flex:1;color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rr-pk-h .btn{padding:2px 8px;min-height:24px}
+.rr-pk-m{display:flex;align-items:center;gap:8px;margin-top:6px}.rr-pk-m .btn{font-size:18px;padding:2px 12px;min-height:34px}.rr-pk-m span{flex:1;display:flex;align-items:center;gap:6px;min-width:0}
+.rr-pk-m b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rr-pk-m i{width:18px;height:18px;border-radius:4px;border:1px solid var(--line2);flex:none}
+.rr-pk-n{display:block;margin-top:5px;color:var(--muted);font-size:11px}
+.rr-head .btn.on{background:var(--ink,#1b211e);color:#fff}
 .rr-stage:active{cursor:grabbing}
 .rr-cv{position:absolute;inset:0;width:100%;height:100%;display:block}
 .rr-bar{position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(0,0,0,.08)}
@@ -3505,7 +3520,7 @@ function tex(name) { var k = key(name), l = looks[k]; if (!l || !l.tex) return n
 function sampler(tx, ppm) {
   var T = tex(tx.name); if (!T) return null;
   var O = tx.O, U = tx.U, V = tx.V, k, s0 = 0, t0 = 0, fit = T.fit && tx.Lu > 0 && tx.Lv > 0;
-  if (fit) { k = Math.max(T.w / tx.Lu, T.h / tx.Lv); s0 = (T.w - tx.Lu * k) / 2; t0 = (T.h - tx.Lv * k) / 2; } else k = T.k;
+  if (fit) { k = Math.min(T.w / tx.Lu, T.h / tx.Lv); s0 = (T.w - tx.Lu * k) / 2; t0 = (T.h - tx.Lv * k) / 2; } else k = T.k;
   var tpp = k / Math.max(1e-6, ppm), lv = 0; while (tpp > 1.4 && lv < T.levels.length - 1) { tpp /= 2; lv++; }
   var Lv = T.levels[lv], sc = Lv.w / T.w, d = Lv.d, w = Lv.w, h = Lv.h, w2 = 2 * w, h2 = 2 * h;
   var cx = fit ? function (i) { return i < 0 ? 0 : i >= w ? w - 1 : i; } : function (i) { i %= w2; if (i < 0) i += w2; return i >= w ? w2 - 1 - i : i; };
@@ -3552,14 +3567,20 @@ function fail(msg) { status(msg, 0); if (R) R.ov.classList.add('err'); }
 function open(o) {
   if (R) close();
   var ov = document.createElement('div'); ov.className = 'rr-ov'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
-  R = { o:o, ov:ov, th:+o.th || 0.55, eye:1600, fov:50, far:1, raf:0 };
+  R = { o:o, ov:ov, th:+o.th || 0.55, eye:+o.eye || 1600, fov:50, far:+o.far || 1, raf:0, room:false };
+  try { R.room = localStorage.getItem('dbRR.room') === '1'; } catch (e) {}
   ov.setAttribute('aria-label', T('rrTitle'));
   ov.innerHTML = '<div class="rr-box"><div class="rr-head"><b>' + esc(T('rrTitle')) + '</b><span class="rr-st" role="status">' + esc(T('rrLoading')) + '</span><span class="rr-sp"></span>' +
     '<div class="seg rr-q" role="group" aria-label="' + esc(T('rrQ')) + '">' + ['fast', 'good', 'best'].map(function (q) { return '<button type="button" data-rq="' + q + '" class="' + (q === Q ? 'on' : '') + '" aria-pressed="' + (q === Q) + '">' + esc(T('rrQ_' + q)) + '</button>'; }).join('') + '</div>' +
+    '<button type="button" class="btn ghost' + (R.room ? ' on' : '') + '" data-rr="room" aria-pressed="' + R.room + '" title="' + esc(T('rrRoomT')) + '">' + esc(T('rrRoom')) + '</button>' +
     '<button type="button" class="btn" data-rr="dl" disabled>⤓ ' + esc(T('rrDl')) + '</button><button type="button" class="btn ghost" data-rr="close" aria-label="' + esc(T('close')) + '">✕</button></div>' +
     '<div class="rr-stage"><canvas class="rr-cv"></canvas><div class="rr-bar"><i></i></div></div><p class="rr-hint">' + esc(T('rrHint')) + '</p></div>';
   document.body.appendChild(ov);
-  ov.addEventListener('click', onClick); R.key = function (e) { if (e.key === 'Escape') close(); }; document.addEventListener('keydown', R.key);
+  ov.addEventListener('click', onClick);
+  R.key = function (e) {
+    if (R && R.sel && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) { e.preventDefault(); stepMat(e.key === 'ArrowRight' ? 1 : -1); return; }
+    if (e.key === 'Escape') { if (R && R.sel) { unpick(); return; } close(); } };
+  document.addEventListener('keydown', R.key);
   var items = root.DBRoom && root.DBRoom.items3d ? root.DBRoom.items3d(o.proj, o.infos || []) : [];
   if (!items.length) { fail(T('rrEmpty')); return; }
   var timer = new Promise(function (res, rej) { setTimeout(function () { rej(new Error('timeout')); }, 45000); });
@@ -3577,6 +3598,10 @@ function onClick(e) {
   if (!R) return; var b = e.target.closest('[data-rr],[data-rq]'); if (!b) { if (e.target === R.ov) close(); return; }
   if (b.getAttribute('data-rr') === 'close') { close(); return; }
   if (b.getAttribute('data-rr') === 'dl') { download(); return; }
+  if (b.getAttribute('data-rr') === 'room') {   // the room round the furniture, or the furniture alone (remembered)
+    var o2 = Object.assign({}, R.o, { th:R.th, eye:R.eye, far:R.far }); try { localStorage.setItem('dbRR.room', R.room ? '0' : '1'); } catch (e) {} close(); open(o2); return; }
+  if (b.getAttribute('data-rr') === 'mprev' || b.getAttribute('data-rr') === 'mnext') { stepMat(b.getAttribute('data-rr') === 'mnext' ? 1 : -1); return; }
+  if (b.getAttribute('data-rr') === 'mx') { unpick(); return; }
   var q = b.getAttribute('data-rq'); if (q && QP[q]) { Q = q; R.ov.querySelectorAll('[data-rq]').forEach(function (x) { var on = x.getAttribute('data-rq') === q; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); }); applyQ(); R.done = false; }
 }
 function download() {
@@ -3601,13 +3626,44 @@ function loadImage(src) { return new Promise(function (res, rej) { var im = new 
 function boxUV(geo, size, g, look, iw, ih) {
   var pos = geo.attributes.position, uv = geo.attributes.uv, rot = !!look.rot, fit = look.fit !== false;
   var Lg = size[g], Lw = Math.max.apply(null, [0, 1, 2].filter(function (k) { return k !== g; }).map(function (k) { return size[k]; })), Lu = rot ? Lw : Lg, Lv = rot ? Lg : Lw;
-  var k, s0 = 0, t0 = 0; if (fit) { k = Math.max(iw / Lu, ih / Lv); s0 = (iw - Lu * k) / 2; t0 = (ih - Lv * k) / 2; } else k = iw / Math.max(20, +look.mm || 1000);
+  var k, s0 = 0, t0 = 0; if (fit) { k = Math.min(iw / Lu, ih / Lv); s0 = (iw - Lu * k) / 2; t0 = (ih - Lv * k) / 2; } else k = iw / Math.max(20, +look.mm || 1000);   // laid once: the board takes the biggest piece of the photo of its shape (never past the photo's edge — that smeared its edge pixels)
   for (var i = 0; i < pos.count; i++) {
     var a = [0, 0, 1, 1, 2, 2][i >> 2], p = [pos.getX(i), pos.getY(i), pos.getZ(i)], inPl = [0, 1, 2].filter(function (x) { return x !== a; });
     var u = inPl.indexOf(g) >= 0 ? g : inPl[0], v = inPl[0] === u ? inPl[1] : inPl[0]; if (rot) { var tmp = u; u = v; v = tmp; }
     uv.setXY(i, (s0 + (p[u] + size[u] / 2) * k) / iw, 1 - (t0 + (p[v] + size[v] / 2) * k) / ih);
   }
   uv.needsUpdate = true;
+}
+/* the furniture: one mesh per board, its material per board name and kind, the texture photos loaded first (kept for later
+   rebuilds — a material picked with the arrows rebuilds this group only) */
+function furniture(THREE, items) {
+  var LK = root.DBLook, V3 = R.V3, texs = R.texs, rd = R;
+  var names = {}; items.forEach(function (it) { var n = it.o.tex && it.o.tex.name; if (n && LK && LK.has(n) && !texs[n]) names[n] = 1; });
+  return Promise.all(Object.keys(names).map(function (n) { var l = LK.get(n); return loadImage(l.tex).then(function (im) {
+      var t = new THREE.Texture(im); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = rd.maxAniso; t.needsUpdate = true;
+      if (l.fit === false) t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping;
+      texs[n] = { t:t, w:im.naturalWidth || im.width, h:im.naturalHeight || im.height, look:l }; }).catch(function () {}); })).then(function () {
+    var mats = rd.mats || (rd.mats = {}), mat = function (it) {
+      var kind = it.o.metal ? 'metal' : it.kind || 'part', tn = it.o.tex && it.o.tex.name, tx = tn && texs[tn], key = kind + '|' + (tx ? 'T' + tn : it.color);
+      if (mats[key]) return mats[key];
+      if (kind === 'led') return (mats[key] = new THREE.MeshStandardMaterial({ color:0xfff3d0, emissive:new THREE.Color(0xffe3a0), emissiveIntensity:6, roughness:0.4 }));   // an LED strip: it lights
+      var rough = { front:0.42, top:0.32, hdf:0.75, part:0.55, metal:0.35 }[kind] || 0.5;
+      return (mats[key] = new THREE.MeshStandardMaterial({ color:tx ? 0xffffff : new THREE.Color(it.color || '#dddddd'), map:tx ? tx.t : null, roughness:rough, metalness:kind === 'metal' ? 0.7 : 0 }));
+    };
+    var group = new THREE.Group();
+    items.forEach(function (it) {
+      var e = it.e, P0 = V3(it.tr([e[0], e[2], e[4]])), ex = V3(it.tr([e[1], e[2], e[4]])).sub(P0), ey = V3(it.tr([e[0], e[3], e[4]])).sub(P0), ez = V3(it.tr([e[0], e[2], e[5]])).sub(P0);
+      var size = [ex.length(), ey.length(), ez.length()], c = P0.clone().addScaledVector(ex, 0.5).addScaledVector(ey, 0.5).addScaledVector(ez, 0.5);
+      ex.normalize(); ey.normalize(); ez.normalize(); if (new THREE.Vector3().crossVectors(ex, ey).dot(ez) < 0) ey.negate();   // keep the basis right-handed (the box is the same)
+      var m = mat(it), mesh;
+      if (it.kind === 'leg') { var rr = Math.min(size[0], size[1]) / 2; mesh = new THREE.Mesh(new THREE.CylinderGeometry(rr, rr, size[2], 24), m); mesh.matrix.makeBasis(ex, ez, new THREE.Vector3().crossVectors(ex, ez)); }
+      else { var geo = new THREE.BoxGeometry(size[0], size[1], size[2]), tn = it.o.tex && it.o.tex.name; if (tn && texs[tn]) boxUV(geo, size, it.o.tex.g || 0, texs[tn].look, texs[tn].w, texs[tn].h);
+        mesh = new THREE.Mesh(geo, m); mesh.matrix.makeBasis(ex, ey, ez); }
+      mesh.userData = { cab:it.o.cab, kind:it.kind || 'part', front:!!it.o.front, tex:it.o.tex && it.o.tex.name };
+      mesh.matrix.setPosition(c); mesh.matrixAutoUpdate = false; mesh.matrixWorldNeedsUpdate = true; group.add(mesh);
+    });
+    return group;
+  });
 }
 function build(THREE, PT, items) {
   R.THREE = THREE; var o = R.o, ov = R.ov, cv = ov.querySelector('canvas'), stage = ov.querySelector('.rr-stage');
@@ -3619,34 +3675,18 @@ function build(THREE, PT, items) {
   var sky = new PT.GradientEquirectTexture(256); sky.topColor.set(0xffffff); sky.bottomColor.set(0x6f685e); sky.exponent = 1.1; sky.update();
   scene.environment = sky; scene.environmentIntensity = 1.05;
   var V3 = function (p) { return new THREE.Vector3(p[0], p[2], p[1]); };   // plan x, plan y, height → three.js (y up)
-  var LK = root.DBLook, maxAniso = renderer.capabilities.getMaxAnisotropy();
-  /* materials: per board name and kind; texture photos loaded first */
-  var names = {}; items.forEach(function (it) { var n = it.o.tex && it.o.tex.name; if (n && LK && LK.has(n)) names[n] = 1; });
-  var texs = {};
-  return Promise.all(Object.keys(names).map(function (n) { var l = LK.get(n); return loadImage(l.tex).then(function (im) {
-      var t = new THREE.Texture(im); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = maxAniso; t.needsUpdate = true;
-      if (l.fit === false) t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping;
-      texs[n] = { t:t, w:im.naturalWidth || im.width, h:im.naturalHeight || im.height, look:l }; }).catch(function () {}); })).then(function () {
+  R.V3 = V3; R.maxAniso = renderer.capabilities.getMaxAnisotropy(); R.texs = {};
+  return furniture(THREE, items).then(function (group) {
     if (!R || R.renderer !== renderer) return;
-    var mats = {}, mat = function (it) {
-      var kind = it.o.metal ? 'metal' : it.kind || 'part', tn = it.o.tex && it.o.tex.name, tx = tn && texs[tn], key = kind + '|' + (tx ? 'T' + tn : it.color);
-      if (mats[key]) return mats[key];
-      if (kind === 'led') return (mats[key] = new THREE.MeshStandardMaterial({ color:0xfff3d0, emissive:new THREE.Color(0xffe3a0), emissiveIntensity:6, roughness:0.4 }));   // an LED strip: it lights
-      var rough = { front:0.42, top:0.32, hdf:0.75, part:0.55, metal:0.35 }[kind] || 0.5;
-      return (mats[key] = new THREE.MeshStandardMaterial({ color:tx ? 0xffffff : new THREE.Color(it.color || '#dddddd'), map:tx ? tx.t : null, roughness:rough, metalness:kind === 'metal' ? 0.7 : 0 }));
-    };
-    var group = new THREE.Group(), bb = new THREE.Box3();
-    items.forEach(function (it) {
-      var e = it.e, P0 = V3(it.tr([e[0], e[2], e[4]])), ex = V3(it.tr([e[1], e[2], e[4]])).sub(P0), ey = V3(it.tr([e[0], e[3], e[4]])).sub(P0), ez = V3(it.tr([e[0], e[2], e[5]])).sub(P0);
-      var size = [ex.length(), ey.length(), ez.length()], c = P0.clone().addScaledVector(ex, 0.5).addScaledVector(ey, 0.5).addScaledVector(ez, 0.5);
-      ex.normalize(); ey.normalize(); ez.normalize(); if (new THREE.Vector3().crossVectors(ex, ey).dot(ez) < 0) ey.negate();   // keep the basis right-handed (the box is the same)
-      var m = mat(it), mesh;
-      if (it.kind === 'leg') { var rr = Math.min(size[0], size[1]) / 2; mesh = new THREE.Mesh(new THREE.CylinderGeometry(rr, rr, size[2], 24), m); mesh.matrix.makeBasis(ex, ez, new THREE.Vector3().crossVectors(ex, ez)); }
-      else { var geo = new THREE.BoxGeometry(size[0], size[1], size[2]), tn = it.o.tex && it.o.tex.name; if (tn && texs[tn]) boxUV(geo, size, it.o.tex.g || 0, texs[tn].look, texs[tn].w, texs[tn].h);
-        mesh = new THREE.Mesh(geo, m); mesh.matrix.makeBasis(ex, ey, ez); }
-      mesh.matrix.setPosition(c); mesh.matrixAutoUpdate = false; mesh.matrixWorldNeedsUpdate = true; group.add(mesh);
-    });
+    var bb = new THREE.Box3(); R.group = group;
     scene.add(group); group.updateMatrixWorld(true); bb.setFromObject(group);
+    if (!R.room) {   /* studio (the default): the furniture alone on a plain light floor — no walls, no planks, quicker and calmer */
+      var sb = bb.clone(), sw = Math.max(6000, (sb.max.x - sb.min.x) * 4), sd = Math.max(6000, (sb.max.z - sb.min.z) * 4);
+      scene.background = new THREE.Color(0xf3f2ef);
+      var sfl = new THREE.Mesh(new THREE.BoxGeometry(sw, 20, sd), new THREE.MeshStandardMaterial({ color:0xeceae5, roughness:0.9 })); sfl.position.set((sb.min.x + sb.max.x) / 2, -10, (sb.min.z + sb.max.z) / 2); scene.add(sfl);
+      var sl = new THREE.RectAreaLight(0xfff6ea, 4, Math.max(1500, (sb.max.x - sb.min.x) * 1.2), Math.max(1500, (sb.max.z - sb.min.z) * 1.2)); sl.position.set((sb.min.x + sb.max.x) / 2, Math.max(H, sb.max.y) + 600, (sb.min.z + sb.max.z) / 2); sl.lookAt(sl.position.x, 0, sl.position.z); scene.add(sl);
+      finish(THREE, PT, scene, bb, [], H, o, L, G, items, stage); return;
+    }
     /* the room: floor and walls (those between the eye and the furniture are left out, as in the 3-D view) */
     var rb = new THREE.Box3(); G.forEach(function (g) { rb.expandByPoint(V3([g.P[0], g.P[1], 0])); rb.expandByPoint(V3([g.P[0] + g.d[0] * g.len, g.P[1] + g.d[1] * g.len, 0])); }); rb.union(bb);
     /* the plank floor: to the horizon (a showroom), or — with a window in the room — over the room and 1.8 m in front of every wall,
@@ -3654,7 +3694,7 @@ function build(THREE, PT, items) {
     var fb = rb.clone(), win = root.DBRoom.opsOf && root.DBRoom.opsOf(L).some(function (op) { return op.type === 'window'; });
     if (win) { G.forEach(function (g) { [0, g.len].forEach(function (a2) { fb.expandByPoint(V3([g.P[0] + g.d[0] * a2 + g.n[0] * 1800, g.P[1] + g.d[1] * a2 + g.n[1] * 1800, 0])); }); }); fb.min.x -= 100; fb.min.z -= 100; fb.max.x += 100; fb.max.z += 100; }
     else { var fcx = (fb.min.x + fb.max.x) / 2, fcz = (fb.min.z + fb.max.z) / 2; fb.min.x = fcx - 30000; fb.max.x = fcx + 30000; fb.min.z = fcz - 30000; fb.max.z = fcz + 30000; }
-    var fw = fb.max.x - fb.min.x, fd = fb.max.z - fb.min.z, ftx = floorTexture(THREE); ftx.repeat.set(fw / 2400, fd / 2400); ftx.anisotropy = maxAniso;
+    var fw = fb.max.x - fb.min.x, fd = fb.max.z - fb.min.z, ftx = floorTexture(THREE); ftx.repeat.set(fw / 2400, fd / 2400); ftx.anisotropy = R.maxAniso;
     var fl = new THREE.Mesh(new THREE.BoxGeometry(fw, 20, fd), new THREE.MeshStandardMaterial({ map:ftx, roughness:0.55 })); fl.position.set((fb.min.x + fb.max.x) / 2, -10, (fb.min.z + fb.max.z) / 2); scene.add(fl);
     if (win) { var gr = new THREE.Mesh(new THREE.BoxGeometry(60000, 20, 60000), new THREE.MeshStandardMaterial({ color:0xd6d3cb, roughness:0.95 })); gr.position.set(fl.position.x, -13, fl.position.z); scene.add(gr); }
     /* walls, 100 mm thick behind their line, with real holes for the doors and windows (daylight comes in through the glass) */
@@ -3676,6 +3716,12 @@ function build(THREE, PT, items) {
     /* light: a big soft panel over the room (like a bright ceiling) and the sky */
     var size = rb.getSize(new THREE.Vector3()), ctr = rb.getCenter(new THREE.Vector3());
     var lamp = new THREE.RectAreaLight(0xfff6ea, 4, Math.max(1200, size.x * 0.7), Math.max(1200, size.z * 0.7)); lamp.position.set(ctr.x, H + 500, ctr.z); lamp.lookAt(ctr.x, 0, ctr.z); scene.add(lamp);
+    finish(THREE, PT, scene, bb, walls, H, o, L, G, items, stage);
+  });
+}
+/* the camera, the path tracer and the controls (room or studio) */
+function finish(THREE, PT, scene, bb, walls, H, o, L, G, items, stage) {
+    var renderer = R.renderer, V3 = R.V3;
     var camera = new THREE.PerspectiveCamera(R.fov, 1, 30, 100000);
     R.scene = scene; R.camera = camera; R.walls = walls; R.fc = bb.getCenter(new THREE.Vector3()); R.fr = bb.getBoundingSphere(new THREE.Sphere()).radius; R.bb = bb.clone(); R.H = H;
     /* the fronts: per cabinet its box, the side its fronts face and their size — the view is turned to where most of them show, unhidden */
@@ -3686,13 +3732,12 @@ function build(THREE, PT, items) {
     resize(); R.th = bestTurn(THREE, R.th);   // sized first: how far back the eye stands depends on the picture's shape
     var pt = new PT.WebGLPathTracer(renderer); R.pt = pt;
     pt.tiles.set(2, 2); pt.filterGlossyFactor = 0.5; pt.minSamples = 1; pt.renderDelay = 0; pt.fadeDuration = 250; pt.dynamicLowRes = true; pt.lowResScale = 0.3;
-    if (Object.keys(texs).length) pt.textureSize.set(2048, 2048);
+    pt.textureSize.set(2048, 2048);   // texture photos (also those picked later with the arrows) at a good size
     denoiser(THREE, PT, pt); applyQ();
     place(true);
     R.resize = function () { if (!R) return; resize(); place(); }; window.addEventListener('resize', R.resize);
     controls(stage);
     loop();
-  });
 }
 function resize() {
   var stage = R.ov.querySelector('.rr-stage'), w = Math.max(200, stage.clientWidth), h = Math.max(150, stage.clientHeight), dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -3783,11 +3828,54 @@ function place(first) {
   else R.pt.updateCamera();
   R.done = false;
 }
+/* a click on a board: its cabinet's front, carcass or worktop material, changed with the arrows (‹ › or the keyboard ← →);
+   the project is changed (o.onMat) and only the furniture is rebuilt */
+var PART_KEY = { facade:'rrPartF', carc:'rrPartC', worktop:'rrPartW' };
+function matOf(c, part) { return part === 'worktop' ? (c.worktop && c.worktop.mat) || '' : (c.mat && c.mat[part]) || ''; }
+function pick(e) {
+  if (!R || !R.group || !R.camera || !R.o.onMat) return;
+  var THREE = R.THREE, cv = R.renderer.domElement, rc = cv.getBoundingClientRect(), ray = new THREE.Raycaster();
+  ray.setFromCamera(new THREE.Vector2((e.clientX - rc.left) / rc.width * 2 - 1, -(e.clientY - rc.top) / rc.height * 2 + 1), R.camera);
+  var hit = ray.intersectObjects(R.group.children, false).filter(function (h) { var u = h.object.userData; return u && u.cab != null && /^(front|part|top|hdf)$/.test(u.kind); })[0];
+  if (!hit) { unpick(); return; }
+  var u = hit.object.userData, c = R.o.proj.cabinets[u.cab]; if (!c) return;
+  R.sel = { cab:u.cab, part:u.kind === 'front' ? 'facade' : u.kind === 'top' ? 'worktop' : 'carc', x:e.clientX - rc.left, y:e.clientY - rc.top };
+  showPick();
+}
+function unpick() { if (!R) return; R.sel = null; var p = R.ov.querySelector('.rr-pick'); if (p) p.remove(); }
+function showPick() {
+  var st = R.ov.querySelector('.rr-stage'), p = st.querySelector('.rr-pick'), sl = R.sel, c = R.o.proj.cabinets[sl.cab]; if (!c) return;
+  if (!p) { p = document.createElement('div'); p.className = 'rr-pick'; st.appendChild(p); }
+  var cur = matOf(c, sl.part), lk = root.DBLook, sw = lk && lk.color(cur);
+  p.innerHTML = '<div class="rr-pk-h"><small>' + esc((sl.cab + 1) + (c.name ? ' · ' + c.name : '') + ' · ' + T(PART_KEY[sl.part])) + '</small><button type="button" class="btn ghost" data-rr="mx" aria-label="' + esc(T('close')) + '">✕</button></div>' +
+    '<div class="rr-pk-m"><button type="button" class="btn" data-rr="mprev" aria-label="‹">‹</button><span>' + (sw ? '<i style="background:' + esc(sw) + '"></i>' : '') + '<b>' + esc(cur || '—') + '</b></span><button type="button" class="btn" data-rr="mnext" aria-label="›">›</button></div>' +
+    '<small class="rr-pk-n">' + esc(T('rrPickN')) + '</small>';
+  p.style.left = '12px'; p.style.top = '12px';   // in the corner: the board stays in sight while the material changes
+}
+function stepMat(dir) {
+  if (!R || !R.sel || !R.o.onMat) return;
+  var sl = R.sel, c = R.o.proj.cabinets[sl.cab]; if (!c) return;
+  var list = (typeof R.o.mats === 'function' ? R.o.mats() : R.o.mats) || []; if (!list.length) return;
+  var cur = matOf(c, sl.part), k = list.indexOf(cur), nx = list[((k < 0 ? (dir > 0 ? -1 : 0) : k) + dir + list.length) % list.length];
+  var infos = R.o.onMat(c, sl.part, nx); if (infos) R.o.infos = infos;
+  showPick(); rebuildFurniture();
+}
+function rebuildFurniture() {
+  if (!R || !R.THREE || !R.scene) return;
+  if (R.busy) { R.again = true; return; }
+  R.busy = true; var r = R, items = root.DBRoom.items3d(R.o.proj, R.o.infos || []);
+  furniture(R.THREE, items).then(function (g) {
+    if (R !== r) return; r.busy = false;
+    r.scene.remove(r.group); r.group = g; r.scene.add(g); g.updateMatrixWorld(true);
+    r.pt.setScene(r.scene, r.camera); r.pt.reset(); r.k = 1; r.done = false;
+    if (r.again) { r.again = false; rebuildFurniture(); }
+  }, function () { r.busy = false; });
+}
 function controls(stage) {
   var d = null;
-  stage.addEventListener('pointerdown', function (e) { if (!R || !R.pt) return; d = { x:e.clientX, y:e.clientY, th:R.th, eye:R.eye }; try { stage.setPointerCapture(e.pointerId); } catch (er) {} e.preventDefault(); });
-  stage.addEventListener('pointermove', function (e) { if (!d || !R) return; R.th = d.th - (e.clientX - d.x) * 0.006; R.eye = Math.max(500, Math.min(R.H + 2500, d.eye + (e.clientY - d.y) * 5)); camAt(); R.pt.updateCamera(); R.done = false; });   // across: walk round; up and down: eye height (above the room too)
-  var up = function () { if (d && R) place(false); d = null; };
+  stage.addEventListener('pointerdown', function (e) { if (!R || !R.pt || e.target.closest('.rr-pick')) return; d = { x:e.clientX, y:e.clientY, th:R.th, eye:R.eye, moved:false }; try { stage.setPointerCapture(e.pointerId); } catch (er) {} e.preventDefault(); });
+  stage.addEventListener('pointermove', function (e) { if (!d || !R) return; if (!d.moved && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 5) return; d.moved = true; R.th = d.th - (e.clientX - d.x) * 0.006; R.eye = Math.max(500, Math.min(R.H + 2500, d.eye + (e.clientY - d.y) * 5)); camAt(); R.pt.updateCamera(); R.done = false; });   // across: walk round; up and down: eye height (above the room too)
+  var up = function (e) { if (d && R) { if (d.moved) place(false); else if (e && e.type === 'pointerup') pick(e); } d = null; };
   stage.addEventListener('pointerup', up); stage.addEventListener('pointercancel', up);
   stage.addEventListener('wheel', function (e) { if (!R || !R.pt) return; e.preventDefault(); R.far = Math.max(0.35, Math.min(3, R.far * Math.exp((e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY) * 0.001))); clearTimeout(R.wt); camAt(); R.pt.updateCamera(); R.done = false; R.wt = setTimeout(function () { if (R) place(false); }, 300); }, { passive:false });   // nearer or further (walls sorted out after)
 }
@@ -6344,7 +6432,7 @@ function onClick(e) {
   if (a === 'undo') { C.o.onUndo(); return; }
   if (a === 'zin' || a === 'zout') { zoomBy(a === 'zin' ? 1.5 : 1 / 1.5, C.w / 2, C.h / 2); return; }
   if (a === 'zfit') { zoomFit(); return; }
-  if (a === 'render') { if (window.DBRender) window.DBRender.open({ proj:proj, infos:C.o.infos, th:V.th, ph:V.ph, t:C.o.t }); return; }
+  if (a === 'render') { if (window.DBRender) window.DBRender.open({ proj:proj, infos:C.o.infos, th:V.th, ph:V.ph, t:C.o.t, onMat:C.o.onMat, mats:C.o.mats }); return; }
   if (a === 'desel') { C.o.onSelect(null); return; }
   if (a === 'sel') { C.o.onSelect(+b.getAttribute('data-i')); return; }
   if (a === 'opsel') { selectOp(v); return; }
@@ -6636,7 +6724,14 @@ function pbox(p) {   // a part's extent [x, y, z] in its cabinet (x right, y fro
   return [0, 1, 2].map(function (i) { return [Math.min.apply(null, pts.map(function (r) { return r[i]; })), Math.max.apply(null, pts.map(function (r) { return r[i]; }))]; });
 }
 function isFront(p) { return /^(FASADAS|DURYS)$/.test(p.role); }
-function partFill(p) { return isFront(p) ? COL.front : (p.role === 'PLAUSAS' || /HDF/i.test(p.mat || '')) ? COL.hdf : COL.carc; }
+function partFill(p) {   // the board's own look (its texture photo's average colour or its colour) when the project has one; else plain drawing colours
+  var lk = typeof window !== 'undefined' && window.DBLook, lc = lk && p.mat && lk.color(p.mat);
+  if (lc && /^#[0-9a-f]{6}$/i.test(lc)) return lc;
+  return isFront(p) ? COL.front : (p.role === 'PLAUSAS' || /HDF/i.test(p.mat || '')) ? COL.hdf : COL.carc; }
+function darkFill(hex) { var h = String(hex || '').replace('#', ''); if (h.length !== 6) return false; var v = [0, 2, 4].map(function (i) { return parseInt(h.slice(i, i + 2), 16) / 255; }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2] < 0.33; }
+/* the side view's near side (and what stands beside it, thinner than it is deep): see-through, so the drawers, shelves and runners inside show */
+function nearSide(boxes) { var x0 = Infinity; boxes.forEach(function (b) { if (b.p && !b.front) x0 = Math.min(x0, b.e[0][0]); });
+  return function (b) { return !!(b.p && !b.front && b.e[0][0] <= x0 + 1 && (b.e[0][1] - b.e[0][0]) < Math.min(60, b.e[1][1] - b.e[1][0], b.e[2][1] - b.e[2][0])); }; }
 /* boxes of one cabinet in its own coordinates */
 function cabBoxes(r, o) {
   o = o || {}; var out = [];
@@ -6873,7 +6968,8 @@ function drawBoxes(order, m, o) {
       var pts = f.pts.map(m), fill = b.fill;
       if (b.polys) fill = shadeOf(fill, 0.8 + 0.2 * Math.max(0, f.n[2] * 0.7 - f.n[0] * 0.4 - f.n[1] * 0.3));
       else if (o.shade && f.n[2] > 0.5) fill = shadeOf(fill, 0.96); else if (o.shade && (f.n[0] !== 0)) fill = shadeOf(fill, 0.9);
-      out += '<polygon points="' + pts.map(function (p) { return f2(p[0]) + ',' + f2(p[1]); }).join(' ') + '" fill="' + fill + '" stroke="' + COL.line + '" stroke-width="' + f2(b.thin ? lw * 0.6 : lw) + '" stroke-linejoin="round"/>';
+      var see = o.see && o.see(b), stc = darkFill(fill) && !see ? '#c3cac6' : COL.line;
+      out += '<polygon points="' + pts.map(function (p) { return f2(p[0]) + ',' + f2(p[1]); }).join(' ') + '" fill="' + fill + '"' + (see ? ' fill-opacity="0.14" stroke-dasharray="1.6 1"' : '') + ' stroke="' + stc + '" stroke-width="' + f2(b.thin ? lw * 0.6 : lw) + '" stroke-linejoin="round"/>';
     });
     if (extra[bi]) out += extra[bi];
   });
@@ -7044,8 +7140,8 @@ function sheetViews(c, r, nr, meta) {
     xNext += W * s + gap;
   }
   /* from the left (front edge on the right) */
-  V = viewOrtho('left'); var oL = solve(cabBoxes(r, {}), V), mL = M(s, xNext + b3[1][1] * s, yBase + zMin * s);
-  svg += viewTitle(xNext, top, L.left, sc.label) + drawBoxes(oL, mL, { lw:0.3 });
+  V = viewOrtho('left'); var bL = cabBoxes(r, { fit:true, c:c }), oL = solve(bL, V), mL = M(s, xNext + b3[1][1] * s, yBase + zMin * s);
+  svg += viewTitle(xNext, top, L.left, sc.label) + drawBoxes(oL, mL, { lw:0.3, see:nearSide(bL) });
   var Pl = function (y, z) { return mL(V.pr([0, y, z])); }, cpp = carc.filter(function (b) { return b.p; }), dC = cpp.length ? boundsOf(cpp)[1] : b3[1];
   svg += dim(Pl(dC[1], zMin), Pl(dC[0], zMin), [0, 1], 8, nm(dC[1] - dC[0]));
   if (b3[1][0] < dC[0] - 0.5) svg += dim(Pl(b3[1][1], zMin), Pl(b3[1][0], zMin), [0, 1], 15, nm(Dt));
@@ -7222,8 +7318,8 @@ function viewsBlock(r, s, x0, y0, two, c) {   // two: front | left on the first 
     if (!two) xR = xi + W * s + 10;
   }
   /* from the left (front edge on the right) */
-  V = viewOrtho('left'); var oL = solve(cabBoxes(r, { worktop:true }), V), mL = M(s, xR + b3[1][1] * s, yB + zMin * s);
-  svg += viewTitle(xR, y0, L.left, lab) + drawBoxes(oL, mL, { lw:0.28 });
+  V = viewOrtho('left'); var bL2 = cabBoxes(r, { worktop:true, fit:true, c:c }), oL = solve(bL2, V), mL = M(s, xR + b3[1][1] * s, yB + zMin * s);
+  svg += viewTitle(xR, y0, L.left, lab) + drawBoxes(oL, mL, { lw:0.28, see:nearSide(bL2) });
   var Pl = function (y, z) { return mL(V.pr([0, y, z])); }, cpp = carc.filter(function (b) { return b.p; }), dC = cpp.length ? boundsOf(cpp)[1] : b3[1];
   svg += dim(Pl(dC[1], zMin), Pl(dC[0], zMin), [0, 1], 7, nm(dC[1] - dC[0]), { size:2.3 });
   if (b3[1][0] < dC[0] - 0.5) svg += dim(Pl(b3[1][1], zMin), Pl(b3[1][0], zMin), [0, 1], 13, nm(Dt), { size:2.3 });
@@ -8008,7 +8104,7 @@ lt:{
  project:'Projektas', projPh:'PROJEKTO_KODAS',
  tCab:'Spintelės', tRes:'Detalės ir CNC', tDrw:'Brėžiniai', drwTitle:'Brėžiniai', drwLead:'Sudaromi automatiškai iš detalių: baldų išdėstymas ir sienų vaizdai (kai spintelės sudėliotos Baldų skirtuke), kiekvienai spintelei — vaizdai su matmenimis ir surinkimo schema su detalių ir furnitūros sąrašu.', drwShow:'Rodyti', drwAll:'Visi lapai', drwFurn:'Tik baldų išdėstymas', drwPaper:'Popierius', drwPdf:'⤓ Atsisiųsti PDF ({n} lap.)', drwOne:'⤓ PDF', drwView:'Peržiūrėti', drwBuilding:'Ruošiamas PDF… {i} / {n}', drwDone:'PDF paruoštas', drwFail:'Nepavyko sudaryti PDF: ', drwNone:'Nėra ką braižyti — pridėkite spintelę.', drwCab:'📐 Brėžiniai', drwZip:'PDF su visais brėžiniais įdedamas ir į „Viskas ZIP“.', drwClose:'Uždaryti', drwPrev:'‹ Ankstesnis', drwNext:'Kitas ›', drwSheets:'lapai', tSet:'Nustatymai', projects:'Projektai',
  cabs:'Spintelės', newCab:'＋ Nauja spintelė', dup:'Kopijuoti', del:'Ištrinti', delSure:'Tikrai ištrinti?',
- pickTitle:'Kokią spintelę kuriame?', pickLead:'Pasirinkite panašiausią — viską galėsite pakeisti.', cancel:'Atšaukti',
+ libT:'Biblioteka', libQ:'Ieškoti: pavadinimas, matmenys (600x720), medžiaga…', libCats:'Katalogai', libAll:'Visi', libNewCat:'Naujas katalogas', libAddT:'Pridėti šią spintelę į projektą (kopija)', libMove:'Perkelti į katalogą', libNone:'Nieko nerasta — pakeiskite paiešką ar katalogą.', libEmpty:'Biblioteka tuščia. Spintelės redaktoriuje paspauskite „☆ Į biblioteką“ — spintelė bus čia visuose projektuose.', libNewT:'Nauja iš šablono', libSave:'Į biblioteką', libSaveT:'Išsaugoti šią spintelę bibliotekoje — ją galėsite pridėti bet kuriame projekte. Vėlesni pakeitimai atnaujins bibliotekos kopiją.', libLinked:'Bibliotekoje', libLinkedT:'Ši spintelė yra bibliotekoje ir jos pakeitimai ten atnaujinami. Spustelėkite — atsieti (bibliotekos kopija liks tokia, kokia yra).', libSaved:'Išsaugota bibliotekoje: {n} ({c})', libUnlinked:'Atsieta — bibliotekos kopija daugiau nekeičiama', libAdded:'Pridėta iš bibliotekos: {n}', pickTitle:'Kokią spintelę kuriame?', pickLead:'Pasirinkite panašiausią — viską galėsite pakeisti.', cancel:'Atšaukti',
  pDrawers:'Stalčių spintelė', pDoors:'Durų spintelė', pDrDoors:'Stalčius + durys', pWall:'Pakabinama', pTall:'Aukšta su orkaite', pFridge:'Šaldytuvo spinta', kFridge:'Šaldytuvas', fridgeHinge:'Vyriai', fridgeHandle:'Rankena — {s}',
  ledAddL:'Pridėti LED:', ledT:'LED apšvietimas', ledL2:'įleidžiamo profilio griovelis 16 × 8, frezuojamas CNC', ledAt:'Kur', ledBottom:'Dugne', ledTop:'Viršuje', ledL:'Kairiame šone', ledR:'Dešiniame šone', ledSide:'Pusė', ledIn:'Viduje', ledOut:'Išorėje', ledFrom:'Nuo priekio', ledEnds:'Galai', ledOpen:'Kiaurai', ledClosed:'Uždari', ledNone:'LED nėra. Pridėkite čia arba Baldų skirtuke nutempkite „LED juostą“ ant spintelės.', ledNote:'Frezuojama kaip step2xxl: freza T=96 Ø15.5, įleidimas nuožulniai per 30 mm, paliekama ≥ 2 mm. „Kiaurai“ — griovelis per visą detalę (profilis įstumiamas, laidas išeina gale). Pakabinamos dugne „Išorėje“ — šviečia žemyn ant stalviršio.', ledChip:'LED juosta', ledChipS:'griovelis 16×8', ledAddT:'Nutempkite ant spintelės — prie jos apačios, viršaus ar šono', ledAdded:'LED pridėtas: {w}', ledMiss:'Paleiskite ant spintelės (vaizdas iš priekio)', rmLeds:'LED', visT:'Matomi šonai (iš fasado medžiagos)', sideFull:'Šonai per visą aukštį (dengia viršų ir dugną)', topMount:'Viršus', topOn:'Ant šonų', topInside:'Tarp šonų', visL:'Kairys', visR:'Dešinys', visB:'Apačia', visNote:'Pažymėtas šonas pjaunamas iš fasado medžiagos ir aplijuojamas fasado briauna; kiti lieka karkaso medžiagos. Baldų skirtuke — mygtukas, kuris pažymi laisvus šonus pagal išdėstymą.', fridgeSec:'Integruojamas šaldytuvas', fridgeN:'Fasadai', fridge1:'1 — vien šaldytuvas', fridge2:'2 — šaldytuvas ir šaldiklis',
  fridgeNiche:'Niša ≈ {h} × {w} mm', fridgeNote:'Fasadai tvirtinami prie šaldytuvo durų — be lankstų. Sekcijos aukštis = nišos aukštis + 2 plokštės (dugnas / lentyna); patikrinkite šaldytuvo instrukcijoje nurodytą nišą (dažniausiai 1772–1780 mm aukščio, ≥ 550 mm gylio). Nišos lentyna gale trumpesnė {v} mm — orui; cokolyje palikite groteles.', pDish:'Indaplovės fasadas', pEmpty:'Tuščia (lentynos)', pBox:'3D konstrukcija',
@@ -8098,7 +8194,7 @@ lt:{
  rmUnplaced:'Nepastatytos', rmPlace:'Pastatyti', rmX:'Nuo sienos pradžios', rmZ:'Apačia nuo grindų', rmHang:'Kabo ant sienos', rmTop:'Viršus nuo grindų', rmTopLegs:'karkasas {h} + kojelės {l}', rmTopZ:'karkasas {h}, apačia {l} nuo grindų', rmHitShort:'Kliūna už kitos spintelės arba išeina už sienos — patraukite arba pakeiskite plotį.',
  rmFill:'Užpildyti tarpą: {w} mm',
  rrBtn:'Realus vaizdas', rrBtnT:'Fotorealistiškas visos patalpos vaizdas (skaičiuojamas vaizdo plokštėje)', rrTitle:'Realus vaizdas', rrLoading:'Kraunamas 3D variklis…', rrBuilding:'Ruošiama scena…', rrProg:'Skaičiuojama: {n} / {m}', rrDone:'Paruošta · {m} kadrų',
- rrCabT:'Fotorealistiškas šios spintelės vaizdas (skaičiuojamas vaizdo plokštėje)', rrQ:'Kokybė', rrQ_fast:'Greitai', rrQ_good:'Gerai', rrQ_best:'Labai gerai', rrDl:'Atsisiųsti PNG', rrHint:'Tempkite į šonus — eikite aplink, aukštyn ir žemyn — akių aukštis · ratukas — arčiau / toliau · „Greitai“ — peržiūrai, „Labai gerai“ — pilna raiška atsisiuntimui. Spalvos ir tekstūros — iš „Išvaizda 3D vaizde“.',
+ rrRoom:'Patalpa', rrRoomT:'Rodyti sienas, grindis, duris ir langus (lėčiau). Išjungus — tik baldai ant šviesių grindų.', rrPartF:'fasadai', rrPartC:'korpusas', rrPartW:'stalviršis', rrPickN:'‹ › arba klaviatūros ← → keičia medžiagą · Esc — uždaryti', rrCabT:'Fotorealistiškas šios spintelės vaizdas (skaičiuojamas vaizdo plokštėje)', rrQ:'Kokybė', rrQ_fast:'Greitai', rrQ_good:'Gerai', rrQ_best:'Labai gerai', rrDl:'Atsisiųsti PNG', rrHint:'Tempkite į šonus — eikite aplink, aukštyn ir žemyn — akių aukštis · ratukas — arčiau / toliau · „Greitai“ — peržiūrai, „Labai gerai“ — pilna raiška atsisiuntimui. Spalvos ir tekstūros — iš „Išvaizda 3D vaizde“.',
  rrNoLib:'Nepavyko įkelti 3D variklio — reikia interneto ryšio.', rrNoGL:'Ši naršyklė ar kompiuteris nepalaiko WebGL 2 — realaus vaizdo padaryti nepavyks.', rrEmpty:'Baldų dar nėra — pastatykite spintelių ant sienų.',
  pPanel:'Plokštė', rmEditP:'Redaguoti plokštę', rmAddedP:'Pridėta plokštė {n}', rmPanelPush:'Paleiskite — spintelės pasislinks {n} mm', rmThick:'Storis', rmPMat:'Medžiaga', rmToCeil:'Iki lubų', rmToFloor:'Iki grindų',
  rmPanelNote:'Atskira plokštė: stovi pati, bet kokio dydžio (didelis šonas, užpildas, apdaila). Pjaunama kaip detalė, be skylių. Apačia virš 0 — plokštė kabo tame aukštyje.',
@@ -8156,7 +8252,7 @@ en:{
  project:'Project', projPh:'PROJECT_CODE',
  tCab:'Cabinets', tRes:'Parts & CNC', tDrw:'Drawings', drwTitle:'Drawings', drwLead:'Made automatically from the parts: furniture layout and wall elevations (when cabinets are placed in the Furniture tab), and for every cabinet its dimensioned views and an assembly diagram with the parts and hardware lists.', drwShow:'Show', drwAll:'All sheets', drwFurn:'Furniture layout only', drwPaper:'Paper', drwPdf:'⤓ Download PDF ({n} sheets)', drwOne:'⤓ PDF', drwView:'View', drwBuilding:'Making the PDF… {i} / {n}', drwDone:'PDF ready', drwFail:'Could not make the PDF: ', drwNone:'Nothing to draw — add a cabinet.', drwCab:'📐 Drawings', drwZip:'The PDF with all drawings also goes into the full ZIP.', drwClose:'Close', drwPrev:'‹ Previous', drwNext:'Next ›', drwSheets:'sheets', tSet:'Settings', projects:'Projects',
  cabs:'Cabinets', newCab:'＋ New cabinet', dup:'Duplicate', del:'Delete', delSure:'Really delete?',
- pickTitle:'What are we building?', pickLead:'Pick the closest one — everything can be changed.', cancel:'Cancel',
+ libT:'Library', libQ:'Search: name, size (600x720), material…', libCats:'Catalogues', libAll:'All', libNewCat:'New catalogue', libAddT:'Add this cabinet to the project (a copy)', libMove:'Move to a catalogue', libNone:'Nothing found — change the search or the catalogue.', libEmpty:'The library is empty. In the cabinet editor press "☆ Save to library" — the cabinet will be here in every project.', libNewT:'New from a template', libSave:'Save to library', libSaveT:'Keep this cabinet in the library — add it in any project. Later edits update the library copy.', libLinked:'In the library', libLinkedT:'This cabinet is in the library and its edits update it there. Click to unlink (the library copy stays as it is).', libSaved:'Saved in the library: {n} ({c})', libUnlinked:'Unlinked — the library copy no longer changes', libAdded:'Added from the library: {n}', pickTitle:'What are we building?', pickLead:'Pick the closest one — everything can be changed.', cancel:'Cancel',
  pDrawers:'Drawer cabinet', pDoors:'Door cabinet', pDrDoors:'Drawer + doors', pWall:'Wall cabinet', pTall:'Tall with oven', pFridge:'Fridge unit', kFridge:'Fridge', fridgeHinge:'Hinges', fridgeHandle:'Handle — {s}',
  ledAddL:'Add an LED:', ledT:'LED lighting', ledL2:'a groove for a recessed profile, 16 × 8, routed on the CNC', ledAt:'Where', ledBottom:'Bottom', ledTop:'Top', ledL:'Left side', ledR:'Right side', ledSide:'Face', ledIn:'Inside', ledOut:'Outside', ledFrom:'From the front', ledEnds:'Ends', ledOpen:'Through', ledClosed:'Closed', ledNone:'No LEDs. Add one here, or drag "LED strip" onto a cabinet in the Baldai tab.', ledNote:'Routed as step2xxl does: cutter T=96 Ø15.5, ramped entry over 30 mm, at least 2 mm left. "Through" — the groove runs the whole part (the profile slides in, the cable leaves at the end). A wall unit\'s bottom "Outside" lights the worktop below.', ledChip:'LED strip', ledChipS:'groove 16×8', ledAddT:'Drag onto a cabinet — near its bottom, top or a side', ledAdded:'LED added: {w}', ledMiss:'Drop it on a cabinet (front view)', rmLeds:'LED', visT:'Visible sides (in the front material)', sideFull:'Full-height sides (covering the top and the bottom)', topMount:'Top', topOn:'On the sides', topInside:'Between the sides', visL:'Left', visR:'Right', visB:'Bottom', visNote:'A ticked side is cut from the front material with the front edging; the others stay in the carcass material. In Baldai one button ticks the free sides from the layout.', fridgeSec:'Integrated fridge', fridgeN:'Fronts', fridge1:'1 — fridge only', fridge2:'2 — fridge and freezer',
  fridgeNiche:'Niche ≈ {h} × {w} mm', fridgeNote:'The fronts are screwed to the fridge\'s own doors — no hinges. Section height = niche height + 2 boards (bottom / shelf); check the niche in the fridge\'s manual (usually 1772–1780 mm high, ≥ 550 mm deep). The niche shelf stops {v} mm short of the back for the air; leave a grille in the plinth.', pDish:'Dishwasher front', pEmpty:'Empty (shelves)', pBox:'3D construction',
@@ -8246,7 +8342,7 @@ en:{
  rmUnplaced:'Not placed', rmPlace:'Place', rmX:'From the wall start', rmZ:'Bottom from the floor', rmHang:'Hangs on the wall', rmTop:'Top from the floor', rmTopLegs:'carcass {h} + legs {l}', rmTopZ:'carcass {h}, bottom {l} from the floor', rmHitShort:'Hits another cabinet or runs past the wall — move it or change the width.',
  rmFill:'Fill the gap: {w} mm',
  rrBtn:'Realistic image', rrBtnT:'A photo-like picture of the whole room (rendered on the graphics card)', rrTitle:'Realistic image', rrLoading:'Loading the 3D engine…', rrBuilding:'Preparing the scene…', rrProg:'Rendering: {n} / {m}', rrDone:'Ready · {m} samples',
- rrCabT:'A photo-like picture of this cabinet (rendered on the graphics card)', rrQ:'Quality', rrQ_fast:'Fast', rrQ_good:'Good', rrQ_best:'Best', rrDl:'Download PNG', rrHint:'Drag sideways to walk round, up and down for eye height · wheel to come nearer or step back · “Fast” to look around, “Best” for full resolution to download. Colours and textures come from “Look in the 3D views”.',
+ rrRoom:'Room', rrRoomT:'Show the walls, floor, doors and windows (slower). Off: the furniture alone on a light floor.', rrPartF:'fronts', rrPartC:'carcass', rrPartW:'worktop', rrPickN:'‹ › or the keyboard ← → change the material · Esc closes', rrCabT:'A photo-like picture of this cabinet (rendered on the graphics card)', rrQ:'Quality', rrQ_fast:'Fast', rrQ_good:'Good', rrQ_best:'Best', rrDl:'Download PNG', rrHint:'Drag sideways to walk round, up and down for eye height · wheel to come nearer or step back · “Fast” to look around, “Best” for full resolution to download. Colours and textures come from “Look in the 3D views”.',
  rrNoLib:'Could not load the 3D engine — needs an internet connection.', rrNoGL:'This browser or computer has no WebGL 2 — the realistic image cannot be made.', rrEmpty:'No furniture yet — place cabinets on the walls.',
  pPanel:'Panel', rmEditP:'Edit panel', rmAddedP:'Panel {n} added', rmPanelPush:'Drop — the cabinets move over {n} mm', rmThick:'Thickness', rmPMat:'Material', rmToCeil:'To the ceiling', rmToFloor:'Down to the floor',
  rmPanelNote:'A loose panel: it stands on its own, any size (a big side, a filler, a cover). Cut as a part, no holes. A bottom above 0 hangs it at that height.',
@@ -8486,8 +8582,44 @@ function libSet(l) { if (store('dbKurejas.lib', l) === false) saveFailed(); }
 function libRec(p) { return { id:p.id, name:p.name || '', updated:p.updated || new Date().toISOString(), n:(p.cabinets || []).length, data:clone(p) }; }
 var libTimer = null;
 function libSave() { if (!S.proj) return; var p = S.proj; libSet([libRec(p)].concat(lib().filter(function (r) { return r.id !== p.id; }))); }
+/* ----------------------------------------------------------------- the cabinet library: cabinets kept for any project, in
+   catalogues, found by search. A cabinet saved there stays linked (c.libId): its later edits update the library copy; cabinets
+   taken from the library are free copies (c.libFrom only remembers where they came from) */
+var CL_CATS = ['Apatinės', 'Pakabinamos', 'Aukštos', 'Spintos', 'Kita'];
+function clib() { var l = store('dbKurejas.cablib'); if (!l || !Array.isArray(l.items)) l = { v:1, items:[], cats:CL_CATS.slice() }; if (!Array.isArray(l.cats)) l.cats = CL_CATS.slice(); return l; }
+function clibSet(l) { if (store('dbKurejas.cablib', l) === false) saveFailed(); }
+function clibClean(c) { var x = clone(c); delete x.id; delete x.libId; delete x.libFrom; return x; }
+function clibCat(c) { if (c.kind === 'panel' || c.kind === 'box' || c.dishwasher) return 'Kita'; var k = cabKind(c); return k === 'PAKABINAMOS' ? 'Pakabinamos' : k === 'ŪKINĖ' ? 'Aukštos' : 'Apatinės'; }
+function clibRec(c, it) { var now = new Date().toISOString(); it = it || { id:uid(), added:now, cat:clibCat(c) };
+  return Object.assign(it, { name:c.name || typeName(c), W:num(c.dishwasher ? c.dishWidth : c.W), H:num(c.H), D:num(c.D), type:c.kind === 'panel' ? 'panel' : c.kind === 'box' ? 'box' : c.dishwasher ? 'dish' : cabKind(c), cab:clibClean(c), updated:now }); }
+function clibAdd(c) { var l = clib(), it = clibRec(c); l.items.unshift(it); if (l.cats.indexOf(it.cat) < 0) l.cats.push(it.cat); clibSet(l); c.libId = it.id; return it; }
+var clibTimer = null;
+function clibSync() {   // linked cabinets: their library copies follow their edits
+  if (!S.proj) return; var l = null, ch = false;
+  S.proj.cabinets.forEach(function (c) { if (!c.libId) return; l = l || clib(); var it = l.items.filter(function (x) { return x.id === c.libId; })[0];
+    if (!it) { delete c.libId; return; } var was = JSON.stringify(it.cab) + it.name; clibRec(c, it); if (JSON.stringify(it.cab) + it.name !== was) ch = true; });
+  if (l && ch) clibSet(l);
+}
+function clibIcon(it) { return ico({ panel:'pPanel', box:'pBox', dish:'pDish', 'PAKABINAMOS':'pWall', 'ŪKINĖ':'pTall' }[it.type] || (it.cab && it.cab.sections && it.cab.sections.some(function (x) { return x.kind === 'drawers'; }) ? 'pDrawers' : 'pDoors')); }
+function viewLib() {
+  var l = clib(), q = String(S.libQ || '').trim().toLowerCase(), cat = S.libCat || '';
+  var words = q.split(/\s+/).filter(Boolean), hay = function (it) { return [it.name, it.cat, typeName(it.cab || {}), fmt(it.W) + 'x' + fmt(it.H) + 'x' + fmt(it.D), fmt(it.W) + '×' + fmt(it.H) + '×' + fmt(it.D), it.cab && it.cab.mat ? [it.cab.mat.facade, it.cab.mat.carc].join(' ') : ''].join(' ').toLowerCase(); };
+  var hit = l.items.filter(function (it) { var h = hay(it); return (!cat || it.cat === cat) && words.every(function (w) { return h.indexOf(w) >= 0; }); });
+  var cnt = function (c0) { return l.items.filter(function (it) { return it.cat === c0; }).length; };
+  var catOpts = function (sel) { return l.cats.map(function (c0) { return '<option value="' + esc(c0) + '"' + (c0 === sel ? ' selected' : '') + '>' + esc(c0) + '</option>'; }).join(''); };
+  return '<div class="lib"><div class="libh"><h4>' + t('libT') + ' <span class="unit">· ' + l.items.length + '</span></h4>' +
+    '<input id="lib-q" type="search" placeholder="' + esc(t('libQ')) + '" value="' + esc(S.libQ || '') + '" autocomplete="off" aria-label="' + esc(t('libQ')) + '"></div>' +
+    '<div class="libcats" role="group" aria-label="' + esc(t('libCats')) + '"><button type="button" data-act="libcat" data-v="" class="' + (!cat ? 'on' : '') + '">' + t('libAll') + ' <i>' + l.items.length + '</i></button>' +
+      l.cats.map(function (c0) { var n = cnt(c0); return '<span class="libcat' + (c0 === cat ? ' on' : '') + '"><button type="button" data-act="libcat" data-v="' + esc(c0) + '">' + esc(c0) + ' <i>' + n + '</i></button>' + (n ? '' : '<button type="button" class="x" data-act="libcatdel" data-v="' + esc(c0) + '" aria-label="' + esc(t('del')) + '">✕</button>') + '</span>'; }).join('') +
+      '<span class="libnew"><input id="lib-newcat" type="text" placeholder="' + esc(t('libNewCat')) + '" autocomplete="off"><button type="button" class="btn ghost" data-act="libnewcat">＋</button></span></div>' +
+    (l.items.length ? (hit.length ? '<div class="libgrid">' + hit.map(function (it) {
+      return '<div class="libitem"><button type="button" class="preset" data-act="libadd" data-v="' + esc(it.id) + '" title="' + esc(t('libAddT')) + '">' + clibIcon(it) + '<b>' + esc(it.name) + '</b><small>' + fmt(it.W) + '×' + fmt(it.H) + '×' + fmt(it.D) + '</small></button>' +
+        '<div class="libact"><select data-act-change="libmove" data-v="' + esc(it.id) + '" aria-label="' + esc(t('libMove')) + '">' + catOpts(it.cat) + '</select><button type="button" class="btn ghost danger" data-act="libdel" data-v="' + esc(it.id) + '" aria-label="' + esc(t('del')) + '">' + (S.confirm === 'libdel' + it.id ? esc(t('delSure')) : '✕') + '</button></div></div>'; }).join('') + '</div>'
+      : '<p class="note">' + t('libNone') + '</p>') : '<p class="note">' + t('libEmpty') + '</p>') + '</div>';
+}
 function save() {
   if (!S.proj) return;
+  clearTimeout(clibTimer); clibTimer = setTimeout(clibSync, 300);
   if (S.tab !== 'room' && S.roomUndo && S.roomUndo.length) S.roomUndo = [];   // the Baldai undo steps back only through Baldai actions, never over edits made elsewhere
   S.proj.updated = new Date().toISOString();
   if (store('dbKurejas.current', S.proj) === false) { saveFailed(); return; }
@@ -8729,7 +8861,7 @@ window.addEventListener('scroll', function () {   // highlight the step being re
 function typeName(c) { if (c.kind === 'panel') return t('pPanel'); if (c.kind === 'box') return t('pBox'); return c.dishwasher ? t('pDish') : ({ 'PASTATOMOS':t('tBase'), 'PAKABINAMOS':t('tWall'), 'ŪKINĖ':t('tTall') })[c.type] || c.type; }
 function viewPick() {
   return '<div class="card"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px"><div><h3 style="margin:0;font:600 24px var(--f-display)">' + (S.proj.cabinets.length ? t('pickTitle') : t('firstCabQ')) + '</h3><p class="note" style="margin:2px 0 0">' + t('pickLead') + '</p></div>' +
-    (S.proj.cabinets.length ? '<button class="btn ghost" data-act="unpick">' + t('cancel') + '</button>' : '') + '</div><div class="presets">' +
+    (S.proj.cabinets.length ? '<button class="btn ghost" data-act="unpick">' + t('cancel') + '</button>' : '') + '</div>' + viewLib() + '<h4 class="libsub">' + t('libNewT') + '</h4><div class="presets">' +
     PRESETS.map(function (p, i) { return '<button class="preset" data-act="preset" data-i="' + i + '">' + ico(p.k) + '<b>' + t(p.k) + '</b><small>' + p.W + '×' + p.H + '×' + p.D + '</small></button>'; }).join('') + '</div></div>';
 }
 function fN(label, bind, val, cls) { var id = 'f-' + bind.replace(/\./g, '-'); return '<label class="f n ' + (cls || '') + '" for="' + id + '"><span>' + label + '</span><input id="' + id + '" inputmode="decimal" type="text" data-bind="' + bind + '" data-num="1" value="' + esc(val) + '" autocomplete="off"></label>'; }
@@ -8819,7 +8951,7 @@ function viewEditor(c) {
     '<div class="row" style="margin-top:10px">' +
     (c.dishwasher ? fN(t('dishW'), b + 'dishWidth', c.dishWidth) : fN(t('W'), b + 'W', c.W)) + fN(t('H'), b + 'H', c.H) + fN(t('D'), b + 'D', c.D) +
     fN(t('thick'), b + 'thick', c.thick, 's') + fN(t('facT'), b + 'cnc.facadeT', o.facadeT, 's') +
-    '<span class="row" style="margin-left:auto;gap:6px"><button class="btn ghost" data-act="dup">' + t('dup') + '</button><button class="btn ghost danger" data-act="del">' + (S.confirm === 'del' ? t('delSure') : t('del')) + '</button></span></div>' +
+    '<span class="row" style="margin-left:auto;gap:6px">' + (c.libId ? '<button class="btn ghost libon" data-act="libunlink" title="' + esc(t('libLinkedT')) + '">★ ' + t('libLinked') + '</button>' : '<button class="btn ghost" data-act="libsave" title="' + esc(t('libSaveT')) + '">☆ ' + t('libSave') + '</button>') + '<button class="btn ghost" data-act="dup">' + t('dup') + '</button><button class="btn ghost danger" data-act="del">' + (S.confirm === 'del' ? t('delSure') : t('del')) + '</button></span></div>' +
     visBlock(c) +
     '<div class="mainset">' + (c.dishwasher ? '' : backBlock(c)) + worktopBlock(c) + '</div>';
   h += step(1, t('s1'), t('s1l'), dims, 'dims');
@@ -8928,7 +9060,7 @@ function boxEditor(c) {
   var tPh = function (bind, val) { var id = 'f-' + bind.replace(/\./g, '-'); return '<label class="f n s" for="' + id + '"><span>' + t('bxT') + '</span><input id="' + id + '" inputmode="decimal" type="text" data-bind="' + bind + '" data-num="1" data-empty="1" value="' + esc(val || '') + '" placeholder="' + esc(fmt(num(c.thick) || 18)) + '" autocomplete="off"></label>'; };
   var dims = '<div class="row">' + fT(t('name'), b + 'name', c.name, null, 'grow') + '</div><div class="row" style="margin-top:10px">' +
     fN(t('W'), b + 'W', c.W) + fN(t('H'), b + 'H', c.H) + fN(t('D'), b + 'D', c.D) + fN(t('thick'), b + 'thick', c.thick, 's') +
-    '<span class="row" style="margin-left:auto;gap:6px"><button class="btn ghost" data-act="dup">' + t('dup') + '</button><button class="btn ghost danger" data-act="del">' + (S.confirm === 'del' ? t('delSure') : t('del')) + '</button></span></div>' +
+    '<span class="row" style="margin-left:auto;gap:6px">' + (c.libId ? '<button class="btn ghost libon" data-act="libunlink" title="' + esc(t('libLinkedT')) + '">★ ' + t('libLinked') + '</button>' : '<button class="btn ghost" data-act="libsave" title="' + esc(t('libSaveT')) + '">☆ ' + t('libSave') + '</button>') + '<button class="btn ghost" data-act="dup">' + t('dup') + '</button><button class="btn ghost danger" data-act="del">' + (S.confirm === 'del' ? t('delSure') : t('del')) + '</button></span></div>' +
     '<div class="row" style="margin-top:10px"><button type="button" class="btn" data-act="box3d">' + t('bx3d') + '</button></div>' + worktopBlock(c);
   h += step(1, t('s1'), t('bxS1l'), dims, 'dims');
   /* 2 — the six outer boards and their corners */
@@ -9051,7 +9183,7 @@ function panelEditor(c) {
   var eb = [['e1', t('pnE1')], ['e2', t('pnE2')], ['e3', t('pnE3')], ['e4', t('pnE4')]].map(function (e) { var id = 'f-pe-' + e[0]; return '<label class="ebx" for="' + id + '"><input id="' + id + '" type="checkbox" data-bind="c.pe.' + e[0] + '"' + (pe[e[0]] !== false ? ' checked' : '') + '>' + e[1] + '</label>'; }).join('');
   var body = '<div class="row">' + fT(t('name'), b + 'name', c.name, null, 'grow') + '</div>' +
     '<div class="row" style="margin-top:10px">' + fN(t('rmThick'), b + 'W', c.W, 's') + fN(t('H'), b + 'H', c.H) + fN(t('D'), b + 'D', c.D) +
-    '<span class="row" style="margin-left:auto;gap:6px"><button class="btn ghost" data-act="dup">' + t('dup') + '</button><button class="btn ghost danger" data-act="del">' + (S.confirm === 'del' ? t('delSure') : t('del')) + '</button></span></div>' +
+    '<span class="row" style="margin-left:auto;gap:6px">' + (c.libId ? '<button class="btn ghost libon" data-act="libunlink" title="' + esc(t('libLinkedT')) + '">★ ' + t('libLinked') + '</button>' : '<button class="btn ghost" data-act="libsave" title="' + esc(t('libSaveT')) + '">☆ ' + t('libSave') + '</button>') + '<button class="btn ghost" data-act="dup">' + t('dup') + '</button><button class="btn ghost danger" data-act="del">' + (S.confirm === 'del' ? t('delSure') : t('del')) + '</button></span></div>' +
     '<div class="row" style="margin-top:10px">' + reqF(fT(t('rmPMat'), b + 'mat.carc', c.mat.carc, 'dl-mat'), c.mat.carc) + fT(t('pnEdgeMat'), b + 'edge.carc', c.edge.carc, 'dl-edge') + '</div>' +
     '<div class="f" style="margin-top:10px"><span>' + t('pnEdges') + '</span><span class="ebs">' + eb + '</span></div>' +
     '<p class="note" style="margin:10px 0 0">' + t('pnNote') + '</p>' +
@@ -9121,6 +9253,17 @@ function matsBlock(c) {
     '<div class="lookwrap"><h4>' + t('lookT') + '</h4><p class="note">' + t('lookL') + '</p>' + lookBlock(lookNames([c])) + '</div>';
 }
 /* how the board materials look in the 3-D views: a texture photo or a colour, per material name (S.proj.look, see DBLook) */
+/* the realistic picture's material arrows: a cabinet's front / carcass / worktop material set from there; the names to step through
+   (those with a texture or colour first, then the project's and the settings' materials) */
+function setMatOf(c, part, name) {
+  if (part === 'worktop') { c.worktop = c.worktop || {}; c.worktop.mat = name; } else { c.mat = c.mat || {}; c.mat[part] = name; }
+  save(); render();
+}
+function pickMats() {
+  var out = [], add = function (n) { n = String(n || '').trim(); if (n && out.indexOf(n) < 0) out.push(n); }, lk = S.proj.look || {};
+  Object.keys(lk).forEach(add); lookNames(S.proj.cabinets).forEach(add); (S.settings.materials || []).forEach(add);
+  return out.sort(function (a, b) { return (!lk[a]) - (!lk[b]); });
+}
 function lookNames(cabs) {
   var out = []; cabs.forEach(function (c) { if (!c) return; var m = c.mat || {};
     [m.facade, m.carc, m.back].concat((c.extras || []).map(function (x) { return x && x.mat; })).concat(c.worktop && c.worktop.on ? [c.worktop.mat] : [])
@@ -9913,6 +10056,7 @@ function mountRoom(focus) {
     lookHTML:function (i) { return '<div class="rm-look"><div class="lbl" title="' + esc(t('lookL')) + '">' + t('lookT') + '</div>' + lookBlock(lookNames(i == null ? S.proj.cabinets : [S.proj.cabinets[i]]), true) + '</div>'; },
     frontArt:function (i) { var c = S.proj.cabinets[i], inf = (S._info || [])[i]; if (!c || c.kind === 'panel' || !inf || !inf.r || !inf.r.panels || !inf.r.panels.length) return null; var a = frontArtOf(c, inf.r, c.dishwasher ? { noHit:true, over:[], legs:false, legH:0 } : { noHit:true, over:[] }); if (c.dishwasher) a.vbH = num(c.H) + 14; return a.svg ? a : null; },
     onSelect:function (i) { setRoomSel(i); S.confirm = null; if (i != null) S.sel = i; mountRoom(true); },
+    onMat:function (c, part, name) { setMatOf(c, part, name); return S._info; }, mats:pickMats,
     onLayout:function (fn, o) { o = o || {}; roomUndoPush(); fn(S.proj); if (o.sel !== undefined) setRoomSel(o.sel); save(); render(); if (o.focus) mountRoom(true); if (o.msg) toast(o.msg); },
     onCab:function (i, patch, after) { roomUndoPush(); var cc0 = S.proj.cabinets[i], oldW = num(cc0.W);
       if (patch.W && colsOf(cc0) > 1 && cc0.colW && cc0.colW.length && oldW > 0) cc0.colW = cc0.colW.map(function (w) { return Math.round(num(w) * num(patch.W) / oldW); });   // columns keep their proportions
@@ -9926,7 +10070,7 @@ function mountRoom(focus) {
       setRoomSel(i); S.sel = i; save(); render(); toast(t(c.kind === 'panel' ? 'rmAddedP' : 'rmAdded').replace('{n}', i + 1) + (mv ? ' · ' + t('rmSideMoved').replace('{n}', E.num(mv)) : ''));
     },
     onDup:function (i) {
-      roomUndoPush(); var src = S.proj.cabinets[i], cp = clone(src); cp.id = uid(); cp.name = copyName(src.name);
+      roomUndoPush(); var src = S.proj.cabinets[i], cp = clone(src); cp.id = uid(); delete cp.libId; cp.name = copyName(src.name);
       S.proj.cabinets.splice(i + 1, 0, cp); var it = S.proj.layout.items[src.id];
       if (it && it.wall >= 0) { S.proj.layout.items[cp.id] = { wall:it.wall, x:it.x + RM.cabW(src) + RM.sideW(src).R + RM.sideW(cp).L, z:it.z };   // right of the original, or the first free place
         var pb = RM.problems(S.proj); if (pb.bad[cp.id]) { delete S.proj.layout.items[cp.id]; var sp = RM.autoSpot(S.proj, cp); S.proj.layout.items[cp.id] = { wall:sp.wall, x:sp.x, z:it.z }; } }
@@ -10025,6 +10169,7 @@ app.addEventListener('focusin', function (e) { var el = e.target; if (el && el.g
   if (el && el.getAttribute && el.getAttribute('data-bind') === 'c.W' && cur() && colsOf(cur()) > 1) { var cb = cur(); colBase = { id:cb.id, W:num(cb.W), colW:colWidths(cb) }; } });
 app.addEventListener('input', function (e) {
   if (e.target.id === 'np-name') { S.npName = e.target.value; e.target.removeAttribute('aria-invalid'); return; }
+  if (e.target.id === 'lib-q') { S.libQ = e.target.value; var lp = e.target.selectionStart; render(); var lq = document.getElementById('lib-q'); if (lq) { lq.focus(); try { lq.setSelectionRange(lp, lp); } catch (er) {} } return; }
   if (e.target.id === 'home-q') { S.homeQ = e.target.value; var pos = e.target.selectionStart; render(); var q = document.getElementById('home-q'); if (q) { q.focus(); try { q.setSelectionRange(pos, pos); } catch (er) {} } return; }
   var el = e.target, bind = el.getAttribute('data-bind'); if (!bind || el.type === 'checkbox' || el.tagName === 'SELECT') return;
   if (el.getAttribute('data-lines')) { setPath(S.settings, bind.slice(2), el.value.split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean)); store('dbKurejas.settings', S.settings); return; }
@@ -10045,6 +10190,7 @@ app.addEventListener('change', function (e) {
   if (el.getAttribute('data-act-change') === 'import') { importFile(el.files && el.files[0]); return; }
   if (el.getAttribute('data-act-change') === 'tpl') { loadTemplateFile(el.files && el.files[0]); el.value = ''; return; }
   if (el.getAttribute('data-act-change') === 'prjson' && S.admin) { var fl = el.files && el.files[0]; if (!fl) return; var rdr = new FileReader(); rdr.onload = function () { try { var nJ = prFromOffer(JSON.parse(rdr.result)); prSave(); render(); toast(nJ ? (S.lang === 'lt' ? 'Perimta kainų: ' : 'Prices taken: ') + nJ : (S.lang === 'lt' ? 'Faile kainų nerasta' : 'No prices in the file'), !nJ); } catch (er) { toast(t('badFile'), true); } }; rdr.readAsText(fl); el.value = ''; return; }
+  if (el.getAttribute('data-act-change') === 'libmove') { var lbm = clib(), im = lbm.items.filter(function (it) { return it.id === el.getAttribute('data-v'); })[0]; if (im) { im.cat = el.value; clibSet(lbm); render(); } return; }
   if (el.getAttribute('data-act-change') === 'drwonly') { S.drwOnly = el.value; S.drwOpen = null; render(); return; }
   if (el.getAttribute('data-act-change') === 'looktex') { lookTexture(el.getAttribute('data-v'), el.files && el.files[0]); el.value = ''; return; }
   if (el.getAttribute('data-act-change') === 'lookcol') { var lc = el.value; if (/^#[0-9a-f]{6}$/i.test(lc)) lookSet(el.getAttribute('data-v'), function (l) { l.color = lc; l.tex = ''; }); return; }   // a colour instead of the photo
@@ -10110,11 +10256,20 @@ app.addEventListener('click', function (e) {
     case 'pick': S.picking = true; break;
     case 'unpick': S.picking = false; break;
     case 'preset': S.proj.cabinets.push(fromPreset(PRESETS[i])); S.sel = S.proj.cabinets.length - 1; S.picking = false; save(); break;
-    case 'dup': { var cp = clone(cur()); cp.id = uid(); cp.name = copyName(cp.name); S.proj.cabinets.splice(S.sel + 1, 0, cp); S.sel++; save(); break; }
+    case 'dup': { var cp = clone(cur()); cp.id = uid(); delete cp.libId; cp.name = copyName(cp.name); S.proj.cabinets.splice(S.sel + 1, 0, cp); S.sel++; save(); break; }
     case 'del': { if (S.confirm !== 'del') { S.confirm = 'del'; break; } S.confirm = null; var di = S.sel, dg = S.proj.cabinets.splice(di, 1)[0], dp = S.proj; S.sel = Math.max(0, S.sel - 1); save(); render();
       toast(t('cabRemoved').replace('{n}', dg.name || (di + 1)), false, t('undoBtn'), function () { if (S.proj !== dp || S.proj.cabinets.some(function (x) { return x.id === dg.id; })) return; S.proj.cabinets.splice(Math.min(di, S.proj.cabinets.length), 0, dg); S.sel = Math.min(di, S.proj.cabinets.length - 1); S.home = false; S.tab = 'cab'; S.picking = false; save(); render(); });
       return; }
     case 'set': assign(el.getAttribute('data-bind'), v); after(el.getAttribute('data-bind'), true); return;
+    case 'libsave': { var lcb = cur(); if (!lcb) break; var lit = clibAdd(lcb); save(); toast(t('libSaved').replace('{n}', lit.name).replace('{c}', lit.cat)); break; }
+    case 'libunlink': { var ucb = cur(); if (ucb) { delete ucb.libId; save(); toast(t('libUnlinked')); } break; }
+    case 'libcat': S.libCat = v; break;
+    case 'libnewcat': { var nci = document.getElementById('lib-newcat'), ncv = nci && nci.value.trim(); if (!ncv) break; var ll = clib(); if (ll.cats.indexOf(ncv) < 0) { ll.cats.push(ncv); clibSet(ll); } S.libCat = ncv; break; }
+    case 'libcatdel': { var ld = clib(); ld.cats = ld.cats.filter(function (x) { return x !== v || ld.items.some(function (it) { return it.cat === x; }); }); clibSet(ld); if (S.libCat === v) S.libCat = ''; break; }
+    case 'libdel': { if (S.confirm !== 'libdel' + v) { S.confirm = 'libdel' + v; break; } S.confirm = null; var lx = clib(); lx.items = lx.items.filter(function (it) { return it.id !== v; }); clibSet(lx);
+      S.proj.cabinets.forEach(function (cc) { if (cc.libId === v) delete cc.libId; }); save(); break; }
+    case 'libadd': { var la = clib().items.filter(function (it) { return it.id === v; })[0]; if (!la) break; var nc = normCab(Object.assign(clone(la.cab), { id:uid(), libFrom:la.id }));
+      S.proj.cabinets.push(nc); S.sel = S.proj.cabinets.length - 1; S.picking = false; save(); toast(t('libAdded').replace('{n}', la.name)); break; }
     case 'ledadd': { var lc = cur(); lc.leds = lc.leds || []; lc.leds.push({ at:v, side:v === 'bottom' && cabKind(lc) === 'PAKABINAMOS' ? 'out' : 'in', from:E.R.led.from, ends:'open', w:E.R.led.w, depth:E.R.led.depth }); save(); break; }
     case 'leddel': { var lc2 = cur(); if (lc2.leds) lc2.leds.splice(i, 1); save(); break; }
     case 'addsec': { var ns = newSection(v); ns.col = isNaN(i) ? 0 : i; S.colSel = ns.col; cur().sections.push(ns); save(); break; }
@@ -10126,7 +10281,7 @@ app.addEventListener('click', function (e) {
       var lay = S.proj.layout || {}, it0 = lay.items && lay.items[rcb.id], wl = Math.max(2400, RM.cabW(rcb) + 1600);
       var tp = { name:S.proj.name + '_' + (S.sel + 1), look:S.proj.look, cabinets:[rcb], layout:{ walls:[{ len:wl }], wallZ:num(lay.wallZ) || 1450, roomH:Math.max(num(lay.roomH) || 2600, RM.cabH(rcb) + 600), worktop:lay.worktop !== false, items:{} } };
       tp.layout.items[rcb.id] = { wall:0, x:(wl - RM.cabW(rcb)) / 2, z:it0 && it0.z != null ? it0.z : null };
-      window.DBRender.open({ proj:tp, infos:[ri], th:0.35, t:t }); return; }
+      window.DBRender.open({ proj:tp, infos:[ri], th:0.35, t:t, mats:pickMats, onMat:function (c, part, name) { setMatOf(c, part, name); var k = S.proj.cabinets.indexOf(c); return [S._info[k >= 0 ? k : S.sel]]; } }); return; }
     case 'lookfit': lookSet(v, function (l) { l.fit = l.fit === false; if (!(num(l.mm) > 0)) l.mm = 1000; }); return;
     case 'lookrm': lookSet(v, function (l) { l.tex = ''; l.color = ''; }); return;
     case 'adminset': { var p1 = (document.getElementById('adm-pin') || {}).value || '', p2 = (document.getElementById('adm-pin2') || {}).value || '';
