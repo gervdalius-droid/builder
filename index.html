@@ -713,6 +713,9 @@ button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(
 .rm-cab.bad .rm-body,.rm-pcab.bad polygon{stroke:#b4291f;stroke-width:2.4;fill:#fde6e3}
 .rm-cab.act{opacity:.85}
 .rm-ghost{fill:rgba(36,72,201,.18);stroke:#2448c9;stroke-width:2;stroke-dasharray:6 4}
+.rm-rsz{fill:transparent;cursor:ns-resize;touch-action:none}.rm-rsz.h{cursor:ew-resize}
+.rm-grip{fill:#fff;stroke:#2448c9;stroke-width:1.6;pointer-events:none}
+.rm-guide{stroke:#2448c9;stroke-width:1.2;stroke-dasharray:5 4;pointer-events:none}
 .rm-ghost.bad{fill:rgba(180,41,31,.15);stroke:#b4291f}
 .rm-pwall{fill:#5f6a64}
 .rm-pcab{cursor:grab}
@@ -1402,6 +1405,7 @@ function buildCabinet(c, idx, projName) {
   var hdfT = +R.hdf.t || 3;
   var tb = backTop ? t : anyHdf ? hdfT : 0;        // depth taken by the back behind the sides
   var topFull = o.top === 'full';
+  var tin = topFull && o.topMount === 'inside', tOver = topFull && !tin && !!o.topOverFacade;   // the top between the sides: the sides reach the cabinet top (their top ends show)
   var Dside = D - tb;                              // side depth
   /* a shorter bottom (o.bottomD, from the front): room behind it for a sink's pipes; its joints, the legs and the standing bottom rail go with it */
   var Dbot = +o.bottomD > 0 ? Math.max(100, Math.min(Dside, +o.bottomD)) : Dside, shortBot = Dbot < Dside - 0.5;
@@ -1422,7 +1426,7 @@ function buildCabinet(c, idx, projName) {
   var cf = R.confirmat, cm = R.cam;
 
   /* ---- sections → facades (bottom-up) and drawer runner heights (relative to carcass bottom), column by column */
-  var Hz = H - (topFull && o.topOverFacade ? t : (topFull ? 0 : R.facade.zoneGapRails));   // facade zone height
+  var Hz = H - (tOver ? t : (topFull ? 0 : R.facade.zoneGapRails));   // facade zone height
   var runners = [], facades = [], doors = [], shelves = [];
   for (var colN = 0; colN < cols; colN++) (function (col) {
     var secs = (c.sections || []).filter(function (s) { return Math.min(cols - 1, Math.max(0, Math.floor(+s.col || 0))) === col; });
@@ -1730,7 +1734,7 @@ function buildCabinet(c, idx, projName) {
   var backPanels = [], backType = null;
   var y0p = rl.front === 'v' ? t : 0, y1p = Dside - ((backV || rl.bottom) ? t : 0), Dp = y1p - y0p, Lp = H - 2*t;   // partitions: depth range, height
   if (backTop) {
-    var Hb = topFull ? H - t : H;
+    var Hb = topFull && !tin ? H - t : H;
     var pk = panel(nm('NUGARA'), 'NUGARA', W, Hb, t, 'išorė viršuje, apatinis kraštas Y=0');
     var jb = joint('back', Lside, 'back', 'nugara', o.backFix === 'cam' ? 'cam' : 'confirmat'); backType = jb.has('confirmat') ? 'confirmat' : jb.type; seam('back', [t/2, Dside, t], Z, Lside);
     var backSide = function (s, bxs, sd) {   // bxs: x of this side's holes in the back; sd undefined = both sides alike
@@ -1804,7 +1808,7 @@ function buildCabinet(c, idx, projName) {
 
   /* ---- sides */
   var jBot = joint('bottom', Dbot, 'carc', 'dugnas'), jTop = topFull ? joint('top', Dside, 'carc', 'viršus') : null;
-  if (bin) seam('bottom', [t, 0, t/2], Y, Dbot); else seam('bottom', [t/2, 0, t], Y, Dbot); if (topFull) seam('top', [t/2, 0, H - t], Y, Dside);
+  if (bin) seam('bottom', [t, 0, t/2], Y, Dbot); else seam('bottom', [t/2, 0, t], Y, Dbot); if (tin) seam('top', [t, 0, H - t/2], Y, Dside); else if (topFull) seam('top', [t/2, 0, H - t], Y, Dside);
   /* the bottom: under the sides (full width), or between them — then its ends are joined to the sides like a fixed shelf */
   var pBot = panel(nm('DUGNAS'), 'DUGNAS', bin ? W - 2*t : W, Dbot, t, (bin ? 'tarp šonų, viršus viršuje, priekis Y=0' : 'viršus viršuje, priekis Y=0') + (shortBot ? ', sutrumpintas: gale ' + num(Dside - Dbot) + ' mm laisva' : '')), dxB = bin ? t : 0;
   if (bin) { endJoint(pBot, W - 2*t, jBot, 'A', function (a) { return { x:-t/2, yf:a }; }); U('dugnas tarp šonų'); }
@@ -1816,10 +1820,13 @@ function buildCabinet(c, idx, projName) {
       else jt.pos.forEach(function (y) { hole(p, face, x, y + yOff, cf.d, 0, { through:true }); });
     });
   };
+  /* the top between the sides (o.topMount 'inside'): its ends are joined to the sides like the bottom between them — drilled before the sides are */
+  var pTopIn = null;
+  if (tin) { pTopIn = panel(nm('VIRSUS'), 'VIRSUS', W - 2*t, Dside, t, 'tarp šonų, apačia viršuje (gręžiama iš apačios), priekis Y=0'); endJoint(pTopIn, W - 2*t, jTop, 'B', function (a) { return { x:H - 1.5*t, yf:a }; }); U('viršus tarp šonų'); }
   var mkSide = function (role, right) {
     var p = panel(nm(role), role, Lside, Dside, t, 'vidinė pusė viršuje, apatinis kraštas X=0, priekis ' + (right ? 'Y=DY' : 'Y=0'));
     var Yf = function (y) { return right ? Dside - y : y; };   // mirror for the right side
-    [[bin ? null : jBot, 'x0', cm.cam.fromEdge], [jTop, 'x1', Lside - cm.cam.fromEdge]].forEach(function (k) {   // the side's ends sit on the bottom / under the top
+    [[bin ? null : jBot, 'x0', cm.cam.fromEdge], [tin ? null : jTop, 'x1', Lside - cm.cam.fromEdge]].forEach(function (k) {   // the side's ends sit on the bottom / under the top
       var jt = k[0] && k[0][right ? 'R' : 'L'], ed = k[1], cx = k[2]; if (!jt) return;
       if (jt.type === 'cam') {
         jt.pos.forEach(function (y) { hole(p, 'A', cx, Yf(y), cm.cam.d, cm.cam.depth); edge(p, ed, Yf(y), cm.bolt.d, cm.bolt.depthEdge); });
@@ -1874,6 +1881,7 @@ function buildCabinet(c, idx, projName) {
     }
     var offS = bin ? t + hb : 0;   // bottom between the sides: the side starts t + hb lower (side x above stays cabinet z − t)
     if (offS) { p.holes.forEach(function (h) { h.x += offS; }); p.edges.forEach(function (e) { if (e.edge === 'y0' || e.edge === 'y1') e.pos += offS; }); p.L = Lside + offS; }
+    if (tin) { p.L += t; p.note += ', viršus tarp šonų'; }   // up to the cabinet top: the top sits between the sides
     if (bin && o.legs && o.feet) feetRows().forEach(function (y) {   // pėdutės under this side: Ø8 × 10 into its bottom edge
       var fr = R.feet, yy = footY(y, function (v) { var yv = Yf(v); return p.holes.some(function (h) { return !h.mark && h.x - h.d/2 < fr.holeDepth + 1 && Math.abs(h.y - yv) < h.d/2 + fr.holeD/2 + 1; }) || p.edges.some(function (e) { return e.edge === 'x0' && Math.abs(e.pos - yv) < e.d/2 + fr.holeD/2 + 1; }); });
       edge(p, 'x0', Yf(yy), fr.holeD, fr.holeDepth); p.edges[p.edges.length - 1].foot = true; feetPos.push({ x:right ? W - t/2 : t/2, y:yy });
@@ -2016,12 +2024,12 @@ function buildCabinet(c, idx, projName) {
 
   /* ---- top: full panel or rails */
   if (topFull) {
-    var off = o.topOverFacade ? fT : 0, Dtop = Dside + off + (backTop ? tb : 0);   // top covers a solid back on the back too (not the plaušas)
-    var pt = panel(nm('VIRSUS'), 'VIRSUS', W, Dtop, t, 'apačia viršuje (gręžiama iš apačios), priekis Y=0');
-    faceJoint(pt, jTop, 'B', [t/2, W - t/2], off);
-    for (var kt = 0; kt < cols - 1; kt++) faceJoint(pt, { L:jPT[kt].L, R:jPT[kt].L }, 'B', [bnd[kt + 1]], off + y0p);
-    place(pt, [0, -off, H], X, Y, Z); pt.mat = mCarc; pt.eb.y0 = eCarc;
-    if (hungC || tallC) { if (vis.L) pt.eb.x0 = eVis; if (vis.R) pt.eb.x1 = eVis; }   // over the sides: its ends show at a visible side of a tall or hung cabinet
+    var off = tOver ? fT : 0, Dtop = tin ? Dside : Dside + off + (backTop ? tb : 0), dxT = tin ? t : 0;   // top covers a solid back on the back too (not the plaušas); between the sides it stops at their back edge
+    var pt = pTopIn || panel(nm('VIRSUS'), 'VIRSUS', W, Dtop, t, 'apačia viršuje (gręžiama iš apačios), priekis Y=0');   // panel x = cabinet x − dxT
+    if (!tin) faceJoint(pt, jTop, 'B', [t/2, W - t/2], off);
+    for (var kt = 0; kt < cols - 1; kt++) faceJoint(pt, { L:jPT[kt].L, R:jPT[kt].L }, 'B', [bnd[kt + 1] - dxT], off + y0p);
+    place(pt, [dxT, -off, H], X, Y, Z); pt.mat = mCarc; pt.eb.y0 = eCarc;
+    if ((hungC || tallC) && !tin) { if (vis.L) pt.eb.x0 = eVis; if (vis.R) pt.eb.x1 = eVis; }   // over the sides: its ends show at a visible side of a tall or hung cabinet
     out.push(pt);
   } else railPanels.forEach(function (p) { out.push(p); });
 
@@ -5254,6 +5262,7 @@ function drawFront() {
     s += frontCab(o.c, o.i, it, prob.bad[o.c.id] || (drag && drag.id === o.c.id && drag.bad), drag && drag.id === o.c.id);
   });
   if (D && D.mode === 'add' && D.cand && F.ws.indexOf(D.cand.wall) >= 0) s += frontGhost(D.cand);
+  if (D && D.mode === 'rsz' && D.moved && F.ws.indexOf(D.wall) >= 0) s += rszDraw();
   ptsOf(L).forEach(function (pt) { if (F.ws.indexOf(pt.wall) >= 0 && !(D && D.mode === 'ptmove' && D.id === pt.id)) s += frontPt(pt, prob); });   // sockets and pipes: seen through the cabinets
   if (D && D.mode === 'ptmove' && F.ws.indexOf(D.pt.wall) >= 0) s += frontPt(D.pt, prob, 'act');
   if (D && D.mode === 'ptadd' && D.cand && F.ws.indexOf(D.cand.wall) >= 0) s += frontPt(D.cand, prob, 'ghost');
@@ -5304,8 +5313,72 @@ function frontCab(c, i, it, bad, act) {
     if (c.vis.B && level(c) === 'wall') s += '<rect class="rm-visside" x="' + x0.toFixed(1) + '" y="' + (fY(z0) - vw).toFixed(1) + '" width="' + (w * k).toFixed(1) + '" height="' + vw.toFixed(1) + '" style="fill:' + vcol + '"/>';
   }
   var cx = x0 + w * k / 2, cy = fY(z0 + h) + Math.min(18, h * k / 2);
+  if (sel && !act && !(D && D.mode === 'rsz')) s += rszHandles(c, i, x0, fY(z0 + h), w * k, h * k);
   if (w * k > 26) s += '<circle class="rm-no" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="9"/><text class="rm-not" x="' + cx.toFixed(1) + '" y="' + (cy + 3.5).toFixed(1) + '" text-anchor="middle">' + (i + 1) + '</text>';
   return s + '<title>' + esc(cabName(c, i) + ' · ' + fm(w) + '×' + fm(h) + '×' + fm(cabD(c))) + '</title></g>';
+}
+/* ---------------------------------------------------------------- resizing in the front view: the selected cabinet's edges are dragged */
+function rszSides(c) {   // which edges can be dragged: the bottom only of a hung cabinet (a standing one stands on its legs); no width for a panel or a dishwasher
+  if (c.dishwasher) return [];
+  var s = ['t']; if (level(c) === 'wall') s.push('b'); if (c.kind !== 'panel') s.push('l', 'r'); return s;
+}
+function rszHandles(c, i, x, y, w, h) {
+  var s = '', hw = 12;   // hit strip width (px)
+  rszSides(c).forEach(function (sd) {
+    var hor = sd === 't' || sd === 'b', ex = sd === 'l' ? x : sd === 'r' ? x + w : x, ey = sd === 't' ? y : sd === 'b' ? y + h : y;
+    var hx = hor ? x + Math.min(10, w / 4) : ex - hw / 2, hy = hor ? ey - hw / 2 : y + Math.min(10, h / 4), hW = hor ? Math.max(4, w - 2 * Math.min(10, w / 4)) : hw, hH = hor ? hw : Math.max(4, h - 2 * Math.min(10, h / 4));
+    var gl = Math.min(28, (hor ? w : h) * 0.4), gx = hor ? x + w / 2 - gl / 2 : ex - 3, gy = hor ? ey - 3 : y + h / 2 - gl / 2;
+    s += '<rect class="rm-grip" x="' + gx.toFixed(1) + '" y="' + gy.toFixed(1) + '" width="' + (hor ? gl : 6).toFixed(1) + '" height="' + (hor ? 6 : gl).toFixed(1) + '" rx="3"/>' +
+      '<rect class="rm-rsz ' + (hor ? 'v' : 'h') + '" data-rsz="' + sd + '" data-cab="' + i + '" x="' + hx.toFixed(1) + '" y="' + hy.toFixed(1) + '" width="' + hW.toFixed(1) + '" height="' + hH.toFixed(1) + '"><title>' + esc(T(hor ? 'rszH' : 'rszW')) + '</title></rect>';
+  });
+  return s;
+}
+/* what a dragged edge snaps to: the other cabinets' edges on the wall, the doors and windows, the wall ends, the ceiling */
+function rszSnap(proj, c, wall, axis, v, thr) {
+  var L = proj.layout, G = geo(L), best = null, cand = [];
+  placed(proj).forEach(function (o) { if (o.c === c || o.it.wall !== wall) return; var nm = '№' + (o.i + 1);
+    if (axis === 'z') { var z0 = z0Of(o.c, o.it, L), z1 = z0 + cabH(o.c), wt = wtOf(o.c); cand.push([z1, nm], [z0, nm]); if (wt && L.worktop && level(o.c) !== 'wall') cand.push([z1 + wt.T, T('rszWt')]); }
+    else cand.push([o.it.x, nm], [o.it.x + cabW(o.c), nm]); });
+  opsOf(L).forEach(function (op) { if (op.wall !== wall) return; var nm = opName(L, op);
+    if (axis === 'z') cand.push([op.z + op.h, nm], [op.z + op.h + OP_CAS, nm + ' · ' + T('rszCas')]); else cand.push([op.x, nm], [op.x + op.w, nm], [op.x - OP_CAS, nm + ' · ' + T('rszCas')], [op.x + op.w + OP_CAS, nm + ' · ' + T('rszCas')]); });
+  if (axis === 'z') { cand.push([+L.roomH > 0 ? +L.roomH : 2600, T('rszCeil')]); if (+L.wallZ > 0) cand.push([+L.wallZ, T('rszWallZ')]); }
+  else if (G[wall]) cand.push([0, T('rmSnap_wall')], [G[wall].len, T('rmSnap_wall')]);
+  cand.forEach(function (q) { var d = Math.abs(q[0] - v); if (d <= thr && (!best || d < best.d)) best = { v:q[0], why:q[1], d:d }; });
+  return best ? { v:best.v, why:best.why } : { v:Math.round(v), why:'' };
+}
+function startResize(e, i, sd) {
+  var proj = C.o.proj, L = proj.layout, c = proj.cabinets[i], it = L.items[c.id]; if (!it || it.wall < 0) return;
+  var z0 = z0Of(c, it, L);
+  D = { mode:'rsz', i:i, id:c.id, c:c, sd:sd, wall:it.wall, x0:it.x, W:cabW(c), z0:z0, H:cabH(c), nx:it.x, nW:cabW(c), nz:z0, nH:cabH(c), x:e.clientX, y:e.clientY, moved:false };
+}
+function rszMove(m) {
+  var proj = C.o.proj, L = proj.layout, k = C.fr.k, thr = thrMm(), sd = D.sd, why = '', sn;
+  if (sd === 't' || sd === 'b') {
+    sn = rszSnap(proj, D.c, D.wall, 'z', zAt(m), thr); why = sn.why;
+    if (sd === 't') { D.nz = D.z0; D.nH = Math.max(100, Math.min(6000, sn.v - D.z0)); }
+    else { var top = D.z0 + D.H, zb = Math.max(0, Math.min(top - 100, sn.v)); D.nz = zb; D.nH = top - zb; }
+    D.guide = { axis:'z', v:sd === 't' ? D.nz + D.nH : D.nz, on:!!why };
+  } else {
+    var along = (m[0] - C.fr.ox) / k - C.fr.off[D.wall];
+    sn = rszSnap(proj, D.c, D.wall, 'x', along, thr); why = sn.why;
+    if (sd === 'r') { D.nx = D.x0; D.nW = Math.max(100, Math.min(6000, sn.v - D.x0)); }
+    else { var right = D.x0 + D.W, xl = Math.min(right - 100, sn.v); D.nx = xl; D.nW = right - xl; }
+    D.guide = { axis:'x', v:sd === 'r' ? D.nx + D.nW : D.nx, on:!!why };
+  }
+  var keepC = { W:D.c.W, H:D.c.H }, keepIt = L.items[D.id];   // would it hit something? (as the move asks)
+  D.c.W = D.nW; D.c.H = D.nH; L.items[D.id] = Object.assign({}, keepIt, { x:D.nx, z:level(D.c) === 'wall' ? D.nz : keepIt.z });
+  D.bad = !!problems(proj).bad[D.id];
+  D.c.W = keepC.W; D.c.H = keepC.H; L.items[D.id] = keepIt;
+  var hor = sd === 't' || sd === 'b';
+  D.tip = { x:m[0], y:m[1], bad:D.bad, lines:[cabName(D.c, D.i) + ' · ' + (hor ? T('rszHt').replace('{a}', fm(D.H)).replace('{b}', fm(D.nH)) : T('rszWd').replace('{a}', fm(D.W)).replace('{b}', fm(D.nW))),
+    hor ? T('rszTop').replace('{t}', fm(D.nz + D.nH)).replace('{b}', fm(D.nz)) : T('rmFromStart').replace('{x}', fm(D.nx)), why ? T('rszAt').replace('{w}', why) : '', D.bad ? T('rmHit') : ''].filter(Boolean) };
+}
+function rszDraw() {
+  var k = C.fr.k, x = fX(D.wall, D.nx), y = fY(D.nz + D.nH), s = '';
+  if (D.guide && D.guide.on) { var g = D.guide;
+    if (g.axis === 'z') s += '<line class="rm-guide" x1="' + fX(D.wall, 0).toFixed(1) + '" y1="' + fY(g.v).toFixed(1) + '" x2="' + fX(D.wall, geo(C.o.proj.layout)[D.wall].len).toFixed(1) + '" y2="' + fY(g.v).toFixed(1) + '"/>';
+    else s += '<line class="rm-guide" x1="' + fX(D.wall, g.v).toFixed(1) + '" y1="' + fY(0).toFixed(1) + '" x2="' + fX(D.wall, g.v).toFixed(1) + '" y2="' + fY(C.fr.H).toFixed(1) + '"/>'; }
+  return s + '<rect class="rm-ghost' + (D.bad ? ' bad' : '') + '" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + (D.nW * k).toFixed(1) + '" height="' + (D.nH * k).toFixed(1) + '"/>';
 }
 function frontGhost(cd) {
   var k = C.fr.k, z0 = cd.lv === 'wall' ? (+C.o.proj.layout.wallZ || 1450) : (cd.legs || 0);
@@ -5850,6 +5923,7 @@ function onMove(e) {
   if (D.mode === 'orbit') { if (!D.moved) return; V.th = D.th - (e.clientX - D.x) * 0.008; V.ph = Math.max(0.05, Math.min(1.35, D.ph + (e.clientY - D.y) * 0.006)); draw(); return; }
   if (D.mode === 'bg') { if (D.moved && V.view !== '3d' && zf().z > 1.001) { var Z = zf(); Z.px = D.px0 + e.clientX - D.x; Z.py = D.py0 + e.clientY - D.y; zClamp(Z); draw(); } return; }   // the zoomed drawing slides
   var m = local(e);
+  if (D.mode === 'rsz') { if (!D.moved || !C.fr) return; rszMove(m); draw(); return; }
   if (D.mode === 'opmove') {   // a door or window along its wall or to another one
     if (!D.moved) return; var wo = wallAt(m); if (!wo) return;
     var sno = opSnap(C.o.proj, Object.assign({}, D.op, { wall:wo.wall }), wo.wall, wo.along - D.grab, thrMm());
@@ -5919,6 +5993,13 @@ function onUp(e) {
   var d = D; D = null; if (d.ghost) d.ghost.remove();
   if (d.mode === 'orbit') { draw(); return; }   // full-quality frame after turning
   if (d.mode === 'pick') { C.o.onSelect(d.i); return; }
+  if (d.mode === 'rsz') {
+    if (!d.moved || (Math.abs(d.nW - d.W) < 0.5 && Math.abs(d.nH - d.H) < 0.5 && Math.abs(d.nx - d.x0) < 0.5 && Math.abs(d.nz - d.z0) < 0.5)) { draw(); return; }
+    var pa = {}; if (Math.abs(d.nW - d.W) >= 0.5) pa.W = d.nW; if (Math.abs(d.nH - d.H) >= 0.5) pa.H = d.nH;
+    C.o.onCab(d.i, pa, function (p) { var q = p.layout.items[d.id]; if (!q) return; if (d.sd === 'l') q.x = d.nx; if (d.sd === 'b') q.z = d.nz; });
+    if (d.bad) C.o.toast(T('rmHitDrop'), true);
+    return;
+  }
   if (d.mode === 'move') {
     if (!d.moved) { C.o.onSelect(d.i); return; }
     C.o.onLayout(function (proj) { proj.layout.items[d.id] = { wall:d.it.wall, x:d.it.x, z:d.orig.z }; }, { sel:d.i, msg:d.bad ? T('rmHitDrop') : '' });
@@ -6252,8 +6333,9 @@ function attach(el, o) {
         try { stage.setPointerCapture(e.pointerId); } catch (er) {} e.preventDefault(); return;
       }
     }
-    var cab = e.target.closest('[data-cab]'), opEl = e.target.closest('[data-op]'), ptEl = e.target.closest('[data-pt]');
-    if (V.view === '3d') { var k3 = pick3d(e); D = { mode:'orbit', x:e.clientX, y:e.clientY, th:V.th, ph:V.ph, moved:false, cab:k3 }; }
+    var cab = e.target.closest('[data-cab]'), opEl = e.target.closest('[data-op]'), ptEl = e.target.closest('[data-pt]'), rsz = e.target.closest('[data-rsz]');
+    if (rsz && V.view === 'front') startResize(e, +rsz.getAttribute('data-cab'), rsz.getAttribute('data-rsz'));   // an edge of the selected cabinet
+    else if (V.view === '3d') { var k3 = pick3d(e); D = { mode:'orbit', x:e.clientX, y:e.clientY, th:V.th, ph:V.ph, moved:false, cab:k3 }; }
     else if (ptEl) startPtMove(e, ptEl.getAttribute('data-pt'));   // drawn over the cabinets: picked first
     else if (cab) startMove(e, +cab.getAttribute('data-cab'));
     else if (opEl) startOpMove(e, opEl.getAttribute('data-op'));
@@ -7783,7 +7865,7 @@ lt:{
  cabs:'Spintelės', newCab:'＋ Nauja spintelė', dup:'Kopijuoti', del:'Ištrinti', delSure:'Tikrai ištrinti?',
  pickTitle:'Kokią spintelę kuriame?', pickLead:'Pasirinkite panašiausią — viską galėsite pakeisti.', cancel:'Atšaukti',
  pDrawers:'Stalčių spintelė', pDoors:'Durų spintelė', pDrDoors:'Stalčius + durys', pWall:'Pakabinama', pTall:'Aukšta su orkaite', pFridge:'Šaldytuvo spinta', kFridge:'Šaldytuvas', fridgeHinge:'Vyriai', fridgeHandle:'Rankena — {s}',
- visT:'Matomi šonai (iš fasado medžiagos)', visL:'Kairys', visR:'Dešinys', visB:'Apačia', visNote:'Pažymėtas šonas pjaunamas iš fasado medžiagos ir aplijuojamas fasado briauna; kiti lieka karkaso medžiagos. Baldų skirtuke — mygtukas, kuris pažymi laisvus šonus pagal išdėstymą.', fridgeSec:'Integruojamas šaldytuvas', fridgeN:'Fasadai', fridge1:'1 — vien šaldytuvas', fridge2:'2 — šaldytuvas ir šaldiklis',
+ visT:'Matomi šonai (iš fasado medžiagos)', sideFull:'Šonai per visą aukštį (dengia viršų ir dugną)', topMount:'Viršus', topOn:'Ant šonų', topInside:'Tarp šonų', visL:'Kairys', visR:'Dešinys', visB:'Apačia', visNote:'Pažymėtas šonas pjaunamas iš fasado medžiagos ir aplijuojamas fasado briauna; kiti lieka karkaso medžiagos. Baldų skirtuke — mygtukas, kuris pažymi laisvus šonus pagal išdėstymą.', fridgeSec:'Integruojamas šaldytuvas', fridgeN:'Fasadai', fridge1:'1 — vien šaldytuvas', fridge2:'2 — šaldytuvas ir šaldiklis',
  fridgeNiche:'Niša ≈ {h} × {w} mm', fridgeNote:'Fasadai tvirtinami prie šaldytuvo durų — be lankstų. Sekcijos aukštis = nišos aukštis + 2 plokštės (dugnas / lentyna); patikrinkite šaldytuvo instrukcijoje nurodytą nišą (dažniausiai 1772–1780 mm aukščio, ≥ 550 mm gylio). Nišos lentyna gale trumpesnė {v} mm — orui; cokolyje palikite groteles.', pDish:'Indaplovės fasadas', pEmpty:'Tuščia (lentynos)', pBox:'3D konstrukcija',
  bxS1l:'Išoriniai matmenys. Plokštes dėliokite modelyje (▣ Plokštės) arba žemiau.', bxS2:'Plokštės', bxS2l:'Kurios plokštės yra, kiek įleistos ir kuri kurią dengia kampuose.', bxS3:'Vidus', bxS3l:'Pertvaros — per visą aukštį tarp apačios ir viršaus; lentynos — skyriuje tarp pertvarų.', bxS4:'Jungtys', bxS4l:'Kiekvienas galas, atsiremiantis į kitos plokštės plokštumą, sujungiamas — rūšis, kiekis ir vietos kiekvienam mazgui.',
  bx_bottom:'Apačia', bx_top:'Viršus', bx_left:'Kairė', bx_right:'Dešinė', bx_back:'Nugara', bx_front:'Priekis', bxInset:'Įleista', bxT:'Storis', bxCorners:'Kampai — kuri plokštė dengia kurią', bxCovers:'dengia', bxForced:'įleista plokštė visada viduje', bxWith:'su',
@@ -7890,7 +7972,7 @@ lt:{
  rmProbOut:'Spintelė {a} išeina už sienos galo', rmOtherProbs:'Kitur patalpoje problemų: {n} — uždarykite (✕), kad matytumėte sąrašą', rmWtHint:'Stalviršis rodomas spintelėms, kurioms jis įjungtas (spintelės 1 žingsnis).', rmProbCeil:'Spintelė {a} aukštesnė už patalpą (lubas)', rmBadVal:'Netinkama reikšmė — palikta ankstesnė', rmProbFloor:'Spintelė {a} žemiau grindų', rmProbHit:'Spintelės {a} ir {b} kliūna viena už kitos', rmNoProbs:'Spintelės telpa ir nekliūna viena už kitos',
  rmZoom:'Mastelis', rmZoomIn:'Artinti', rmZoomOut:'Tolinti', rmZoomFit:'Visas vaizdas (dukart spustelėkite tuščią vietą)',
  rmHint:'Spintelę tempkite išilgai sienos ar į kitą sieną — ji prisitraukia prie sienos galo, kampo ar kaimynės. Spustelėkite spintelę — dešinėje pakeisite plotį, užpildysite tarpą, atidarysite redagavimą.',
- rmFromStart:'{x} mm nuo sienos pradžios', rmLeftRight:'kairėje {l} · dešinėje {r}', rmSnap_wall:'prie sienos galo', rmSnap_corner:'prie kampo', rmSnap_nb:'prie kaimynės', rmSnap_op:'prie durų ar lango', rmSnap_mid:'sienos viduryje',
+ rmFromStart:'{x} mm nuo sienos pradžios', rmLeftRight:'kairėje {l} · dešinėje {r}', rszH:'Tempkite — keičia aukštį', rszW:'Tempkite — keičia plotį', rszHt:'aukštis {a} → {b}', rszWd:'plotis {a} → {b}', rszTop:'viršus {t} · apačia {b} nuo grindų', rszAt:'lygiai su: {w}', rszWt:'stalviršio viršus', rszCas:'apvadas', rszCeil:'lubos', rszWallZ:'pakabinamų aukštis', rmSnap_wall:'prie sienos galo', rmSnap_corner:'prie kampo', rmSnap_nb:'prie kaimynės', rmSnap_op:'prie durų ar lango', rmSnap_mid:'sienos viduryje',
  rmVisFree:'Pagal išdėstymą laisvi šonai: {s}.', rmVisNone:'nėra', rmVisFit:'Pritaikyti', rmVisAll:'Matomi šonai pagal išdėstymą', rmVisAllN:'Visoms spintelėms pažymi laisvus šonus (prie jų nieko nėra visu aukščiu) — jie pjaunami iš fasado medžiagos. Pakabinamų apačia nekeičiama.', rmVisAllDone:'Matomi šonai pažymėti pagal išdėstymą — pakeista spintelių: {n}',
  rmPtAdd:'Rozetės ir vamzdžiai', ptSocket:'Rozetė', ptSocket2:'Dviguba rozetė', ptCold:'Šaltas vanduo', ptHot:'Karštas vanduo', ptDrain:'Kanalizacija',
  ptAddT:'Nutempkite ant sienos (vaizdas „Iš priekio“ — ir į aukštį) arba spustelėkite', ptX:'Vidurys nuo sienos pradžios', ptZ:'Aukštis nuo grindų',
@@ -7931,7 +8013,7 @@ en:{
  cabs:'Cabinets', newCab:'＋ New cabinet', dup:'Duplicate', del:'Delete', delSure:'Really delete?',
  pickTitle:'What are we building?', pickLead:'Pick the closest one — everything can be changed.', cancel:'Cancel',
  pDrawers:'Drawer cabinet', pDoors:'Door cabinet', pDrDoors:'Drawer + doors', pWall:'Wall cabinet', pTall:'Tall with oven', pFridge:'Fridge unit', kFridge:'Fridge', fridgeHinge:'Hinges', fridgeHandle:'Handle — {s}',
- visT:'Visible sides (in the front material)', visL:'Left', visR:'Right', visB:'Bottom', visNote:'A ticked side is cut from the front material with the front edging; the others stay in the carcass material. In Baldai one button ticks the free sides from the layout.', fridgeSec:'Integrated fridge', fridgeN:'Fronts', fridge1:'1 — fridge only', fridge2:'2 — fridge and freezer',
+ visT:'Visible sides (in the front material)', sideFull:'Full-height sides (covering the top and the bottom)', topMount:'Top', topOn:'On the sides', topInside:'Between the sides', visL:'Left', visR:'Right', visB:'Bottom', visNote:'A ticked side is cut from the front material with the front edging; the others stay in the carcass material. In Baldai one button ticks the free sides from the layout.', fridgeSec:'Integrated fridge', fridgeN:'Fronts', fridge1:'1 — fridge only', fridge2:'2 — fridge and freezer',
  fridgeNiche:'Niche ≈ {h} × {w} mm', fridgeNote:'The fronts are screwed to the fridge\'s own doors — no hinges. Section height = niche height + 2 boards (bottom / shelf); check the niche in the fridge\'s manual (usually 1772–1780 mm high, ≥ 550 mm deep). The niche shelf stops {v} mm short of the back for the air; leave a grille in the plinth.', pDish:'Dishwasher front', pEmpty:'Empty (shelves)', pBox:'3D construction',
  bxS1l:'Outer size. Place the boards in the model (▣ Boards) or below.', bxS2:'Boards', bxS2l:'Which boards there are, how far they are set in, and which covers which at the corners.', bxS3:'Inside', bxS3l:'Partitions run the full height between bottom and top; shelves sit in one compartment.', bxS4:'Joints', bxS4l:'Every end that meets another board\'s face is joined — type, count and positions per joint.',
  bx_bottom:'Bottom', bx_top:'Top', bx_left:'Left', bx_right:'Right', bx_back:'Back', bx_front:'Front', bxInset:'Set in', bxT:'Thickness', bxCorners:'Corners — which board covers which', bxCovers:'covers', bxForced:'a set-in board always sits inside', bxWith:'with',
@@ -8038,7 +8120,7 @@ en:{
  rmProbOut:'Cabinet {a} runs past the wall end', rmOtherProbs:'Problems elsewhere in the room: {n} — close (✕) to see the list', rmWtHint:'A worktop shows on cabinets that have one turned on (cabinet step 1).', rmProbCeil:'Cabinet {a} reaches above the ceiling', rmBadVal:'Not a valid value — the previous one is kept', rmProbFloor:'Cabinet {a} is below the floor', rmProbHit:'Cabinets {a} and {b} hit each other', rmNoProbs:'Cabinets fit and do not hit each other',
  rmZoom:'Zoom', rmZoomIn:'Zoom in', rmZoomOut:'Zoom out', rmZoomFit:'Whole drawing (or double-click an empty spot)',
  rmHint:'Drag a cabinet along a wall or to another wall — it snaps to the wall end, corner or neighbour. Click a cabinet to change its width, fill a gap or open it for editing on the right.',
- rmFromStart:'{x} mm from the wall start', rmLeftRight:'left {l} · right {r}', rmSnap_wall:'at the wall end', rmSnap_corner:'at the corner', rmSnap_nb:'at the neighbour', rmSnap_op:'at a door or window', rmSnap_mid:'centred on the wall',
+ rmFromStart:'{x} mm from the wall start', rmLeftRight:'left {l} · right {r}', rszH:'Drag — changes the height', rszW:'Drag — changes the width', rszHt:'height {a} → {b}', rszWd:'width {a} → {b}', rszTop:'top {t} · bottom {b} from the floor', rszAt:'aligned with: {w}', rszWt:'worktop top', rszCas:'casing', rszCeil:'ceiling', rszWallZ:'wall-unit height', rmSnap_wall:'at the wall end', rmSnap_corner:'at the corner', rmSnap_nb:'at the neighbour', rmSnap_op:'at a door or window', rmSnap_mid:'centred on the wall',
  rmVisFree:'From the layout, the free sides are: {s}.', rmVisNone:'none', rmVisFit:'Apply', rmVisAll:'Visible sides from the layout', rmVisAllN:'Ticks the free sides of every cabinet (nothing beside them over their full height) — they are cut from the front material. Wall cabinets\' bottoms are left as they are.', rmVisAllDone:'Visible sides set from the layout — cabinets changed: {n}',
  rmPtAdd:'Sockets and pipes', ptSocket:'Socket', ptSocket2:'Double socket', ptCold:'Cold water', ptHot:'Hot water', ptDrain:'Drain',
  ptAddT:'Drag onto a wall (in the Front view also up and down) or click', ptX:'Middle from the wall start', ptZ:'Height from the floor',
@@ -8513,7 +8595,7 @@ function step(no, title, lead, body, key) { return '<div class="card step"' + (k
 
 function zoneInfo(c, col) {
   var o = c.cnc, H = num(c.H) - (o.bottom === 'inside' ? Math.max(0, Math.min(num(o.bottomZ) || 0, num(c.H) - 200)) : 0), t_ = num(c.thick) || 18, topFull = o.top === 'full';   // as the engine clamps it
-  var Hz = H - (topFull && o.topOverFacade ? t_ : (topFull ? 0 : E.R.facade.zoneGapRails));
+  var Hz = H - (topFull && o.topOverFacade && o.topMount !== 'inside' ? t_ : (topFull ? 0 : E.R.facade.zoneGapRails));
   var exp = 0, nFill = 0; c.sections.forEach(function (s) { if (col != null && colOf(c, s) !== col) return; if (s.fill) nFill++; else exp += Math.max(0, num(s.height)); });
   return { Hz:Hz, exp:exp, nFill:nFill, fillH:nFill ? Math.max(0, Hz - exp) / nFill : 0, over:exp > Hz + 0.5 };
 }
@@ -8525,7 +8607,15 @@ function visBlock(c) {
   if (c.dishwasher || c.kind === 'box' || c.kind === 'panel') return '';
   var b = 'c.', v = c.vis || {};
   return '<div class="visrow"><span class="lbl">' + t('visT') + '</span><div class="vischk">' + chk(b + 'vis.L', v.L, t('visL')) + chk(b + 'vis.R', v.R, t('visR')) +
-    (c.type === 'PAKABINAMOS' || c.hang ? chk(b + 'vis.B', v.B, t('visB')) : '') + '</div><p class="note">' + t('visNote') + '</p></div>';
+    (c.type === 'PAKABINAMOS' || c.hang ? chk(b + 'vis.B', v.B, t('visB')) : '') + chk(b + 'cnc.sideFull', sideFullOf(c), t('sideFull')) + '</div><p class="note">' + t('visNote') + '</p></div>';
+}
+/* the sides run the full height: the bottom between them (not lifted) and the top too (a rail top always sits between them) */
+function sideFullOf(c) { var o = c.cnc || {}; return o.bottom === 'inside' && !(num(o.bottomZ) > 0) && (o.top !== 'full' || o.topMount === 'inside'); }
+function topPic(inside) {   // tiny front section: where the top sits
+  var s = '<svg viewBox="0 0 64 40" width="64" height="40"><g fill="#c9cfc8" stroke="#56635b" stroke-width="1">';
+  if (inside) s += '<rect x="4" y="4" width="6" height="34"/><rect x="54" y="4" width="6" height="34"/><rect x="10" y="4" width="44" height="6" fill="#2448c9" fill-opacity=".35" stroke="#2448c9"/>';
+  else s += '<rect x="4" y="10" width="6" height="28"/><rect x="54" y="10" width="6" height="28"/><rect x="4" y="4" width="56" height="6" fill="#2448c9" fill-opacity=".35" stroke="#2448c9"/>';
+  return s + '</g></svg>';
 }
 function botDepthField(c) {
   var o = c.cnc || {}, full = num(c.D), v = num(o.bottomD) > 0 ? num(o.bottomD) : '', id = 'f-c-cnc-bottomD';
@@ -8577,6 +8667,8 @@ function viewEditor(c) {
       (o.legs ? '<button type="button" class="btn ghost supgo" data-act="goto" data-v="st-ops">' + t('supEdit') + ' ↓</button>' : '') + '</div>') +
     (c.dishwasher ? '' : '<div class="row bottomrow" style="margin-top:10px"><div class="f"><span>' + t('botMount') + '</span>' + seg(b + 'cnc.bottom', bIn ? 'inside' : 'under', [['under', t('botUnder')], ['inside', t('botInside')]]) + '</div>' +
       (bIn ? fN(t('botZ'), b + 'cnc.bottomZ', o.bottomZ || 0, 's') : '') + botDepthField(c) + '<figure class="botpic" aria-hidden="true">' + bottomPic(bIn) + '</figure></div>') +
+    (c.dishwasher || o.top !== 'full' ? '' : '<div class="row bottomrow" style="margin-top:10px"><div class="f"><span>' + t('topMount') + '</span>' + seg(b + 'cnc.topMount', o.topMount === 'inside' ? 'inside' : 'over', [['over', t('topOn')], ['inside', t('topInside')]]) + '</div>' +
+      '<figure class="botpic" aria-hidden="true">' + topPic(o.topMount === 'inside') + '</figure></div>') +
     '<div class="row" style="margin-top:10px">' +
     (c.dishwasher ? fN(t('dishW'), b + 'dishWidth', c.dishWidth) : fN(t('W'), b + 'W', c.W)) + fN(t('H'), b + 'H', c.H) + fN(t('D'), b + 'D', c.D) +
     fN(t('thick'), b + 'thick', c.thick, 's') + fN(t('facT'), b + 'cnc.facadeT', o.facadeT, 's') +
@@ -8609,7 +8701,7 @@ function viewEditor(c) {
     choice(b + 'cnc.joinery', o.joinery, 'confirmat', artOf('confirmat'), t('jConf'), t('jConfD')) +
     choice(b + 'cnc.joinery', o.joinery, 'cam', artOf('cam'), t('jCam'), t('jCamD')) + '</div><div class="sub">' +
     '<div><div class="lbl">' + t('top') + '</div><div class="row">' + seg(b + 'cnc.top', o.top, [['rails', t('topRails')], ['full', t('topFull')]]) +
-      (o.top === 'full' ? chk(b + 'cnc.topOverFacade', o.topOverFacade, t('topOver')) : '') + '</div></div>' +
+      (o.top === 'full' && o.topMount !== 'inside' ? chk(b + 'cnc.topOverFacade', o.topOverFacade, t('topOver')) : '') + '</div></div>' +
     (o.top === 'rails' ? railsEditor(c) : '') +
     '</div>';
   secs += '<details class="construction-settings" id="st-constr"' + (S.constrOpen ? ' open' : '') + '><summary>'+(S.lang==='lt'?'Konstrukcijos nustatymai · viršus, juostos, nugara':'Construction settings · top, rails, back')+'</summary><div>'+jo+'</div></details>';
@@ -8744,7 +8836,7 @@ function sectionSVG(c, res, side) {
   if (full) r = { front:'none', back:'none', bottom:false };
   if (bs.some(function (x) { return x === 'solid'; }) && !(allS && o.backMount !== 'inside') && (r.back === 'v' || r.back === 'hv' || r.bottom)) { r.back = r.back === 'hv' ? 'h' : r.back === 'v' ? 'none' : r.back; r.bottom = false; }
   var bH = r.back === 'h' || r.back === 'hv', bV = r.back === 'v' || r.back === 'hv';
-  var off = full && o.topOverFacade ? (num(o.facadeT) || 18) : 0;
+  var tIn = full && o.topMount === 'inside', off = full && o.topOverFacade && !tIn ? (num(o.facadeT) || 18) : 0;
   var k = Math.min(230 / H, 240 / (D + off)), pad = 14, legs = o.legs ? 10 : 0;
   var W_ = (D + off) * k + 2 * pad, H_ = H * k + 2 * pad + legs + 12;
   var flip = side === 'R';   // right side seen from the right: front on the right
@@ -8752,14 +8844,14 @@ function sectionSVG(c, res, side) {
   var rect = function (y0, z0, y1, z1, cls) { return '<rect class="' + cls + '" x="' + Math.min(X(y0), X(y1)).toFixed(1) + '" y="' + Y(z1).toFixed(1) + '" width="' + ((y1 - y0) * k).toFixed(1) + '" height="' + ((z1 - z0) * k).toFixed(1) + '"/>'; };
   var sv = '<svg viewBox="0 0 ' + W_.toFixed(0) + ' ' + H_.toFixed(0) + '" width="' + W_.toFixed(0) + '" xmlns="http://www.w3.org/2000/svg">';
   var hb_ = hbOf(c), bIn_ = o.bottom === 'inside';
-  sv += rect(0, bIn_ ? 0 : t_, Ds, full ? H - t_ : H, 'xs-side');
+  sv += rect(0, bIn_ ? 0 : t_, Ds, full && !tIn ? H - t_ : H, 'xs-side');
   sv += rect(0, hb_, Ds, hb_ + t_, 'xs-p');
-  if (full) sv += rect(-off, H - t_, Ds + tb, H, 'xs-p');
+  if (full) sv += rect(-off, H - t_, tIn ? Ds : Ds + tb, H, 'xs-p');
   if (r.front === 'h') sv += rect(0, H - t_, rw, H, 'xs-r'); else if (r.front === 'v') sv += rect(0, H - rw, t_, H, 'xs-r');
   if (bH) sv += rect(Ds - rw, H - t_, Ds, H, 'xs-r');
   if (bV) { var zv = bH ? H - t_ - rw : H - rw; sv += rect(Ds - t_, zv, Ds, zv + rw, 'xs-r'); }
   if (r.bottom) sv += rect(Ds - t_, hb_ + t_, Ds, hb_ + t_ + rw, 'xs-r');
-  if (eb === 'top') sv += rect(Ds, 0, D, full ? H - t_ : H, 'xs-b');
+  if (eb === 'top') sv += rect(Ds, 0, D, full && !tIn ? H - t_ : H, 'xs-b');
   else if (eb === 'inside') sv += rect(Ds - t_, t_, Ds, full || bH ? H - t_ : H, 'xs-b');
   else if (eb === 'hdf') sv += rect(Ds, 0, D, H, 'xs-hdf');
   var legYs = res && res.legs && res.legs.length ? res.legs.map(function (l) { return l.y; }).filter(function (y, i, a) { return a.indexOf(y) === i; }) : [E.R.legs.fromFront, Ds - E.R.legs.fromBack];
@@ -9729,6 +9821,8 @@ function assign(bind, raw) {
     else { fs.doorSplit = 'v'; fs.hinge = fs.prevHinge || 'BLUM LANKSTAI'; fs.shelves = 1; } return; }
   if (bind === 'c.cnc.backJoint') { var bc0 = tg.obj, infB = S._info && S._info[S.sel], keysB = infB && infB.r ? (infB.r.joints || []).map(function (j) { return j.key; }).filter(function (k) { return /^back(P\d)?$/.test(k); }) : ['back'];
     if (keysB.indexOf('back') < 0) keysB.push('back'); keysB.forEach(function (k) { setJoint(bc0, k, { type:v }); }); return; }   // the back's fixing: one choice for the back and its partitions
+  if (bind === 'c.cnc.sideFull') { var cs = tg.obj.cnc, on = raw === true || raw === 'true';   // full-height sides: the bottom (and a full top) between them
+    cs.bottom = on ? 'inside' : 'under'; if (on) cs.bottomZ = 0; if (cs.top === 'full') cs.topMount = on ? 'inside' : 'over'; return; }
   if (bind === 'c.cnc.support') { tg.obj.cnc.legs = v !== 'none'; tg.obj.cnc.feet = v === 'feet'; return; }
   if (bind === 'c.cols') { if (+v === colsOf(tg.obj)) return; tg.obj.cols = +v; tg.obj.colW = []; fixCols(tg.obj); return; }
   if (/^c\.sections\.\d+\.(shelves|rail)$/.test(bind) && typeof v === 'string' && /^\d+$/.test(v)) v = +v;
