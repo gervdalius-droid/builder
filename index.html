@@ -8347,7 +8347,7 @@ lt:{
  npLead:'Įrašykite pavadinimą — jis bus CNC programų ir sąrašo failų pavadinimuose. Toliau pasirinksite pirmą spintelę.', npName:'Projekto pavadinimas', npPh:'pvz. VIRTUVE_JONAITIS', npCreate:'Sukurti projektą',
  npOr:'arba', npImport:'Įkelti iš pasiūlymo programos (.json)', npSample:'Atidaryti pavyzdį', npNeed:'Įrašykite projekto pavadinimą', npDone:'Sukurtas projektas {n}',
  prSearch:'Ieškoti projekto…', prOpenNow:'atidarytas', prUpdated:'keista', prDup:'Kopija', prDupT:'Sukurti šio projekto kopiją', prJsonT:'Atsisiųsti projekto failą (atsarginė kopija)', prDupDone:'Kopija sukurta',
- prNone2:'Projektų dar nėra — sukurkite pirmą viršuje.', prNoMatch:'Nieko nerasta.', prHint2:'Projektai išsaugomi automatiškai šioje naršyklėje. Atsarginei kopijai ar perkelti į kitą kompiuterį — „.json“.', prDeleted:'Projektas ištrintas',
+ prNone2:'Projektų dar nėra — sukurkite pirmą viršuje.', prNoMatch:'Nieko nerasta.', prHint2:'Projektai išsaugomi automatiškai šioje naršyklėje, o prisijungus — ir debesyje (matomi visuose kompiuteriuose). Atsarginei kopijai ar perkelti į kitą kompiuterį — „.json“.', prDeleted:'Projektas ištrintas',
  noName:'(be pavadinimo)', cabsN:'spint.', copySfx:'(kopija)', agoNow:'ką tik', agoMin:'prieš {n} min.', agoToday:'šiandien',
  firstCabQ:'Pirmoji spintelė — kokią kuriame?', stepsNav:'Spintelės žingsniai', stepNeed:'Reikia užpildyti',
  ckTitleOk:'Paruošta CNC', ckTitleBad:'Prieš siunčiant į CNC — pataisykite', ckFix:'Taisyti', ckName:'Neįrašytas projekto pavadinimas (jis bus failų pavadinimuose)', ckNameOk:'Projektas: <b>{n}</b>',
@@ -8495,7 +8495,7 @@ en:{
  npLead:'Type a name — it goes into the CNC program and list file names. Next you pick the first cabinet.', npName:'Project name', npPh:'e.g. KITCHEN_SMITH', npCreate:'Create project',
  npOr:'or', npImport:'Import from the offer app (.json)', npSample:'Open the example', npNeed:'Type a project name', npDone:'Project {n} created',
  prSearch:'Search projects…', prOpenNow:'open', prUpdated:'changed', prDup:'Copy', prDupT:'Make a copy of this project', prJsonT:'Download the project file (backup)', prDupDone:'Copy made',
- prNone2:'No projects yet — create the first one above.', prNoMatch:'Nothing found.', prHint2:'Projects are saved automatically in this browser. For a backup or another computer — “.json”.', prDeleted:'Project deleted',
+ prNone2:'No projects yet — create the first one above.', prNoMatch:'Nothing found.', prHint2:'Projects are saved automatically in this browser and, when signed in, in the cloud (on every computer). For a backup or another computer — “.json”.', prDeleted:'Project deleted',
  noName:'(no name)', cabsN:'cab.', copySfx:'(copy)', agoNow:'just now', agoMin:'{n} min ago', agoToday:'today',
  firstCabQ:'First cabinet — what are we building?', stepsNav:'Cabinet steps', stepNeed:'Needs filling in',
  ckTitleOk:'Ready for CNC', ckTitleBad:'Before sending to CNC — fix these', ckFix:'Fix', ckName:'No project name (it goes into the file names)', ckNameOk:'Project: <b>{n}</b>',
@@ -8526,7 +8526,7 @@ function num(v) {
   var n = parseFloat(s); return isFinite(n) ? n : 0;
 }
 var fmt = function (v) { return E.num(Math.round(num(v) * 10) / 10); };
-function store(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k) || 'null'); localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return v === undefined ? null : false; } }
+function store(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k) || 'null'); localStorage.setItem(k, JSON.stringify(v)); if (window.__dbkOnStore) { try { window.__dbkOnStore(k); } catch (er) {} } return true; } catch (e) { return v === undefined ? null : false; } }
 /* the browser's storage is full (or blocked): say so once — the work is not lost while the page stays open, but must be exported */
 var saveFailShown = false;
 function saveFailed() { var sv = document.getElementById('saved'); if (sv) { sv.classList.add('fail'); sv.textContent = S.lang === 'lt' ? '✕ neišsaugota' : '✕ not saved'; }
@@ -10648,9 +10648,11 @@ function saveFile(name, data, type) {
 
 document.documentElement.lang = S.lang;
 render();
-window.__dbk = { S:S, render:render, priceCabinet:priceCabinet, buildProjectAll:buildProjectAll, zipAll:zipAll, xlsmBytes:xlsmBytes, csvOf:csvOf, fromOffer:fromOffer, normCab:normCab, PRESETS:PRESETS, fromPreset:fromPreset };
+window.__dbk = { S:S, render:render, store:store, lib:lib, libSet:libSet, libRec:libRec, clib:clib, defSettings:defSettings, applyRules:applyRules, toast:toast, newProject:newProject, openProject:openProject, save:save, priceCabinet:priceCabinet, buildProjectAll:buildProjectAll, zipAll:zipAll, xlsmBytes:xlsmBytes, csvOf:csvOf, fromOffer:fromOffer, normCab:normCab, PRESETS:PRESETS, fromPreset:fromPreset };
 })();
 
 </script>
+<script src="workshop-auth.js"></script>
+<script src="cloud.js"></script>
 </body>
 </html>
