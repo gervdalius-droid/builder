@@ -7054,6 +7054,93 @@ function LETTER(i) { return i < 26 ? String.fromCharCode(65 + i) : 'A' + String.
 function hwKind(item) { item = String(item || '');
   if (/LANKST|TIP-ON|hinge/i.test(item)) return 'hinge'; if (/TANDEM|bėgel|runner|stalči|KULKIN|GTV|DTC|GUOLIN|PASLĖPT/i.test(item)) return 'drawer'; if (/kojel|pėdut|legs?\b|feet/i.test(item)) return 'leg';
   if (/laikikl|support/i.test(item)) return 'pin'; if (/konfirmat|confirmat/i.test(item)) return 'conf'; if (/kaišč|dowel/i.test(item)) return 'dowel'; if (/ekscentrik|cam/i.test(item)) return 'cam'; return null; }
+/* ---------------------------------------------------------------- fitting pictures (as on the DB_Drawings sheets): the Blum
+   parts drawn from their STEP models (window.DBFit), the rest as simple solids; small iso pictures, light grey, thin edges */
+var ICONS = {};
+function cylPrism(cx, cy, r, z0, z1, n, ax) {   // a cylinder as faces; ax: its axis ('z' up or 'y' into the cabinet)
+  n = n || 14; var A = [], B = [];
+  for (var i = 0; i < n; i++) { var a = i / n * Math.PI * 2, u = cx + r * Math.cos(a), v = cy + r * Math.sin(a);
+    A.push(ax === 'y' ? [u, z0, v] : [u, v, z0]); B.push(ax === 'y' ? [u, z1, v] : [u, v, z1]); }
+  return boxFacesOf(A, B, ax === 'y'); }
+function boxPrism(e) { var A = [[e[0][0], e[1][0], e[2][0]], [e[0][1], e[1][0], e[2][0]], [e[0][1], e[1][1], e[2][0]], [e[0][0], e[1][1], e[2][0]]], B = A.map(function (q) { return [q[0], q[1], e[2][1]]; }); return boxFacesOf(A, B, false); }
+function boxFacesOf(A, B, flip) {   // a prism from its two outlines: side faces + the two ends, outward normals (Newell)
+  var n = A.length, f = [];
+  for (var i = 0; i < n; i++) { var j = (i + 1) % n; f.push([A[i], A[j], B[j], B[i]]); }
+  f.push(B.slice()); f.push(A.slice().reverse());
+  return f.map(function (pts) { var nx = 0, ny = 0, nz = 0; for (var a = 0; a < pts.length; a++) { var c = pts[a], e = pts[(a + 1) % pts.length]; nx += (c[1] - e[1]) * (c[2] + e[2]); ny += (c[2] - e[2]) * (c[0] + e[0]); nz += (c[0] - e[0]) * (c[1] + e[1]); }
+    var l = Math.hypot(nx, ny, nz) || 1, sg = flip ? -1 : 1; return { pts:pts, n:[sg * nx / l, sg * ny / l, sg * nz / l] }; });
+}
+function iconFaces(key) {   // the faces of a fitting's picture, in cabinet axes (x right, y into the cabinet, z up)
+  var FT = root.DBFit && root.DBFit.has ? root.DBFit : null, out = [], put = function (polys) { polys.forEach(function (pg) { out.push(pg); }); };
+  var pr = function (name, part, map, mir) { if (!FT || !FT.has(name)) return false; FT.prismPolys(name, part, map, mir).forEach(put); return true; };
+  if (key === 'hinge' || key === 'plate') {
+    if (FT && FT.has('hinge')) { var HG = FT.HINGE, mapH = function (sx, sy, sz) { return [sx - HG.cupX, -(sz - HG.doorZ), sy]; };
+      pr('hinge', 0, mapH, false); if (key === 'hinge') pr('hinge', 1, mapH, false); return out; }
+    put(boxPrism([[0, 8], [18, 62], [-22, 22]])); if (key === 'hinge') put(cylPrism(-18, 0, 17.5, -14, 0, 18, 'y')); return out; }
+  if (key === 'tbx' && FT && FT.has('tbSide')) { var topT = FT.sideTop(83), Yz = function (sz) { return FT.FRONT_Z - FT.zmap(sz, 300); };
+    pr('tbRunner', 0, function (sx, sy, sz) { return [sx, Yz(sz), sy]; }, false); pr('tbSide', 0, function (sx, sy, sz) { return [sx, Yz(sz), FT.ymap(sy, topT)]; }, false); return out; }
+  if (key === 'tandem' && FT && FT.has('tdRunner')) { var Yd = function (sz) { return FT.FRONT_Z - FT.zmap(sz, 300); }, mapD = function (sx, sy, sz) { return [sx, Yd(sz), sy]; };
+    pr('tdRunner', 0, mapD, false); pr('tdRunner', 1, mapD, false); return out; }
+  if (key === 'tbx' || key === 'tandem' || key === 'runner') { put(boxPrism([[0, 13], [0, 300], [0, 45]])); put(boxPrism([[0, 3], [0, 300], [-14, 0]])); return out; }
+  if (key === 'leg') { put(cylPrism(0, 0, 25, 0, 6, 18)); put(cylPrism(0, 0, 14, 6, 95, 16)); put(cylPrism(0, 0, 30, 95, 100, 18)); return out; }
+  if (key === 'feet') { put(cylPrism(0, 0, 7.5, 0, 10, 14)); return out; }
+  if (key === 'pin') { put(cylPrism(0, 0, 2.5, 0, 9, 10, 'y')); put(boxPrism([[-5, 5], [-8, 0], [2.5, 5]])); return out; }
+  if (key === 'conf') { put(cylPrism(0, 0, 5, 0, 8, 14, 'y')); put(cylPrism(0, 0, 3.5, 8, 50, 12, 'y')); return out; }
+  if (key === 'cam') { put(cylPrism(0, 0, 7.5, 0, 12.5, 18)); put(cylPrism(0, 0, 4, 12.5, 13.2, 14)); put(boxPrism([[-4.5, 4.5], [-0.7, 0.7], [13.2, 13.9]])); return out; }
+  if (key === 'bolt') { put(cylPrism(0, 0, 3.5, 0, 6, 12, 'y')); put(cylPrism(0, 0, 2.5, 6, 34, 10, 'y')); return out; }
+  if (key === 'dowel') { put(cylPrism(0, 0, 4, 0, 30, 14, 'y')); return out; }
+  if (key === 'led') { var A = [[0, 0], [16, 0], [16, 8], [14.5, 8], [14.5, 1.5], [1.5, 1.5], [1.5, 8], [0, 8]];
+    put(boxFacesOf(A.map(function (q) { return [q[0], 0, q[1]]; }), A.map(function (q) { return [q[0], 120, q[1]]; }), true)); put(boxPrism([[1.6, 14.4], [2, 118], [6.2, 7.4]])); return out; }
+  if (key === 'nail') { put(cylPrism(0, 0, 2.5, 0, 1, 10)); put(cylPrism(0, 0, 0.8, 1, 18, 8)); return out; }
+  return out;
+}
+function iconKey(item) { var s = String(item || ''), k = hwKind(s);
+  if (/Plokštel|plate/i.test(s)) return 'plate'; if (k === 'hinge') return 'hinge';
+  if (k === 'drawer') return /TANDEMBOX/i.test(s) ? 'tbx' : /TANDEM\b|TANDEM /i.test(s) ? 'tandem' : 'runner';
+  if (k === 'leg') return /pėdut|feet/i.test(s) ? 'feet' : 'leg'; if (/varžt|bolt/i.test(s)) return 'bolt'; if (k === 'cam') return 'cam';
+  if (k === 'conf' || k === 'dowel' || k === 'pin') return k; if (/LED/i.test(s)) return 'led'; if (/vinut|kabės|nail/i.test(s)) return 'nail'; return null; }
+function iconSvg(key, cx, cy, size) {   // the picture fitted in a size × size square centred at (cx, cy)
+  if (!key) return '';
+  var ic = ICONS[key];
+  if (!ic) {
+    var V = viewIso([-0.62, 0.62, -0.48]), d = V.d, Lt = unit([0.35, -0.55, 0.75]), faces = iconFaces(key).filter(function (f) { return dot(f.n, d) < 0; });
+    var pl = faces.map(function (f) { var c = [0, 1, 2].map(function (k) { return f.pts.reduce(function (a, q) { return a + q[k]; }, 0) / f.pts.length; });
+      var sh = 0.55 + 0.45 * Math.max(0, dot(f.n, Lt)), g = Math.round(150 + 95 * sh); g = Math.min(246, g);
+      return { z:dot(c, d), p:f.pts.map(function (q) { var a = V.pr(q); return [a[0], -a[1]]; }), fill:'rgb(' + (g - 4) + ',' + g + ',' + Math.min(250, g + 4) + ')' }; });
+    pl.sort(function (a, b) { return b.z - a.z; });
+    var xs = [], ys = []; pl.forEach(function (q) { q.p.forEach(function (a) { xs.push(a[0]); ys.push(a[1]); }); });
+    ic = ICONS[key] = pl.length ? { pl:pl, x0:Math.min.apply(null, xs), x1:Math.max.apply(null, xs), y0:Math.min.apply(null, ys), y1:Math.max.apply(null, ys) } : { pl:[] };
+  }
+  if (!ic.pl.length) return '';
+  var k = size / Math.max(ic.x1 - ic.x0, ic.y1 - ic.y0, 1e-6), mx = (ic.x0 + ic.x1) / 2, my = (ic.y0 + ic.y1) / 2, sw = f2(Math.max(0.05, Math.min(0.12, size / 90)));
+  return '<g stroke="#4a524e" stroke-width="' + sw + '" stroke-linejoin="round">' + ic.pl.map(function (q) {
+    return '<polygon points="' + q.p.map(function (a) { return f2(cx + (a[0] - mx) * k) + ',' + f2(cy + (a[1] - my) * k); }).join(' ') + '" fill="' + q.fill + '"/>'; }).join('') + '</g>';
+}
+/* the fittings with their pictures, letters and quantities: cards in a row (two rows when many) in the box x, y, w × h */
+function fitLegend(x, y, w, h, list) {
+  if (!list.length) return '';
+  var rowsN = Math.ceil(list.length / 4), per = Math.ceil(list.length / rowsN), cw = w / Math.max(per, 3), ch = h / rowsN, s = '';
+  list.forEach(function (it, i) {
+    var cx = x + (i % per) * cw, cy = y + Math.floor(i / per) * ch, isz = Math.min(ch - 3, 12), tx = cx + isz + 5.5, maxCh = Math.max(6, Math.floor((cw - isz - 8) / (2.05 * 0.56)));
+    s += rect(cx + 0.6, cy + 0.6, cw - 1.2, ch - 1.2, { stroke:'#d5d9d6', w:0.2, fill:'#fbfbfa' });
+    s += iconSvg(iconKey(it.item), cx + 2.5 + isz / 2, cy + ch / 2, isz);
+    s += fitBalloon([cx + 3.2, cy + 3.2], it.n, 2.2);
+    var nm0 = hwText(it.item), words = nm0.split(' '), l1 = '', l2 = '';
+    words.forEach(function (wd) { if (!l2 && (l1 + ' ' + wd).trim().length <= maxCh) l1 = (l1 + ' ' + wd).trim(); else l2 = (l2 + ' ' + wd).trim(); });
+    s += txt(tx, cy + ch / 2 - (l2 ? 2.4 : 0.6), l1, 2.05, { bold:true }) + (l2 ? txt(tx, cy + ch / 2 + 0.2, clip(l2, maxCh), 2.05, { bold:true }) : '');
+    s += txt(tx, cy + ch / 2 + (l2 ? 3.1 : 2.6), String(it.qty).replace('.', ',') + ' ' + unitText(it.unit), 2.05, { fill:'#55605a' });
+  });
+  return s;
+}
+/* the fittings list as on the drawings: a Blum CLIP top hinge and its mounting plate on lines of their own (ordered apart) */
+function drawHw(hw) {
+  var out = [];
+  (hw || []).forEach(function (h) {
+    if (/^BLUM LANKSTAI$/i.test(String(h.item || '').trim())) { out.push({ item:'Lankstas Blum CLIP top', qty:h.qty, unit:h.unit, src:h, part:'hinge' }); out.push({ item:'Plokštelė Blum CLIP', qty:h.qty, unit:h.unit, src:h, part:'plate' }); }
+    else out.push(Object.assign({}, h, { src:h }));
+  });
+  return out;
+}
 function fitBalloon(c, n, r) { return '<rect x="' + f2(c[0] - r) + '" y="' + f2(c[1] - r) + '" width="' + f2(2 * r) + '" height="' + f2(2 * r) + '" rx="1.2" fill="#fff6e6" stroke="#7a4d12" stroke-width="0.3"/>' + txt(c[0], c[1] + r * 0.37, String(n), r * 0.95, { anchor:'middle', bold:true, fill:'#7a4d12' }); }
 function balloon(c, n, r) { r = r || 3.4; return '<circle cx="' + f2(c[0]) + '" cy="' + f2(c[1]) + '" r="' + f2(r) + '" fill="#ffffff" stroke="' + COL.line + '" stroke-width="0.3"/>' + txt(c[0], c[1] + r * 0.37, String(n), r * 0.95, { anchor:'middle', bold:true }); }
 /* a list in the box x, y, w × h: one table with lines as tall as fit (2.6–4.4 mm), else side-by-side tables with narrower
@@ -7352,7 +7439,7 @@ function viewsSize(r, s, two) {   // width and height the views take at scale s
 }
 /* the cabinet sheet's lists: parts (position numbers as in the exploded view), extra parts, the worktop, fittings (lettered) */
 function cabLists(c, r) {
-  var parts = partOrder(r.panels || []), hwList = r.hardware || [], hwRows = hwList.map(function (h, i) { return [LETTER(i), hwText(h.item), String(h.qty), unitText(h.unit)]; });
+  var parts = partOrder(r.panels || []), hwList = drawHw(r.hardware), hwRows = hwList.map(function (h, i) { return [LETTER(i), hwText(h.item), String(h.qty), unitText(h.unit)]; });
   var extras = (c.extras || []).filter(function (x) { return x && +x.L > 0 && +x.W > 0 && !(x.qty !== '' && x.qty != null && !(+x.qty > 0)); });   // as in the parts list: no size or quantity 0 → not made
   var rows = parts.map(function (p, i) { var eb = p.eb || {}; return [String(i + 1), p.short || p.role, nm(p.L) + ' × ' + nm(p.W) + ' × ' + nm(p.T), p.mat || L.none,
     [eb.y0 ? 'L1' : '', eb.y1 ? 'L2' : '', eb.x0 ? 'W1' : '', eb.x1 ? 'W2' : ''].filter(Boolean).join(' ') || L.none, '1']; });
@@ -7426,7 +7513,7 @@ function sheetCabinet(c, r, nr, meta, plan) {
   if (hwRows.length) { var yH = yT + tp.h + rh + 4; svg += txt(LX, yH - 1.8, L.hw, 3, { bold:true });
     svg += table(LX, yH, HW_COLS(), hwRows, { rh:rh, fs:fs }).svg; }
   /* exploded assembly on the right */
-  var AX = LX + LW + 10, area = [AX + 10, SW - FR - 10, FR + 26, SH - FR - TB.h - 10];
+  var AX = LX + LW + 10, legH = hwList.length ? Math.ceil(hwList.length / 4) * 15 + 2 : 0, area = [AX + 10, SW - FR - 10, FR + 26, SH - FR - TB.h - 10 - legH];
   svg += line([AX - 4, FR + 4], [AX - 4, SH - FR - 4], 0.15, '#c3c8c5');
   var V = viewIso(ISO_D), boxes = cabBoxes(r, { plinth:false, fit:true, c:c }); explode(r, boxes);
   var order = solve(boxes, V), fp = fitPic(order, area[0] + 4, area[2] + 4, area[1] - area[0] - 8, area[3] - area[2] - 8);
@@ -7441,8 +7528,12 @@ function sheetCabinet(c, r, nr, meta, plan) {
   var pickAny = function (fit, pref) { return pickFit(function (b) { return b.fit === fit && pref(b); }) || pickFit(function (b) { return b.fit === fit; }) ||
     (function () { var c0 = order.filter(function (b) { return b.fit === fit; }).pop(); return c0 ? fp.m(anchorOf(c0, order)) : null; })(); };
   hwList.forEach(function (h, i) {
-    var k = hwKind(h.item), a = null;
-    if (k === 'hinge') a = pickAny('hinge', function (b) { return b.arm; });
+    var k = hwKind(h.src ? h.src.item : h.item), a = null;
+    if (k === 'hinge' && h.part === 'plate') {   // the plate: the lowest one in sight (the hinge takes the highest), so the two letters point at different pieces
+      var pc = order.filter(function (b) { return b.fit === 'hinge' && b.plate; }).sort(function (x, y) { return x.e[2][0] - y.e[2][0]; });
+      for (var q2 = 0; q2 < pc.length && !a; q2++) { var an = anchorOf(pc[q2], order, true); if (an) a = fp.m(an); }
+      for (var q3 = 0; q3 < pc.length && !a; q3++) { if (!pc[q3].hull || !pc[q3].hull.length) continue; var an2 = anchorOf(pc[q3], order); if (an2) a = fp.m(an2); } }
+    else if (k === 'hinge') a = pickAny('hinge', function (b) { return h.part === 'hinge' ? b.cup || b.arm : b.arm; });
     else if (k === 'drawer') a = pickAny('drawer', function (b) { return b.dside; });
     else if (k === 'leg') a = pickAny('leg', function () { return true; });
     else if (k === 'pin') a = pickAny('pin', function () { return true; });
@@ -7451,11 +7542,12 @@ function sheetCabinet(c, r, nr, meta, plan) {
       if (vis) a = fp.m(vis.mid); }
     if (a) items.push({ a:a, n:LETTER(i), fit:true });
   });
-  var pbS = [fp.m([fp.pb[0], fp.pb[3]]), fp.m([fp.pb[1], fp.pb[2]])], ring = [Math.max(AX + 4, pbS[0][0] - 8), Math.min(SW - FR - 5, pbS[1][0] + 8), Math.max(FR + 20, pbS[0][1] - 8), Math.min(SH - FR - TB.h - 5, pbS[1][1] + 8)];
+  var pbS = [fp.m([fp.pb[0], fp.pb[3]]), fp.m([fp.pb[1], fp.pb[2]])], ring = [Math.max(AX + 4, pbS[0][0] - 8), Math.min(SW - FR - 5, pbS[1][0] + 8), Math.max(FR + 20, pbS[0][1] - 8), Math.min(area[3] + 4, pbS[1][1] + 8)];
   placeBalloons(items, ring, 3.1).forEach(function (it) { svg += line(it.a, it.p, 0.18, it.fit ? '#7a4d12' : '#3a423e') + '<circle cx="' + f2(it.a[0]) + '" cy="' + f2(it.a[1]) + '" r="0.55" fill="' + (it.fit ? '#7a4d12' : '#3a423e') + '"/>' + (it.fit ? fitBalloon(it.p, it.n, 3.1) : balloon(it.p, it.n, 3.1)); });
   var lg = FR + 16.5, lx = AX, anyConn = (r.panels || []).some(function (p) { return p.edges && p.edges.length; });
   if (anyConn) svg += txt(lx, lg, L.conn, 2.1, { fill:'#55605a' }); lx += tw(L.conn, 2.1) + 3;
   if (anyConn) [[COL.conf, L.cConf], [COL.cam, L.cCam], [COL.dowel, L.cDowel]].forEach(function (k) { svg += line([lx, lg - 0.7], [lx + 6, lg - 0.7], 0.3, k[0], '1.4 0.9') + txt(lx + 7.5, lg, k[1], 2.1, { fill:'#55605a' }); lx += 10 + tw(k[1], 2.1) + 4; });
+  if (legH) svg += fitLegend(AX, SH - FR - TB.h - 4 - legH, SW - FR - AX - 3, legH - 2, hwList.map(function (h, i) { return { item:h.item, qty:h.qty, unit:h.unit, n:LETTER(i) }; }));   // the fittings, pictured
   if ((r.panels || []).some(function (p) { return p.role === 'DURYS'; })) svg += txt(LX, SH - FR - 2.2, L.open, 1.9, { fill:'#6b736e' });
   svg += titleBlock(Object.assign({}, meta, { title:L.cab + ' ' + nr + (c.name ? ' „' + c.name + '“' : ''), scale:'1:' + Math.round(1 / best.s) }));
   return svg + '</svg>';
@@ -7713,7 +7805,7 @@ function pdf(list, o) {
   return next();
 }
 
-var api = { hwKind:hwKind, hwText:hwText, unitText:unitText, cabPlan:cabPlan, fittingBoxes:fittingBoxes, overlap2:overlap2, sheets:sheets, sheetViews:sheetViews, sheetAssembly:sheetAssembly, pdf:pdf, pdfBytes:pdfBytes, solve:solve, viewIso:viewIso, viewOrtho:viewOrtho, cabBoxes:cabBoxes, pbox:pbox, explode:explode, partOrder:partOrder, TX:TX };
+var api = { iconSvg:iconSvg, hwKind:hwKind, hwText:hwText, unitText:unitText, cabPlan:cabPlan, fittingBoxes:fittingBoxes, overlap2:overlap2, sheets:sheets, sheetViews:sheetViews, sheetAssembly:sheetAssembly, pdf:pdf, pdfBytes:pdfBytes, solve:solve, viewIso:viewIso, viewOrtho:viewOrtho, cabBoxes:cabBoxes, pbox:pbox, explode:explode, partOrder:partOrder, TX:TX };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.DBDraw = api;
 })(typeof window !== 'undefined' ? window : this);
 </script>
