@@ -5482,14 +5482,14 @@ function frontCab(c, i, it, bad, act) {
   if (art) {   // the same render as the cabinet's front view, at its place on the wall
     s += art.svg.replace('<svg class="fr-svg"', '<svg class="rm-art" x="' + x0.toFixed(1) + '" y="' + fY(z0 + h + 4).toFixed(1) + '" width="' + (w * k).toFixed(1) + '" height="' + (art.vbH * k).toFixed(1) + '" preserveAspectRatio="none"');
     s += '<rect class="rm-body art" x="' + x0.toFixed(1) + '" y="' + fY(z0 + h).toFixed(1) + '" width="' + (w * k).toFixed(1) + '" height="' + (h * k).toFixed(1) + '"/>';
-    fronts(i).forEach(function (f) { if (!f.door) return;   // door opening lines over the render (they meet on the hinge side, as on the drawings)
-      var fx = x0 + f.x0 * k, fy = fY(z0 + f.z1), fw = (f.x1 - f.x0) * k, fh = (f.z1 - f.z0) * k, hx = f.left ? fx : fx + fw, ox = f.left ? fx + fw : fx;
+    fronts(i).forEach(function (f) { if (!f.door) return;   // door opening lines over the render (they meet on the handle side — where the door opens — as on the drawings)
+      var fx = x0 + f.x0 * k, fy = fY(z0 + f.z1), fw = (f.x1 - f.x0) * k, fh = (f.z1 - f.z0) * k, hx = f.left ? fx + fw : fx, ox = f.left ? fx : fx + fw;
       s += '<path class="rm-open art" d="M' + ox.toFixed(1) + ' ' + fy.toFixed(1) + ' L' + hx.toFixed(1) + ' ' + (fy + fh / 2).toFixed(1) + ' L' + ox.toFixed(1) + ' ' + (fy + fh).toFixed(1) + '"/>'; });
   } else s += '<rect class="rm-body' + (c.dishwasher ? ' dish' : c.kind === 'panel' ? ' panel' : '') + '" x="' + x0.toFixed(1) + '" y="' + fY(z0 + h).toFixed(1) + '" width="' + Math.max(1.2, w * k).toFixed(1) + '" height="' + (h * k).toFixed(1) + '"' + (c.kind === 'panel' && window.DBFront ? ' style="fill:' + window.DBFront.matColor(c.mat && c.mat.carc, '#d5cbbd') + '"' : '') + '/>';
   if (!art) fronts(i).forEach(function (f) {
     var fx = x0 + f.x0 * k, fy = fY(z0 + f.z1), fw = (f.x1 - f.x0) * k, fh = (f.z1 - f.z0) * k;
     s += '<rect class="rm-front" x="' + fx.toFixed(1) + '" y="' + fy.toFixed(1) + '" width="' + fw.toFixed(1) + '" height="' + fh.toFixed(1) + '"/>';
-    if (f.door) { var hx = f.left ? fx : fx + fw, ox = f.left ? fx + fw : fx;   // opening lines meet on the hinge side (as on the drawings): a pair hinged outside points to its sides
+    if (f.door) { var hx = f.left ? fx + fw : fx, ox = f.left ? fx : fx + fw;   // opening lines meet on the handle side, where the door opens (as on the drawings): a pair hinged outside points to the middle
       s += '<path class="rm-open" d="M' + ox.toFixed(1) + ' ' + fy.toFixed(1) + ' L' + hx.toFixed(1) + ' ' + (fy + fh / 2).toFixed(1) + ' L' + ox.toFixed(1) + ' ' + (fy + fh).toFixed(1) + '"/>'; }
     else if (fw > 8) s += '<line class="rm-handle" x1="' + (fx + fw * 0.35).toFixed(1) + '" y1="' + (fy + Math.min(fh * 0.22, 40 * k + 3)).toFixed(1) + '" x2="' + (fx + fw * 0.65).toFixed(1) + '" y2="' + (fy + Math.min(fh * 0.22, 40 * k + 3)).toFixed(1) + '"/>';
   });
@@ -5882,7 +5882,7 @@ function frontOp(op, prob, mode) {   // mode: 'act' (being moved) or 'ghost' (be
     var lx0 = x0 + OP_JAMB, lx1 = x1 - OP_JAMB, lz1 = z1 - OP_JAMB;
     s += R(x0 - OP_CAS, x1 + OP_CAS, 0, z1 + opCasTop(op, L), 'rm-opfr', op.color) + R(lx0, lx1, 0, lz1, 'rm-opleaf', op.color);
     if (op.type === 'gdoor') { var m = Math.max(90, Math.min(140, (lx1 - lx0) * 0.18)); s += glass(lx0 + m, lx1 - m, Math.min(300, lz1 * 0.15), lz1 - Math.min(260, lz1 * 0.13)); }
-    var hx = op.hinge === 'R' ? lx1 : lx0, ox = op.hinge === 'R' ? lx0 : lx1;   // the opening sign: from the handle side's corners to the hinges
+    var hx = op.hinge === 'R' ? lx0 : lx1, ox = op.hinge === 'R' ? lx1 : lx0;   // the opening sign: from the hinge side's corners to the handle side (where it opens), as on the cabinets
     s += '<path class="rm-opsym" d="M' + f1(X(ox)) + ',' + f1(fY(0)) + ' L' + f1(X(hx)) + ',' + f1(fY(lz1 / 2)) + ' L' + f1(X(ox)) + ',' + f1(fY(lz1)) + '"/>';
     var hd = op.hinge === 'R' ? lx0 + 65 : lx1 - 65, hz = Math.min(1000, lz1 - 200), dir = op.hinge === 'R' ? 1 : -1;
     s += '<line class="rm-ophd" x1="' + f1(X(hd)) + '" y1="' + f1(fY(hz)) + '" x2="' + f1(X(hd + dir * 120)) + '" y2="' + f1(fY(hz)) + '"/>';
@@ -7563,7 +7563,7 @@ function sheetWall(proj, infos, RM, wi, meta) {
     if (RM.isDoor(op)) { var J = RM.OP_JAMB || 30, C2 = RM.OP_CAS || 70, lz = op.h - J, hx = op.hinge === 'R' ? x1 - J : x0 + J, ox = op.hinge === 'R' ? x0 + J : x1 - J;
       svg += R2(x0 - C2, x1 + C2, 0, op.h + (RM.opCasTop ? RM.opCasTop(op, Lo) : C2), { w:0.2, fill:'#ffffff', stroke:COL.thin }) + R2(x0 + J, x1 - J, 0, lz, { w:0.25, fill:'#f6f4ef' });
       if (op.type === 'gdoor') { var gm = Math.max(90, Math.min(140, (op.w - 2 * J) * 0.18)); svg += R2(x0 + J + gm, x1 - J - gm, Math.min(300, lz * 0.15), lz - Math.min(260, lz * 0.13), { w:0.2, fill:'#e6eff3', stroke:COL.dim }); }
-      svg += line(P(ox, 0), P(hx, lz / 2), 0.15, COL.thin, '1.2 0.8') + line(P(hx, lz / 2), P(ox, lz), 0.15, COL.thin, '1.2 0.8');
+      svg += line(P(hx, 0), P(ox, lz / 2), 0.15, COL.thin, '1.2 0.8') + line(P(ox, lz / 2), P(hx, lz), 0.15, COL.thin, '1.2 0.8');   // the point on the handle side, as on the cabinets
     } else { var f = 65, z0 = op.z, z1 = op.z + op.h;
       svg += R2(x0 - 30, x1 + 30, z0 - 25, z0, { w:0.2, fill:'#ffffff' }) + R2(x0, x1, z0, z1, { w:0.25, fill:'#ffffff' });
       (op.w > 1000 ? [[x0 + f, (x0 + x1) / 2 - 40], [(x0 + x1) / 2 + 40, x1 - f]] : [[x0 + f, x1 - f]]).forEach(function (qq) { svg += R2(qq[0], qq[1], z0 + f, z1 - f, { w:0.2, fill:'#e6eff3', stroke:COL.dim }); }); }
