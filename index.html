@@ -1004,6 +1004,8 @@ button.prog:hover{border-color:var(--accent);color:var(--accent);background:var(
 .fh.own .fh-bar{background:color-mix(in srgb,var(--k,var(--accent)) 30%,var(--panel))}
 .fh-warn{margin:6px 0 0;font-size:12.5px;color:var(--warn)}
 
+/* Dėdės Baldai logo in the header box (mask: takes the box text colour) */
+.logo .dbl{display:block;width:76%;height:76%;background:currentColor;-webkit-mask:url(https://gervdalius-droid.github.io/hub/shared/logo-mask.png) center/contain no-repeat;mask:url(https://gervdalius-droid.github.io/hub/shared/logo-mask.png) center/contain no-repeat}
 </style>
 <style>:root{--bg:#f2f3f5;--accent:#315c50;--accent-soft:#e8f0ec;--accent-ink:#fff;--r:12px;--f-display:"IBM Plex Sans",system-ui,sans-serif}
 .wrap{max-width:1840px}.top .wrap{padding-block:12px}.brand h1{font-size:19px;letter-spacing:-.6px}.logo{background:#315c50;border-radius:10px}.brand .sub{font-size:11px;margin-top:4px}.card{box-shadow:0 2px 6px #15251d03;padding:20px}.step h3{font-size:18px;letter-spacing:-.4px}.step .no{font-size:19px;color:var(--accent);background:var(--accent-soft);border-radius:8px;padding:6px 0;align-self:start}.step{gap:12px;grid-template-columns:30px minmax(0,1fr)}.step .lead{line-height:1.55;margin-top:5px}.btn{border-radius:8px;min-height:36px}.f input,.f select{min-height:39px;background:var(--sunk)}.cab{padding:13px 10px;border-radius:10px}.cab.on{background:var(--accent-soft)}.stepnav{border-radius:10px}.stepnav .sl{font-size:11px}.sheet{gap:10px}.technical-preview,.preview-warnings{border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}summary{cursor:pointer;padding:12px 16px;font-weight:600;font-size:12px}summary span{float:right;background:var(--sunk);border-radius:6px;padding:0 6px}.technical-preview .paper{border:0;border-top:1px solid var(--line);border-radius:0}.preview-warnings .warns{padding:0 12px 12px;max-height:240px;overflow:auto}
@@ -8895,7 +8897,7 @@ function render() {
   if (typeof ptr !== 'undefined') ptr.pending = null;   // this redraw is the one that was waiting
   if (!S.proj) S.home = true;
   if (S.home) {
-    app.innerHTML = '<header class="top"><div class="wrap"><div class="brand"><div class="logo">DB</div><div><h1>' + t('app') + '</h1><div class="sub">' + t('sub') + '</div></div></div>' +
+    app.innerHTML = '<header class="top"><div class="wrap"><div class="brand"><div class="logo"><span class="dbl" role="img" aria-label="Dėdės Baldai"></span></div><div><h1>' + t('app') + '</h1><div class="sub">' + t('sub') + '</div></div></div>' +
       '<div class="hbtns">' + langBtns() + '</div></div></header><main class="wrap">' + viewHome() + '</main>';
     if (S.focusNew) { S.focusNew = false; var nf = document.getElementById('np-name'); if (nf) { nf.focus(); nf.select(); } }
     return;
@@ -8907,7 +8909,7 @@ function render() {
   S._info = cabInfo;
   var nParts = partCount(cabInfo);
   var h = '<header class="top"><div class="wrap">' +
-    '<button class="brand brandbtn" data-act="home" title="' + t('toHome') + '"><div class="logo">DB</div><div><h1>' + t('app') + '</h1><div class="sub">' + t('sub') + '</div></div></button>' +
+    '<button class="brand brandbtn" data-act="home" title="' + t('toHome') + '"><div class="logo"><span class="dbl" role="img" aria-label="Dėdės Baldai"></span></div><div><h1>' + t('app') + '</h1><div class="sub">' + t('sub') + '</div></div></button>' +
     '<button class="btn projbtn" data-act="home" title="' + t('toHome') + '">☰ ' + t('projects') + '</button>' +
     '<label class="projname"><span class="unit">' + t('project') + '</span><input id="projname" type="text" data-bind="p.name" value="' + esc(S.proj.name) + '" placeholder="' + t('projPh') + '" autocomplete="off"' + (S.proj.name ? '' : ' aria-invalid="true"') + '><span class="saved" id="saved" title="' + t('autosaveT') + '">✓ ' + t('autosaved') + '</span></label>' +
     '<nav class="tabs" aria-label="tabs">' +
